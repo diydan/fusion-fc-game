@@ -5,6 +5,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { getUser, createUser, updateUser } from '@/services/database';
 import { getAvatarUrl } from '@/services/storage';
 import { clearMetaMaskSession, getMetaMaskSession } from '@/services/auth/metamask';
+import { getFirebaseUserByWallet } from '@/services/auth/metamask-firebase';
 
 export const useUserStore = defineStore('user', () => {
   // State
@@ -21,7 +22,8 @@ export const useUserStore = defineStore('user', () => {
     if (!currentUser.value) return null;
     if (currentUser.value.providerData?.[0]?.providerId === 'google.com') return 'google';
     if (currentUser.value.providerData?.[0]?.providerId === 'password') return 'email';
-    if (getMetaMaskSession().address) return 'metamask';
+    if (userProfile.value?.authMethod === 'metamask') return 'metamask';
+    if (currentUser.value.isAnonymous && userProfile.value?.walletAddress) return 'metamask';
     return 'unknown';
   });
   const displayName = computed(() => {
@@ -91,12 +93,32 @@ export const useUserStore = defineStore('user', () => {
     loading.value = true;
     
     // Check for MetaMask session first
-    const { address } = getMetaMaskSession();
-    if (address) {
-      // Handle MetaMask session
-      currentUser.value = { uid: address, isMetaMask: true };
-      fetchUserProfile(address).finally(() => {
-        loading.value = false;
+    const metamaskAddress = localStorage.getItem('metamask_address');
+    if (metamaskAddress) {
+      // Check if this wallet is linked to a Firebase user
+      getFirebaseUserByWallet(metamaskAddress).then(linkedUserId => {
+        if (linkedUserId) {
+          // Wallet is linked, use the linked user ID
+          currentUser.value = { 
+            uid: linkedUserId, 
+            displayName: `Linked Wallet: ${metamaskAddress.slice(0, 6)}...${metamaskAddress.slice(-4)}`,
+            isMetaMask: true,
+            walletAddress: metamaskAddress
+          };
+          fetchUserProfile(linkedUserId).finally(() => {
+            loading.value = false;
+          });
+        } else {
+          // Create a mock user for unlinked MetaMask
+          currentUser.value = { 
+            uid: metamaskAddress, 
+            displayName: `${metamaskAddress.slice(0, 6)}...${metamaskAddress.slice(-4)}`,
+            isMetaMask: true 
+          };
+          fetchUserProfile(metamaskAddress).finally(() => {
+            loading.value = false;
+          });
+        }
       });
       return;
     }
@@ -115,7 +137,10 @@ export const useUserStore = defineStore('user', () => {
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
-            authMethod: user.providerData?.[0]?.providerId || 'unknown'
+            authMethod: user.providerData?.[0]?.providerId || 'unknown',
+            linkedProviders: {
+              [user.providerData?.[0]?.providerId || 'unknown']: true
+            }
           });
         } else {
           // Update last login
@@ -132,14 +157,9 @@ export const useUserStore = defineStore('user', () => {
 
   const logout = async () => {
     try {
-      if (authMethod.value === 'metamask') {
-        clearMetaMaskSession();
-        currentUser.value = null;
-        userProfile.value = null;
-        avatarUrl.value = null;
-      } else {
-        await signOut(auth);
-      }
+      // Always use Firebase signOut now that MetaMask uses Firebase Auth
+      await signOut(auth);
+      clearMetaMaskSession(); // Clean up any legacy localStorage
       return true;
     } catch (err) {
       error.value = err.message;

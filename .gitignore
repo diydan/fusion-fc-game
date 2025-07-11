@@ -199,3 +199,4 @@ Thumbs.db
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+cors.json

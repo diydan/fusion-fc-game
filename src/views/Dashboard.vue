@@ -35,6 +35,13 @@
                 to="/buttons"
                 click-sound="whoosh"
               />
+              <GameButton
+                color="warning"
+                prepend-icon="mdi-volume-high"
+                label="Test Sounds"
+                to="/sound-test"
+                click-sound="coin"
+              />
             </div>
           </v-card-text>
         </v-card>

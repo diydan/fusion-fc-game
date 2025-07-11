@@ -3,8 +3,9 @@
     <!-- Floating Orbs Background -->
     <FloatingOrbs />
 
-    <!-- Mobile Header -->
+    <!-- Mobile Header (hidden on login page) -->
     <v-app-bar
+      v-if="!isLoginPage"
       app
       class="d-md-none mobile-header"
       color="surface"
@@ -25,8 +26,9 @@
       </template>
     </v-app-bar>
 
-    <!-- Desktop Header -->
+    <!-- Desktop Header (hidden on login page) -->
     <v-app-bar
+      v-if="!isLoginPage"
       app
       class="d-none d-md-flex desktop-header"
       color="surface"
@@ -73,8 +75,9 @@
 
 
 
-    <!-- Desktop Navigation Drawer -->
+    <!-- Desktop Navigation Drawer (hidden on login page) -->
     <v-navigation-drawer
+      v-if="!isLoginPage"
       v-model="drawer"
       app
       class="d-none d-md-flex"
@@ -118,8 +121,8 @@
       </v-list>
     </v-navigation-drawer>
 
-    <v-main class="main-content">
-      <div class="mobile-container">
+    <v-main :class="isLoginPage ? 'login-main' : 'main-content'">
+      <div v-if="!isLoginPage" class="mobile-container">
         <v-container fluid class="pa-2 pa-md-4 full-width-container">
           <router-view v-slot="{ Component }">
             <transition name="fade" mode="out-in">
@@ -128,9 +131,17 @@
           </router-view>
         </v-container>
       </div>
+      <div v-else class="login-container">
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </div>
     </v-main>
 
     <v-bottom-navigation
+      v-if="!isLoginPage"
       v-model="bottomNav"
       grow
       class="d-md-none"
@@ -161,15 +172,19 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import FloatingOrbs from '@/components/ui/FloatingOrbs.vue'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 const drawer = ref(true)
 const bottomNav = ref(0)
+
+// Check if current route is login page
+const isLoginPage = computed(() => route.name === 'login')
 
 const logout = async () => {
   const success = await userStore.logout()
@@ -222,6 +237,24 @@ const logout = async () => {
     radial-gradient(circle at 30% 70%, rgba(236, 72, 153, 0.02) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
+}
+
+.login-main {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  z-index: 1001 !important;
+}
+
+.login-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1002;
 }
 
 @media (max-width: 959px) {

@@ -53,55 +53,9 @@ export const verifySignature = (message, signature, address) => {
 };
 
 export const signInWithMetaMask = async () => {
-  try {
-    // Connect to MetaMask
-    const { signer, address, error: connectError } = await connectMetaMask();
-    if (connectError) throw new Error(connectError);
-
-    // Create a message to sign
-    const timestamp = Date.now();
-    const message = `Sign this message to authenticate with Fusion FC Game\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
-
-    // Sign the message
-    const { signature, error: signError } = await signMessage(signer, message);
-    if (signError) throw new Error(signError);
-
-    // Verify the signature
-    const isValid = verifySignature(message, signature, address);
-    if (!isValid) throw new Error('Invalid signature');
-
-    // Check if user exists in Firestore
-    const userDoc = await getDoc(doc(db, 'users', address));
-    
-    if (!userDoc.exists()) {
-      // Create new user document
-      await setDoc(doc(db, 'users', address), {
-        walletAddress: address,
-        createdAt: new Date(),
-        lastLogin: new Date(),
-        authMethod: 'metamask'
-      });
-    } else {
-      // Update last login
-      await setDoc(doc(db, 'users', address), {
-        lastLogin: new Date()
-      }, { merge: true });
-    }
-
-    // In production, you would call a Cloud Function here to generate a custom token
-    // For now, we'll store the wallet address in localStorage as a temporary solution
-    localStorage.setItem('metamask_address', address);
-    localStorage.setItem('metamask_signature', signature);
-    
-    return { 
-      address, 
-      signature, 
-      error: null,
-      message: 'Connected with MetaMask. Note: In production, implement server-side token generation.'
-    };
-  } catch (error) {
-    return { address: null, signature: null, error: error.message };
-  }
+  // Import the Firebase-integrated version
+  const { signInWithMetaMaskDev } = await import('./metamask-firebase');
+  return signInWithMetaMaskDev();
 };
 
 export const getMetaMaskSession = () => {

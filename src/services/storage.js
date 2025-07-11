@@ -28,6 +28,11 @@ export const getAvatarUrl = async (userId) => {
     const url = await getDownloadURL(storageRef);
     return { url, error: null };
   } catch (error) {
+    // Handle CORS or file not found errors gracefully
+    if (error.code === 'storage/object-not-found' || error.message.includes('CORS')) {
+      console.log('Avatar not found or CORS issue for user:', userId);
+      return { url: null, error: null }; // Return null without error
+    }
     return { url: null, error: error.message };
   }
 };

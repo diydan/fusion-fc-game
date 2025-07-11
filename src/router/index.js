@@ -105,6 +105,12 @@ const router = createRouter({
       beforeEnter: requireAuth
     },
     {
+      path: '/sound-test',
+      name: 'sound-test',
+      component: () => import('@/views/SoundTest.vue'),
+      beforeEnter: requireAuth
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: () => import('@/views/NotFound.vue')

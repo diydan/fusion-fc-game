@@ -1,36 +1,34 @@
 <template>
-  <v-card class="mx-auto pa-4" max-width="400">
+  <v-card class="mx-auto pa-6" max-width="420">
     <v-card-title class="text-h5 text-center">
       {{ isSignUp ? 'Create Account' : 'Sign In' }}
     </v-card-title>
 
     <v-card-text>
       <!-- Social Login Buttons -->
-      <v-btn
+      <GameButton
         block
-        color="white"
-        variant="outlined"
+        color="info"
         prepend-icon="mdi-google"
-        class="mb-3"
+        label="Continue with Google"
+        class="mb-4"
         @click="handleGoogleLogin"
         :loading="loading"
-      >
-        Continue with Google
-      </v-btn>
+        click-sound="pop"
+      />
 
-      <v-btn
+      <GameButton
         block
         color="primary"
-        variant="outlined"
         prepend-icon="mdi-ethereum"
-        class="mb-3"
+        label="Connect MetaMask"
+        class="mb-4"
         @click="handleMetaMaskLogin"
         :loading="loading"
-      >
-        Connect MetaMask
-      </v-btn>
+        click-sound="coin"
+      />
 
-      <v-divider class="my-4">
+      <v-divider class="my-6">
         <span class="text-caption">OR</span>
       </v-divider>
 
@@ -43,7 +41,7 @@
           variant="outlined"
           density="comfortable"
           :rules="emailRules"
-          class="mb-2"
+          class="mb-3"
         />
 
         <v-text-field
@@ -53,7 +51,7 @@
           variant="outlined"
           density="comfortable"
           :rules="nameRules"
-          class="mb-2"
+          class="mb-3"
         />
 
         <v-text-field
@@ -65,7 +63,7 @@
           :rules="passwordRules"
           :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
           @click:append-inner="showPassword = !showPassword"
-          class="mb-2"
+          class="mb-3"
         />
 
         <v-text-field
@@ -76,45 +74,45 @@
           variant="outlined"
           density="comfortable"
           :rules="confirmPasswordRules"
-          class="mb-3"
+          class="mb-4"
         />
 
-        <v-btn
+        <GameButton
           block
           color="primary"
+          :label="isSignUp ? 'Sign Up' : 'Sign In'"
           type="submit"
           :loading="loading"
           :disabled="!valid"
-        >
-          {{ isSignUp ? 'Sign Up' : 'Sign In' }}
-        </v-btn>
+          click-sound="success"
+        />
       </v-form>
 
       <!-- Toggle Sign Up/Sign In -->
-      <div class="text-center mt-4">
+      <div class="text-center mt-6">
         <span class="text-body-2">
           {{ isSignUp ? 'Already have an account?' : "Don't have an account?" }}
         </span>
-        <v-btn
+        <GameButton
           variant="text"
-          color="primary"
+          color="secondary"
           size="small"
+          :label="isSignUp ? 'Sign In' : 'Sign Up'"
           @click="isSignUp = !isSignUp"
-        >
-          {{ isSignUp ? 'Sign In' : 'Sign Up' }}
-        </v-btn>
+          click-sound="whoosh"
+        />
       </div>
 
       <!-- Forgot Password -->
-      <div v-if="!isSignUp" class="text-center">
-        <v-btn
+      <div v-if="!isSignUp" class="text-center mt-4">
+        <GameButton
           variant="text"
-          color="primary"
+          color="info"
           size="small"
+          label="Forgot Password?"
           @click="showResetDialog = true"
-        >
-          Forgot Password?
-        </v-btn>
+          click-sound="pop"
+        />
       </div>
 
       <!-- Error Message -->
@@ -144,10 +142,10 @@
             :rules="emailRules"
           />
         </v-card-text>
-        <v-card-actions>
+        <v-card-actions class="pa-4">
           <v-spacer />
-          <v-btn text @click="showResetDialog = false">Cancel</v-btn>
-          <v-btn color="primary" @click="handlePasswordReset">Send Reset Email</v-btn>
+          <GameButton variant="text" label="Cancel" @click="showResetDialog = false" click-sound="pop" class="me-2" />
+          <GameButton color="primary" label="Send Reset Email" @click="handlePasswordReset" click-sound="success" />
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -160,6 +158,7 @@ import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
 import { signInWithGoogle } from '@/services/auth/google';
 import { signInWithEmail, signUpWithEmail, resetPassword } from '@/services/auth/email';
+import GameButton from '@/components/GameButton.vue';
 import { signInWithMetaMask } from '@/services/auth/metamask';
 
 const router = useRouter();
@@ -259,19 +258,12 @@ const handleMetaMaskLogin = async () => {
   error.value = null;
   
   try {
-    const { address, error: metamaskError, message } = await signInWithMetaMask();
+    const { user, address, error: metamaskError } = await signInWithMetaMask();
     
     if (metamaskError) throw new Error(metamaskError);
     
-    // Set user in store
-    await userStore.setMetaMaskUser(address);
-    
-    // Show info message if provided
-    if (message) {
-      console.info(message);
-    }
-    
-    // Navigate to dashboard
+    // The user is now automatically handled by Firebase Auth
+    // Just navigate to dashboard
     router.push('/dashboard');
   } catch (err) {
     error.value = err.message;

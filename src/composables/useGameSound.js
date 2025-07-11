@@ -166,6 +166,14 @@ export function useGameSound() {
       audioClone.volume = fadeIn ? 0 : volume
       audioClone.loop = loop
       
+      // Add error handler for the clone
+      audioClone.addEventListener('error', () => {
+        // If real audio fails, try synthetic sound
+        if (useSynthetic && preloadedSounds[soundNameOrUrl]) {
+          createSyntheticSound(soundNameOrUrl)
+        }
+      })
+      
       // Fade in effect
       if (fadeIn) {
         const fadeInInterval = setInterval(() => {
