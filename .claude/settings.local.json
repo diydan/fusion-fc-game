@@ -14,7 +14,8 @@
       "Bash(command -v:*)",
       "Bash(find:*)",
       "Bash(pnpm list:*)",
-      "Bash(pnpm add:*)"
+      "Bash(pnpm add:*)",
+      "Bash(git check-ignore:*)"
     ],
     "deny": []
   }

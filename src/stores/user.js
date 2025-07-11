@@ -35,7 +35,14 @@ export const useUserStore = defineStore('user', () => {
   const fetchUserProfile = async (userId) => {
     try {
       const { data, error: fetchError } = await getUser(userId);
-      if (fetchError) throw new Error(fetchError);
+      if (fetchError) {
+        console.warn('User profile not found:', fetchError);
+        // Don't throw error if user doesn't exist yet
+        if (fetchError === 'User not found') {
+          return null;
+        }
+        throw new Error(fetchError);
+      }
       
       userProfile.value = data;
       
@@ -45,6 +52,7 @@ export const useUserStore = defineStore('user', () => {
       
       return data;
     } catch (err) {
+      console.error('Error fetching user profile:', err);
       error.value = err.message;
       return null;
     }

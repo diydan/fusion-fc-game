@@ -1,5 +1,8 @@
 <template>
   <v-app>
+    <!-- Floating Orbs Background -->
+    <FloatingOrbs />
+
     <!-- Mobile Header -->
     <v-app-bar
       app
@@ -115,7 +118,7 @@
       </v-list>
     </v-navigation-drawer>
 
-    <v-main>
+    <v-main class="main-content">
       <div class="mobile-container">
         <v-container fluid class="pa-2 pa-md-4 full-width-container">
           <router-view v-slot="{ Component }">
@@ -159,25 +162,66 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import FloatingOrbs from '@/components/ui/FloatingOrbs.vue'
 
+const router = useRouter()
+const userStore = useUserStore()
 const drawer = ref(true)
 const bottomNav = ref(0)
 
-const logout = () => {
-  // Add logout logic here
-  console.log('Logout clicked')
-  // router.push('/login')
+const logout = async () => {
+  const success = await userStore.logout()
+  if (success) {
+    router.push('/login')
+  }
 }
 </script>
 
 <style scoped>
 .v-navigation-drawer {
-  background-color: #1E293B !important;
+  background: linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%) !important;
+  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(59, 130, 246, 0.3) !important;
+  position: relative;
+}
+
+.v-navigation-drawer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(59, 130, 246, 0.05) 0%, transparent 60%),
+    radial-gradient(circle at 70% 70%, rgba(124, 58, 237, 0.03) 0%, transparent 60%);
+  pointer-events: none;
 }
 
 .mobile-header {
-  background-color: #1E293B !important;
-  border-bottom: 1px solid rgba(241, 245, 249, 0.12) !important;
+  background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 100%) !important;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.3) !important;
+  backdrop-filter: blur(10px);
+}
+
+.main-content {
+  position: relative;
+}
+
+.main-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(circle at 70% 30%, rgba(59, 130, 246, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 30% 70%, rgba(236, 72, 153, 0.02) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 @media (max-width: 959px) {
@@ -192,8 +236,9 @@ const logout = () => {
 }
 
 .desktop-header {
-  background-color: #1E293B !important;
-  border-bottom: 1px solid rgba(241, 245, 249, 0.12) !important;
+  background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 100%) !important;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.3) !important;
+  backdrop-filter: blur(10px);
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -232,6 +277,8 @@ const logout = () => {
   margin: 0 !important;
   padding-left: 8px !important;
   padding-right: 8px !important;
+  position: relative;
+  z-index: 1;
 }
 
 @media (min-width: 960px) {
@@ -244,8 +291,9 @@ const logout = () => {
   }
 
   .v-navigation-drawer {
-    background-color: #1E293B !important;
-    border-right: 1px solid rgba(241, 245, 249, 0.12) !important;
+    background: linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%) !important;
+    border-right: 1px solid rgba(59, 130, 246, 0.3) !important;
+    backdrop-filter: blur(10px);
   }
 }
 </style>

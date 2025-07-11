@@ -142,10 +142,9 @@ functions/dist/
 public/
 
 # Firebase config files with sensitive data
+# Note: src/config/firebase.js uses env vars, so it's safe to commit
 src/firebase-config.js
 src/firebase-config.ts
-src/config/firebase.js
-src/config/firebase.ts
 firebase-config.js
 firebase-config.ts
 
