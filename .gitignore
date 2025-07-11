@@ -119,6 +119,69 @@ dist
 # Firebase cache directory
 .firebase/
 
+# Firebase specific files (keep private)
+firebase-debug.log
+firebase-debug.*.log
+.firebaserc
+firebase.json
+firestore.rules
+firestore.indexes.json
+storage.rules
+database.rules.json
+
+# Firebase Functions
+functions/node_modules/
+functions/.env
+functions/.env.*
+!functions/.env.example
+functions/lib/
+functions/dist/
+
+# Firebase Hosting
+.firebase/
+public/
+
+# Firebase config files with sensitive data
+src/firebase-config.js
+src/firebase-config.ts
+src/config/firebase.js
+src/config/firebase.ts
+firebase-config.js
+firebase-config.ts
+
+# Vue specific
+# Build outputs
+dist/
+build/
+
+# Vue CLI cache
+.vuerc
+
+# Vue 3 specific
+.vite/
+vite.config.*.timestamp-*
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Deployment and CI/CD
+.vercel
+.netlify/
+.github/workflows/deploy.yml
+
 # TernJS port file
 .tern-port
 

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(npm install)",
+      "Bash(rm:*)",
+      "Bash(pnpm install:*)",
+      "Bash(npm install:*)",
+      "Bash(/usr/local/bin/pnpm install)"
+    ],
+    "deny": []
+  }
+}

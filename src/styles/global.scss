@@ -1,0 +1,207 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  font-family: 'Inter', sans-serif;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  background-color: #121212;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.v-application {
+  width: 100% !important;
+  max-width: 100vw !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.v-application__wrap {
+  min-height: 100%;
+}
+
+.v-main {
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+  width: 100% !important;
+  max-width: 100vw !important;
+}
+
+.mobile-container {
+  padding-bottom: 80px !important; // Account for 64px nav + safe area
+  padding-top: 0 !important; // Let v-main handle the spacing
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100vh;
+
+  @media (min-width: 960px) {
+    padding-bottom: 0 !important;
+    padding-top: 0 !important; // Let Vuetify handle header spacing
+    padding-left: 0 !important; // Let Vuetify handle drawer spacing
+  }
+}
+
+// Fix for mobile viewport
+@media (max-width: 959px) {
+  .v-main {
+    --v-layout-top: 20px !important;
+    padding-top: 20px !important;
+  }
+
+  .v-container {
+    padding: 8px !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .v-row {
+    margin: -4px !important;
+    width: 100% !important;
+  }
+
+  .v-col {
+    padding: 4px !important;
+  }
+
+  // Ensure cards don't overflow
+  .v-card {
+    margin: 4px 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  // Adjust text sizes for mobile
+  .text-h4 {
+    font-size: 1.5rem !important;
+  }
+
+  .text-h3 {
+    font-size: 1.75rem !important;
+  }
+
+  // Full width main content on mobile only
+  .v-main {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .mobile-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  // Ensure proper spacing for bottom navigation
+  body {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  // Prevent horizontal overflow
+  .v-application__wrap {
+    overflow-x: hidden !important;
+  }
+
+  // Fix for very small screens
+  @media (max-width: 360px) {
+    .v-container {
+      padding: 4px !important;
+    }
+
+    .v-row {
+      margin: -2px !important;
+    }
+
+    .v-col {
+      padding: 2px !important;
+    }
+  }
+}
+
+// Desktop specific fixes
+@media (min-width: 960px) {
+  .mobile-container {
+    width: 100% !important;
+    max-width: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-top: 16px !important; // Reduced space from header
+    padding-bottom: 16px !important;
+    min-height: calc(100vh - 64px) !important; // Full height minus header
+  }
+
+  .v-main {
+    padding-top: 64px !important; // Header height
+    padding-left: 256px !important; // Sidebar width
+    padding-right: 0 !important;
+    min-height: 100vh !important;
+  }
+
+  .v-app-bar.desktop-header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+  }
+
+  .v-navigation-drawer {
+    position: fixed !important;
+    top: 64px !important; // Below header
+    left: 0 !important;
+    height: calc(100vh - 64px) !important;
+    z-index: 999 !important;
+  }
+}
+
+.v-application {
+  font-family: 'Inter', sans-serif !important;
+}
+
+.v-card {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.5, 1);
+  
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+  transition: all 0.3s cubic-bezier(1.0, 0.5, 0.8, 1.0);
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateX(20px);
+  opacity: 0;
+}
