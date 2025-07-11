@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@firebasegen/default-connector':
+        specifier: file:dataconnect-generated/js/default-connector
+        version: file:dataconnect-generated/js/default-connector(firebase@11.10.0)
       '@mdi/font':
         specifier: ^7.4.47
         version: 7.4.47
@@ -442,6 +445,12 @@ packages:
 
   '@firebase/webchannel-wrapper@1.0.3':
     resolution: {integrity: sha512-2xCRM9q9FlzGZCdgDMJwc0gyUkWFtkosy7Xxr6sFgQwn+wMNIWd7xIvYNauU1r64B5L5rsGKy/n9TKJ0aAFeqQ==}
+
+  '@firebasegen/default-connector@file:dataconnect-generated/js/default-connector':
+    resolution: {directory: dataconnect-generated/js/default-connector, type: directory}
+    engines: {node: ' >=18.0'}
+    peerDependencies:
+      firebase: ^10.14.0
 
   '@grpc/grpc-js@1.9.15':
     resolution: {integrity: sha512-nqE7Hc0AzI+euzUwDAy0aY5hCp10r734gMGRdU+qOPX0XSceI2ULrcXB5U2xSc5VkWwalCj4M7GzCAygZl2KoQ==}
@@ -1982,6 +1991,10 @@ snapshots:
       tslib: 2.8.1
 
   '@firebase/webchannel-wrapper@1.0.3': {}
+
+  '@firebasegen/default-connector@file:dataconnect-generated/js/default-connector(firebase@11.10.0)':
+    dependencies:
+      firebase: 11.10.0
 
   '@grpc/grpc-js@1.9.15':
     dependencies:

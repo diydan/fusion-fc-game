@@ -70,6 +70,11 @@ web_modules/
 .env.*
 !.env.example
 
+# Test files
+test-*.html
+test-*.md
+!test-multi-auth.md  # Keep documentation
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
@@ -119,15 +124,14 @@ dist
 # Firebase cache directory
 .firebase/
 
-# Firebase specific files (keep private)
+# Firebase logs and debug files
 firebase-debug.log
 firebase-debug.*.log
-.firebaserc
-firebase.json
-firestore.rules
-firestore.indexes.json
-storage.rules
-database.rules.json
+
+# Firebase local emulator data
+firestore-debug.log
+pubsub-debug.log
+ui-debug.log
 
 # Firebase Functions
 functions/node_modules/
@@ -167,6 +171,9 @@ vite.config.*.timestamp-*
 *.swo
 *~
 
+# Local Claude settings
+.claude/settings.local.json
+
 # OS generated files
 .DS_Store
 .DS_Store?
@@ -199,4 +206,8 @@ Thumbs.db
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+.firebaserc
+apphosting.yaml
 cors.json
+firebase.json
+firestore.rules

@@ -15,7 +15,9 @@
       "Bash(find:*)",
       "Bash(pnpm list:*)",
       "Bash(pnpm add:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(npx firebase emulators:exec:*)",
+      "Bash(firebase deploy:*)"
     ],
     "deny": []
   }
