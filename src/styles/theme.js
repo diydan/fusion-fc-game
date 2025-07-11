@@ -41,7 +41,7 @@ export default {
     'text-disabled': '#64748B'
   },
   variables: {
-    'border-color': 'rgba(197, 217, 232, 0.12)',
+    'border-color': 'rgba(241, 245, 249, 0.12)',
     'border-opacity': 0.12,
     'hover-opacity': 0.08,
     'focus-opacity': 0.12,
@@ -49,9 +49,9 @@ export default {
     'activated-opacity': 0.12,
     'pressed-opacity': 0.12,
     'dragged-opacity': 0.08,
-    'theme-kbd': '#212529',
-    'theme-on-kbd': '#C5D9E8',
-    'theme-code': '#1E1E1E',
-    'theme-on-code': '#C5D9E8'
+    'theme-kbd': '#334155',
+    'theme-on-kbd': '#F1F5F9',
+    'theme-code': '#1E293B',
+    'theme-on-code': '#F1F5F9'
   }
 }

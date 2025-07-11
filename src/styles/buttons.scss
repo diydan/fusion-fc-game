@@ -1,0 +1,392 @@
+// 3D Elevated Button Styles inspired by Josh W. Comeau's approach
+
+// Custom 3D button class
+.v-btn--elevated-3d {
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: none !important;
+  padding: 0 24px !important;
+  height: 48px !important;
+  border-radius: 12px !important;
+  border: none !important;
+  position: relative !important;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  
+  // Create the 3D effect with box-shadow
+  transform: translateY(-4px);
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-6px);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(-2px);
+    transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1), 
+                box-shadow 0.08s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  
+  &:disabled {
+    transform: translateY(0);
+    opacity: 0.6;
+    cursor: not-allowed !important;
+  }
+}
+
+// Color variations with proper shadows
+.v-btn--elevated-3d {
+  &.bg-primary {
+    background-color: #3B82F6 !important;
+    color: white !important;
+    box-shadow: 
+      0 4px 0 0 #1E40AF,
+      0 5px 0 0 #1E40AF,
+      0 6px 0 0 #1E40AF,
+      0 7px 0 0 #1E40AF,
+      0 8px 0 0 #1E40AF,
+      0 8px 8px rgba(30, 64, 175, 0.3),
+      0 8px 16px rgba(30, 64, 175, 0.2) !important;
+    
+    &:hover:not(:disabled) {
+      background-color: #60A5FA !important;
+      box-shadow: 
+        0 6px 0 0 #1E40AF,
+        0 7px 0 0 #1E40AF,
+        0 8px 0 0 #1E40AF,
+        0 9px 0 0 #1E40AF,
+        0 10px 0 0 #1E40AF,
+        0 10px 10px rgba(30, 64, 175, 0.3),
+        0 10px 20px rgba(30, 64, 175, 0.2) !important;
+    }
+    
+    &:active:not(:disabled) {
+      box-shadow: 
+        0 2px 0 0 #1E40AF,
+        0 3px 0 0 #1E40AF,
+        0 4px 0 0 #1E40AF,
+        0 4px 4px rgba(30, 64, 175, 0.3),
+        0 4px 8px rgba(30, 64, 175, 0.2) !important;
+    }
+    
+    &:disabled {
+      box-shadow: none !important;
+      background-color: #3B82F6 !important;
+    }
+  }
+  
+  &.bg-secondary {
+    background-color: #EC4899 !important;
+    color: white !important;
+    box-shadow: 
+      0 4px 0 0 #BE185D,
+      0 5px 0 0 #BE185D,
+      0 6px 0 0 #BE185D,
+      0 7px 0 0 #BE185D,
+      0 8px 0 0 #BE185D,
+      0 8px 8px rgba(190, 24, 93, 0.3),
+      0 8px 16px rgba(190, 24, 93, 0.2) !important;
+    
+    &:hover:not(:disabled) {
+      background-color: #F472B6 !important;
+      box-shadow: 
+        0 6px 0 0 #BE185D,
+        0 7px 0 0 #BE185D,
+        0 8px 0 0 #BE185D,
+        0 9px 0 0 #BE185D,
+        0 10px 0 0 #BE185D,
+        0 10px 10px rgba(190, 24, 93, 0.3),
+        0 10px 20px rgba(190, 24, 93, 0.2) !important;
+    }
+    
+    &:active:not(:disabled) {
+      box-shadow: 
+        0 2px 0 0 #BE185D,
+        0 3px 0 0 #BE185D,
+        0 4px 0 0 #BE185D,
+        0 4px 4px rgba(190, 24, 93, 0.3),
+        0 4px 8px rgba(190, 24, 93, 0.2) !important;
+    }
+  }
+  
+  &.bg-success {
+    background-color: #10B981 !important;
+    color: white !important;
+    box-shadow: 
+      0 4px 0 0 #047857,
+      0 5px 0 0 #047857,
+      0 6px 0 0 #047857,
+      0 7px 0 0 #047857,
+      0 8px 0 0 #047857,
+      0 8px 8px rgba(4, 120, 87, 0.3),
+      0 8px 16px rgba(4, 120, 87, 0.2) !important;
+    
+    &:hover:not(:disabled) {
+      background-color: #34D399 !important;
+      box-shadow: 
+        0 6px 0 0 #047857,
+        0 7px 0 0 #047857,
+        0 8px 0 0 #047857,
+        0 9px 0 0 #047857,
+        0 10px 0 0 #047857,
+        0 10px 10px rgba(4, 120, 87, 0.3),
+        0 10px 20px rgba(4, 120, 87, 0.2) !important;
+    }
+    
+    &:active:not(:disabled) {
+      box-shadow: 
+        0 2px 0 0 #047857,
+        0 3px 0 0 #047857,
+        0 4px 0 0 #047857,
+        0 4px 4px rgba(4, 120, 87, 0.3),
+        0 4px 8px rgba(4, 120, 87, 0.2) !important;
+    }
+  }
+  
+  &.bg-error {
+    background-color: #EF4444 !important;
+    color: white !important;
+    box-shadow: 
+      0 4px 0 0 #DC2626,
+      0 5px 0 0 #DC2626,
+      0 6px 0 0 #DC2626,
+      0 7px 0 0 #DC2626,
+      0 8px 0 0 #DC2626,
+      0 8px 8px rgba(220, 38, 38, 0.3),
+      0 8px 16px rgba(220, 38, 38, 0.2) !important;
+    
+    &:hover:not(:disabled) {
+      background-color: #F87171 !important;
+      box-shadow: 
+        0 6px 0 0 #DC2626,
+        0 7px 0 0 #DC2626,
+        0 8px 0 0 #DC2626,
+        0 9px 0 0 #DC2626,
+        0 10px 0 0 #DC2626,
+        0 10px 10px rgba(220, 38, 38, 0.3),
+        0 10px 20px rgba(220, 38, 38, 0.2) !important;
+    }
+    
+    &:active:not(:disabled) {
+      box-shadow: 
+        0 2px 0 0 #DC2626,
+        0 3px 0 0 #DC2626,
+        0 4px 0 0 #DC2626,
+        0 4px 4px rgba(220, 38, 38, 0.3),
+        0 4px 8px rgba(220, 38, 38, 0.2) !important;
+    }
+  }
+  
+  &.bg-warning {
+    background-color: #F59E0B !important;
+    color: black !important;
+    box-shadow: 
+      0 4px 0 0 #D97706,
+      0 5px 0 0 #D97706,
+      0 6px 0 0 #D97706,
+      0 7px 0 0 #D97706,
+      0 8px 0 0 #D97706,
+      0 8px 8px rgba(217, 119, 6, 0.3),
+      0 8px 16px rgba(217, 119, 6, 0.2) !important;
+    
+    &:hover:not(:disabled) {
+      background-color: #FBBF24 !important;
+      box-shadow: 
+        0 6px 0 0 #D97706,
+        0 7px 0 0 #D97706,
+        0 8px 0 0 #D97706,
+        0 9px 0 0 #D97706,
+        0 10px 0 0 #D97706,
+        0 10px 10px rgba(217, 119, 6, 0.3),
+        0 10px 20px rgba(217, 119, 6, 0.2) !important;
+    }
+    
+    &:active:not(:disabled) {
+      box-shadow: 
+        0 2px 0 0 #D97706,
+        0 3px 0 0 #D97706,
+        0 4px 0 0 #D97706,
+        0 4px 4px rgba(217, 119, 6, 0.3),
+        0 4px 8px rgba(217, 119, 6, 0.2) !important;
+    }
+  }
+  
+  &.bg-info {
+    background-color: #06B6D4 !important;
+    color: white !important;
+    box-shadow: 
+      0 4px 0 0 #0891B2,
+      0 5px 0 0 #0891B2,
+      0 6px 0 0 #0891B2,
+      0 7px 0 0 #0891B2,
+      0 8px 0 0 #0891B2,
+      0 8px 8px rgba(8, 145, 178, 0.3),
+      0 8px 16px rgba(8, 145, 178, 0.2) !important;
+    
+    &:hover:not(:disabled) {
+      background-color: #22D3EE !important;
+      box-shadow: 
+        0 6px 0 0 #0891B2,
+        0 7px 0 0 #0891B2,
+        0 8px 0 0 #0891B2,
+        0 9px 0 0 #0891B2,
+        0 10px 0 0 #0891B2,
+        0 10px 10px rgba(8, 145, 178, 0.3),
+        0 10px 20px rgba(8, 145, 178, 0.2) !important;
+    }
+    
+    &:active:not(:disabled) {
+      box-shadow: 
+        0 2px 0 0 #0891B2,
+        0 3px 0 0 #0891B2,
+        0 4px 0 0 #0891B2,
+        0 4px 4px rgba(8, 145, 178, 0.3),
+        0 4px 8px rgba(8, 145, 178, 0.2) !important;
+    }
+  }
+  
+  &:disabled {
+    box-shadow: none !important;
+  }
+}
+
+// Icon buttons with 3D effect
+.v-btn--elevated-3d.v-btn--icon {
+  width: 48px !important;
+  height: 48px !important;
+  padding: 0 !important;
+  
+  .v-icon {
+    font-size: 24px !important;
+  }
+}
+
+// Size variations
+.v-btn--elevated-3d {
+  &.v-btn--size-small {
+    height: 36px !important;
+    padding: 0 16px !important;
+    font-size: 14px !important;
+    
+    &.v-btn--icon {
+      width: 36px !important;
+      height: 36px !important;
+      
+      .v-icon {
+        font-size: 20px !important;
+      }
+    }
+  }
+  
+  &.v-btn--size-large {
+    height: 56px !important;
+    padding: 0 32px !important;
+    font-size: 18px !important;
+    
+    &.v-btn--icon {
+      width: 56px !important;
+      height: 56px !important;
+      
+      .v-icon {
+        font-size: 28px !important;
+      }
+    }
+  }
+}
+
+// Bottom navigation 3D buttons
+.v-bottom-navigation {
+  .v-btn {
+    position: relative;
+    transition: all 0.15s ease-out !important;
+    
+    &.v-btn--active {
+      transform: translateY(-2px);
+      
+      &::before {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 10%;
+        right: 10%;
+        height: 2px;
+        background: currentColor;
+        border-radius: 2px;
+        opacity: 0.5;
+      }
+    }
+  }
+}
+
+// Floating action button style
+.v-btn--fab-3d {
+  @extend .v-btn--elevated-3d;
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  
+  &.v-btn--size-small {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  
+  &.v-btn--size-large {
+    width: 72px !important;
+    height: 72px !important;
+  }
+}
+
+// Gradient button variation
+.v-btn--gradient-3d {
+  @extend .v-btn--elevated-3d;
+  background: linear-gradient(135deg, #3B82F6 0%, #7C3AED 100%) !important;
+  color: white !important;
+  box-shadow: 
+    0 4px 0 0 #5B21B6,
+    0 5px 0 0 #5B21B6,
+    0 6px 0 0 #5B21B6,
+    0 7px 0 0 #5B21B6,
+    0 8px 0 0 #5B21B6,
+    0 8px 8px rgba(91, 33, 182, 0.3),
+    0 8px 16px rgba(91, 33, 182, 0.2) !important;
+  
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%) !important;
+    box-shadow: 
+      0 6px 0 0 #5B21B6,
+      0 7px 0 0 #5B21B6,
+      0 8px 0 0 #5B21B6,
+      0 9px 0 0 #5B21B6,
+      0 10px 0 0 #5B21B6,
+      0 10px 10px rgba(91, 33, 182, 0.3),
+      0 10px 20px rgba(91, 33, 182, 0.2) !important;
+  }
+  
+  &:active:not(:disabled) {
+    box-shadow: 
+      0 2px 0 0 #5B21B6,
+      0 3px 0 0 #5B21B6,
+      0 4px 0 0 #5B21B6,
+      0 4px 4px rgba(91, 33, 182, 0.3),
+      0 4px 8px rgba(91, 33, 182, 0.2) !important;
+  }
+}
+
+// Global button animation improvements
+.v-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  
+  &:not(.v-btn--elevated-3d) {
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    }
+  }
+}

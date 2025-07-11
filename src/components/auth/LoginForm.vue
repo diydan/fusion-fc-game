@@ -1,0 +1,304 @@
+<template>
+  <v-card class="mx-auto pa-4" max-width="400">
+    <v-card-title class="text-h5 text-center">
+      {{ isSignUp ? 'Create Account' : 'Sign In' }}
+    </v-card-title>
+
+    <v-card-text>
+      <!-- Social Login Buttons -->
+      <v-btn
+        block
+        color="white"
+        variant="outlined"
+        prepend-icon="mdi-google"
+        class="mb-3"
+        @click="handleGoogleLogin"
+        :loading="loading"
+      >
+        Continue with Google
+      </v-btn>
+
+      <v-btn
+        block
+        color="primary"
+        variant="outlined"
+        prepend-icon="mdi-ethereum"
+        class="mb-3"
+        @click="handleMetaMaskLogin"
+        :loading="loading"
+      >
+        Connect MetaMask
+      </v-btn>
+
+      <v-divider class="my-4">
+        <span class="text-caption">OR</span>
+      </v-divider>
+
+      <!-- Email/Password Form -->
+      <v-form ref="form" v-model="valid" @submit.prevent="handleEmailAuth">
+        <v-text-field
+          v-model="email"
+          label="Email"
+          type="email"
+          variant="outlined"
+          density="comfortable"
+          :rules="emailRules"
+          class="mb-2"
+        />
+
+        <v-text-field
+          v-if="isSignUp"
+          v-model="displayName"
+          label="Display Name"
+          variant="outlined"
+          density="comfortable"
+          :rules="nameRules"
+          class="mb-2"
+        />
+
+        <v-text-field
+          v-model="password"
+          label="Password"
+          :type="showPassword ? 'text' : 'password'"
+          variant="outlined"
+          density="comfortable"
+          :rules="passwordRules"
+          :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
+          @click:append-inner="showPassword = !showPassword"
+          class="mb-2"
+        />
+
+        <v-text-field
+          v-if="isSignUp"
+          v-model="confirmPassword"
+          label="Confirm Password"
+          :type="showPassword ? 'text' : 'password'"
+          variant="outlined"
+          density="comfortable"
+          :rules="confirmPasswordRules"
+          class="mb-3"
+        />
+
+        <v-btn
+          block
+          color="primary"
+          type="submit"
+          :loading="loading"
+          :disabled="!valid"
+        >
+          {{ isSignUp ? 'Sign Up' : 'Sign In' }}
+        </v-btn>
+      </v-form>
+
+      <!-- Toggle Sign Up/Sign In -->
+      <div class="text-center mt-4">
+        <span class="text-body-2">
+          {{ isSignUp ? 'Already have an account?' : "Don't have an account?" }}
+        </span>
+        <v-btn
+          variant="text"
+          color="primary"
+          size="small"
+          @click="isSignUp = !isSignUp"
+        >
+          {{ isSignUp ? 'Sign In' : 'Sign Up' }}
+        </v-btn>
+      </div>
+
+      <!-- Forgot Password -->
+      <div v-if="!isSignUp" class="text-center">
+        <v-btn
+          variant="text"
+          color="primary"
+          size="small"
+          @click="showResetDialog = true"
+        >
+          Forgot Password?
+        </v-btn>
+      </div>
+
+      <!-- Error Message -->
+      <v-alert
+        v-if="error"
+        type="error"
+        variant="tonal"
+        class="mt-4"
+        closable
+        @click:close="error = null"
+      >
+        {{ error }}
+      </v-alert>
+    </v-card-text>
+
+    <!-- Password Reset Dialog -->
+    <v-dialog v-model="showResetDialog" max-width="400">
+      <v-card>
+        <v-card-title>Reset Password</v-card-title>
+        <v-card-text>
+          <v-text-field
+            v-model="resetEmail"
+            label="Email"
+            type="email"
+            variant="outlined"
+            density="comfortable"
+            :rules="emailRules"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="showResetDialog = false">Cancel</v-btn>
+          <v-btn color="primary" @click="handlePasswordReset">Send Reset Email</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </v-card>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useUserStore } from '@/stores/user';
+import { signInWithGoogle } from '@/services/auth/google';
+import { signInWithEmail, signUpWithEmail, resetPassword } from '@/services/auth/email';
+import { signInWithMetaMask } from '@/services/auth/metamask';
+
+const router = useRouter();
+const userStore = useUserStore();
+
+// Form state
+const form = ref(null);
+const valid = ref(false);
+const loading = ref(false);
+const error = ref(null);
+const showPassword = ref(false);
+const isSignUp = ref(false);
+const showResetDialog = ref(false);
+
+// Form fields
+const email = ref('');
+const password = ref('');
+const confirmPassword = ref('');
+const displayName = ref('');
+const resetEmail = ref('');
+
+// Validation rules
+const emailRules = [
+  v => !!v || 'Email is required',
+  v => /.+@.+\..+/.test(v) || 'Email must be valid'
+];
+
+const passwordRules = [
+  v => !!v || 'Password is required',
+  v => v.length >= 6 || 'Password must be at least 6 characters'
+];
+
+const confirmPasswordRules = [
+  v => !!v || 'Please confirm your password',
+  v => v === password.value || 'Passwords must match'
+];
+
+const nameRules = [
+  v => !!v || 'Display name is required',
+  v => v.length >= 2 || 'Name must be at least 2 characters'
+];
+
+// Handlers
+const handleEmailAuth = async () => {
+  if (!form.value.validate()) return;
+  
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    if (isSignUp.value) {
+      const { user, error: signUpError } = await signUpWithEmail(
+        email.value, 
+        password.value, 
+        displayName.value
+      );
+      
+      if (signUpError) throw new Error(signUpError);
+      
+      // Success message
+      error.value = 'Account created! Please check your email to verify your account.';
+    } else {
+      const { user, error: signInError } = await signInWithEmail(email.value, password.value);
+      
+      if (signInError) throw new Error(signInError);
+      
+      // Navigate to dashboard
+      router.push('/dashboard');
+    }
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleGoogleLogin = async () => {
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    const { user, error: googleError } = await signInWithGoogle();
+    
+    if (googleError) throw new Error(googleError);
+    
+    // Navigate to dashboard
+    router.push('/dashboard');
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleMetaMaskLogin = async () => {
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    const { address, error: metamaskError, message } = await signInWithMetaMask();
+    
+    if (metamaskError) throw new Error(metamaskError);
+    
+    // Set user in store
+    await userStore.setMetaMaskUser(address);
+    
+    // Show info message if provided
+    if (message) {
+      console.info(message);
+    }
+    
+    // Navigate to dashboard
+    router.push('/dashboard');
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handlePasswordReset = async () => {
+  if (!resetEmail.value || !/.+@.+\..+/.test(resetEmail.value)) {
+    error.value = 'Please enter a valid email';
+    return;
+  }
+  
+  loading.value = true;
+  
+  try {
+    const { error: resetError } = await resetPassword(resetEmail.value);
+    
+    if (resetError) throw new Error(resetError);
+    
+    showResetDialog.value = false;
+    error.value = 'Password reset email sent! Check your inbox.';
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    loading.value = false;
+  }
+};
+</script>

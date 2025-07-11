@@ -25,7 +25,9 @@ export default createVuetify({
   defaults: {
     VBtn: {
       variant: 'flat',
-      rounded: 'lg'
+      rounded: 'lg',
+      elevation: 0,
+      style: 'font-weight: 600; text-transform: none;'
     },
     VCard: {
       rounded: 'lg',

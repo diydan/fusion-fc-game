@@ -172,12 +172,12 @@ const logout = () => {
 
 <style scoped>
 .v-navigation-drawer {
-  background-color: #1E1E1E !important;
+  background-color: #1E293B !important;
 }
 
 .mobile-header {
-  background-color: #1E1E1E !important;
-  border-bottom: 1px solid rgba(197, 217, 232, 0.12) !important;
+  background-color: #1E293B !important;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.12) !important;
 }
 
 @media (max-width: 959px) {
@@ -192,8 +192,8 @@ const logout = () => {
 }
 
 .desktop-header {
-  background-color: #1E1E1E !important;
-  border-bottom: 1px solid rgba(197, 217, 232, 0.12) !important;
+  background-color: #1E293B !important;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.12) !important;
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -244,8 +244,8 @@ const logout = () => {
   }
 
   .v-navigation-drawer {
-    background-color: #1E1E1E !important;
-    border-right: 1px solid rgba(197, 217, 232, 0.12) !important;
+    background-color: #1E293B !important;
+    border-right: 1px solid rgba(241, 245, 249, 0.12) !important;
   }
 }
 </style>

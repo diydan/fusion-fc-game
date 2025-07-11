@@ -6,7 +6,15 @@
       "Bash(rm:*)",
       "Bash(pnpm install:*)",
       "Bash(npm install:*)",
-      "Bash(/usr/local/bin/pnpm install)"
+      "Bash(/usr/local/bin/pnpm install)",
+      "Bash(npm install:*)",
+      "Bash(ls:*)",
+      "Bash(npm run:*)",
+      "Bash(/usr/local/bin/pnpm add firebase ethers)",
+      "Bash(command -v:*)",
+      "Bash(find:*)",
+      "Bash(pnpm list:*)",
+      "Bash(pnpm add:*)"
     ],
     "deny": []
   }

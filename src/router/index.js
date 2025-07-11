@@ -1,38 +1,113 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Dashboard from '@/views/Dashboard.vue'
+import { useUserStore } from '@/stores/user'
+
+// Route guards
+const requireAuth = (to, from, next) => {
+  const userStore = useUserStore()
+  
+  if (userStore.loading) {
+    // Wait for auth to initialize
+    const unwatch = userStore.$subscribe((mutation, state) => {
+      if (!state.loading) {
+        unwatch()
+        if (state.isAuthenticated) {
+          next()
+        } else {
+          next('/login')
+        }
+      }
+    })
+  } else if (userStore.isAuthenticated) {
+    next()
+  } else {
+    next('/login')
+  }
+}
+
+const requireGuest = (to, from, next) => {
+  const userStore = useUserStore()
+  
+  if (userStore.loading) {
+    // Wait for auth to initialize
+    const unwatch = userStore.$subscribe((mutation, state) => {
+      if (!state.loading) {
+        unwatch()
+        if (!state.isAuthenticated) {
+          next()
+        } else {
+          next('/')
+        }
+      }
+    })
+  } else if (!userStore.isAuthenticated) {
+    next()
+  } else {
+    next('/')
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/Login.vue'),
+      beforeEnter: requireGuest
+    },
+    {
       path: '/',
       name: 'dashboard',
-      component: Dashboard
+      component: Dashboard,
+      beforeEnter: requireAuth
     },
     {
       path: '/my-team',
       name: 'my-team',
-      component: () => import('@/views/MyTeam.vue')
+      component: () => import('@/views/MyTeam.vue'),
+      beforeEnter: requireAuth
     },
     {
       path: '/my-games',
       name: 'my-games',
-      component: () => import('@/views/MyGames.vue')
+      component: () => import('@/views/MyGames.vue'),
+      beforeEnter: requireAuth
     },
     {
       path: '/leaderboards',
       name: 'leaderboards',
-      component: () => import('@/views/Leaderboards.vue')
+      component: () => import('@/views/Leaderboards.vue'),
+      beforeEnter: requireAuth
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('@/views/Profile.vue'),
+      beforeEnter: requireAuth
     },
     {
       path: '/settings',
       name: 'settings',
-      component: () => import('@/views/Settings.vue')
+      component: () => import('@/views/Settings.vue'),
+      beforeEnter: requireAuth
     },
     {
       path: '/theme',
       name: 'theme',
-      component: () => import('@/views/Theme.vue')
+      component: () => import('@/views/Theme.vue'),
+      beforeEnter: requireAuth
+    },
+    {
+      path: '/buttons',
+      name: 'buttons',
+      component: () => import('@/views/ButtonDemo.vue'),
+      beforeEnter: requireAuth
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('@/views/NotFound.vue')
     }
   ]
 })
