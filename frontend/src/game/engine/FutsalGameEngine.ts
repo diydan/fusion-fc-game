@@ -1,4 +1,6 @@
 // FlowAI removed - using original AI only
+import { UtilityAI, type AIContext } from '../ai/UtilityAI'
+import { SteeringBehaviors, type Vector2D } from '../ai/SteeringBehaviors'
 
 export interface PlayerAttributes {
   // Physical
@@ -1367,19 +1369,26 @@ export class FutsalGameEngine {
       player.targetX = bestX
       player.targetY = bestY
     } else if (tactic === 'pass-move' && teamHasBall) {
-      // Constant movement to create passing lanes
-      const time = Date.now() / 2000
-      const movePattern = player.number % 2
+      // Use wander behavior for natural movement patterns
+      const maxSpeed = this.getPlayerMaxSpeed(player)
+      const wanderForce = SteeringBehaviors.wander(player, maxSpeed, 50 * tacticalAwareness)
       
-      if (movePattern === 0) {
-        // Horizontal movement
-        const baseY = this.config.fieldHeight / 2
-        player.targetX = centralZoneX + Math.sin(time) * 80 * tacticalAwareness
-        player.targetY = baseY + Math.cos(time * 1.5) * 60
+      // Apply boundaries to keep player in position
+      const centerX = centralZoneX
+      const centerY = this.config.fieldHeight / 2
+      const maxDistance = 100
+      
+      // Seek back to zone if too far
+      const distFromCenter = Math.hypot(player.x - centerX, player.y - centerY)
+      if (distFromCenter > maxDistance) {
+        const seekForce = SteeringBehaviors.arrive(player, { x: centerX, y: centerY }, maxSpeed)
+        const combined = SteeringBehaviors.combine([
+          { force: wanderForce, weight: 0.3 },
+          { force: seekForce, weight: 0.7 }
+        ])
+        SteeringBehaviors.applyForce(player, combined, 1/60)
       } else {
-        // Diagonal runs
-        player.targetX = centralZoneX + Math.cos(time) * 100 * tacticalAwareness
-        player.targetY = this.config.fieldHeight / 2 + Math.sin(time * 0.8) * 80
+        SteeringBehaviors.applyForce(player, wanderForce, 1/60)
       }
     } else if (!teamHasBall) {
       // Defensive positioning
@@ -1448,10 +1457,11 @@ export class FutsalGameEngine {
       player.targetX = pivotX
       player.targetY = this.config.fieldHeight / 2
       
-      // Small movements to receive ball
+      // Use subtle wander for small movements
       if (teamHasBall) {
-        const time = Date.now() / 1500
-        player.targetY += Math.sin(time) * 20
+        const maxSpeed = this.getPlayerMaxSpeed(player) * 0.3
+        const wanderForce = SteeringBehaviors.wander(player, maxSpeed, 20)
+        SteeringBehaviors.applyForce(player, wanderForce, 1/60)
       }
     } else if (tactic === 'wing-play') {
       // Wide positioning
@@ -1516,9 +1526,19 @@ export class FutsalGameEngine {
           player.targetX = oppositionGoalX + (player.team === 'home' ? -80 : 80)
           player.targetY = bestGapY
           
-          // Curved runs
-          const runCurve = Math.sin(time * (1 + offBallQuality * 0.5)) * 30 * anticipation
-          player.targetX += runCurve
+          // Use pursuit behavior to run into space
+          const maxSpeed = this.getPlayerMaxSpeed(player)
+          const targetPos = { x: player.targetX!, y: player.targetY! }
+          const arriveForce = SteeringBehaviors.arrive(player, targetPos, maxSpeed)
+          
+          // Add slight wander for curved runs
+          const wanderForce = SteeringBehaviors.wander(player, maxSpeed * 0.3, 30 * anticipation)
+          
+          const combined = SteeringBehaviors.combine([
+            { force: arriveForce, weight: 0.7 },
+            { force: wanderForce, weight: 0.3 * offBallQuality }
+          ])
+          SteeringBehaviors.applyForce(player, combined, 1/60)
         } else {
           // No defenders, go straight to goal
           player.targetX = oppositionGoalX + (player.team === 'home' ? -60 : 60)
@@ -1549,17 +1569,52 @@ export class FutsalGameEngine {
     }
   }
 
+  private getPlayerMaxSpeed(player: Player): number {
+    const staminaFactor = player.stamina / player.maxStamina
+    const baseSpeed = 2.5 + (player.attributes.pace / 99) * 2.5
+    const maxSpeed = baseSpeed * (0.6 + staminaFactor * 0.4) * (0.8 + (player.attributes.agility / 99) * 0.2)
+    return maxSpeed
+  }
+
   private updatePlayerMovement(player: Player, maxSpeed: number, accelRate: number): void {
     if (player.targetX !== undefined && player.targetY !== undefined) {
-      const dx = player.targetX - player.x
-      const dy = player.targetY - player.y
-      const dist = Math.hypot(dx, dy)
+      const target = { x: player.targetX, y: player.targetY }
+      const dist = Math.hypot(target.x - player.x, target.y - player.y)
       const currentSpeed = Math.hypot(player.vx, player.vy)
 
+      // Get other players for avoidance
+      const teammates = this.players.filter(p => p.team === player.team && p !== player && !p.isSentOff)
+      const opponents = this.players.filter(p => p.team !== player.team && !p.isSentOff)
+      
+      // Calculate steering forces
+      const forces: Array<{ force: Vector2D; weight: number }> = []
+      
       if (dist > 5) {
-        const desiredAngle = Math.atan2(dy, dx)
+        // Primary movement - arrive at target
+        const arriveForce = SteeringBehaviors.arrive(player, target, maxSpeed)
+        forces.push({ force: arriveForce, weight: 1.0 })
         
-        // Update facing direction with smooth turning
+        // Separation from teammates to avoid crowding
+        const separationForce = SteeringBehaviors.separation(player, teammates, 25)
+        if (Math.hypot(separationForce.x, separationForce.y) > 0) {
+          forces.push({ force: separationForce, weight: 0.8 })
+        }
+        
+        // Avoid opponents when not challenging for ball
+        const hasBall = this.ball.possessor === player
+        if (!hasBall) {
+          const avoidanceForce = SteeringBehaviors.separation(player, opponents, 35)
+          if (Math.hypot(avoidanceForce.x, avoidanceForce.y) > 0) {
+            forces.push({ force: avoidanceForce, weight: 0.6 })
+          }
+        }
+        
+        // Apply combined steering force
+        const steeringForce = SteeringBehaviors.combine(forces)
+        SteeringBehaviors.applyForce(player, steeringForce, 1/60)
+        
+        // Update facing direction smoothly
+        const desiredAngle = Math.atan2(player.vy, player.vx)
         const facingDiff = desiredAngle - player.facing
         const turnSpeed = (player.attributes.agility / 99) * 0.15
         
@@ -1570,38 +1625,8 @@ export class FutsalGameEngine {
         
         player.facing += Math.sign(normalizedDiff) * Math.min(Math.abs(normalizedDiff), turnSpeed)
         
-        // Realistic acceleration curves
-        const accelerationCurve = (speed: number, max: number) => {
-          const ratio = speed / max
-          if (ratio < 0.3) return 1.2 // Quick initial burst
-          if (ratio < 0.7) return 1.0 // Steady acceleration
-          if (ratio < 0.9) return 0.7 // Approaching top speed
-          return 0.3 // Hard to reach absolute max
-        }
-        
-        const accelModifier = accelerationCurve(currentSpeed, maxSpeed)
-        const effectiveAccel = accelRate * accelModifier * (player.attributes.acceleration / 99)
-        
-        // Movement based on facing direction and control
-        const controlQuality = (player.attributes.technique / 99) * 0.7 + 0.3
-        const targetSpeed = Math.min(maxSpeed, dist / 10) * controlQuality
-        
-        // Add momentum-based movement
+        // Apply momentum and balance effects
         const momentum = currentSpeed / maxSpeed
-        const inertia = 0.85 + (player.attributes.strength / 99) * 0.1
-        
-        // Calculate desired velocity based on facing
-        const targetVx = Math.cos(player.facing) * targetSpeed
-        const targetVy = Math.sin(player.facing) * targetSpeed
-        
-        // Apply acceleration with momentum consideration
-        const vxDiff = targetVx - player.vx
-        const vyDiff = targetVy - player.vy
-        
-        player.vx += vxDiff * effectiveAccel * (1 - momentum * 0.3)
-        player.vy += vyDiff * effectiveAccel * (1 - momentum * 0.3)
-        
-        // Apply slight drift when changing direction at speed
         if (momentum > 0.5) {
           const driftFactor = (1 - player.attributes.balance / 99) * 0.1
           player.vx *= (1 - driftFactor)
@@ -1615,12 +1640,22 @@ export class FutsalGameEngine {
         player.vy *= decelRate
         
         // Face the target when close
-        player.facing = Math.atan2(dy, dx)
+        player.facing = Math.atan2(target.y - player.y, target.x - player.x)
+      }
+      
+      // Limit to max speed (accounting for stamina)
+      const speed = Math.hypot(player.vx, player.vy)
+      const fatigueFactor = player.stamina / player.maxStamina
+      const effectiveMaxSpeed = maxSpeed * (0.7 + fatigueFactor * 0.3)
+      
+      if (speed > effectiveMaxSpeed) {
+        const scale = effectiveMaxSpeed / speed
+        player.vx *= scale
+        player.vy *= scale
       }
       
       // Enhanced stamina system
-      const playerSpeed = Math.hypot(player.vx, player.vy)
-      const speedRatio = playerSpeed / maxSpeed
+      const speedRatio = speed / maxSpeed
       const workRateFactor = player.attributes.workRate / 99
       const fitnessLevel = player.attributes.stamina / 99
       
@@ -1636,14 +1671,6 @@ export class FutsalGameEngine {
         // Walking/standing recovers stamina
         const recoveryRate = 0.08 * (0.7 + fitnessLevel * 0.3) * (0.8 + (player.attributes.determination / 99) * 0.2)
         player.stamina = Math.min(player.maxStamina, player.stamina + recoveryRate)
-      }
-      
-      // Fatigue affects max speed
-      const fatigueFactor = player.stamina / player.maxStamina
-      if (fatigueFactor < 0.5) {
-        const fatigueSpeedPenalty = 0.7 + fatigueFactor * 0.6
-        player.vx *= fatigueSpeedPenalty
-        player.vy *= fatigueSpeedPenalty
       }
     }
   }
@@ -1713,60 +1740,59 @@ export class FutsalGameEngine {
     this.ball.spin.y = player.vx * 0.3
     this.ball.spin.z *= 0.9
     
-    // Decision making
-    const nearGoal = player.team === 'home' ? 
-      this.ball.x > this.config.fieldWidth - 180 : 
-      this.ball.x < 180
+    // Create AI context for utility-based decision making
+    const teammates = this.players.filter(p => p.team === player.team && p !== player && !p.isSentOff)
+    const opponents = this.players.filter(p => p.team !== player.team && !p.isSentOff)
     
-    const decisionQuality = (
-      player.attributes.decisions / 99 * 0.4 +
-      player.attributes.composure / 99 * 0.3 +
-      player.attributes.vision / 99 * 0.3
-    )
-    
-    // Pressure affects decisions
-    const pressure = this.calculatePressure(player)
-    const calmness = player.attributes.composure / 99
-    const panicFactor = pressure * (1 - calmness)
-    
-    // Base chances modified by role and situation - increased for more passing
-    let basePassChance = player.role === 'defender' ? 0.12 : 0.08
-    const baseShootChance = 0.05
-    
-    // Tactic modifiers
-    if (tactic === 'pass-move') basePassChance *= 2.0
-    if (tactic === 'pivot' && player.role === 'striker') basePassChance *= 1.5
-    
-    // Too many touches increases chance to pass
-    if (player.consecutiveTouches > 2) {
-      basePassChance += 0.04 * player.consecutiveTouches
+    const aiContext: AIContext = {
+      player,
+      ball: this.ball,
+      gameState: this.gameState,
+      teammates,
+      opponents,
+      fieldWidth: this.config.fieldWidth,
+      fieldHeight: this.config.fieldHeight,
+      goalWidth: this.config.goalWidth
     }
     
-    // Increase passing when teammates are making runs
-    const teammatesInSpace = this.players.filter(p => 
-      p.team === player.team && 
-      p !== player && 
-      !p.isSentOff &&
-      p.targetX !== undefined &&
-      Math.abs(p.y - p.targetY!) > 20
-    ).length
-    if (teammatesInSpace > 0) {
-      basePassChance *= 1.3
-    }
+    // Get best action from utility AI
+    const bestAction = UtilityAI.evaluateActions(aiContext)
     
-    // Apply decision quality and panic
-    const passChance = basePassChance * (0.5 + decisionQuality * 0.5) * (1 + panicFactor)
-    const shootChance = nearGoal ? baseShootChance * (0.5 + decisionQuality * 0.5) : 0
-    
-    const shouldPass = Math.random() < passChance
-    const shouldShoot = Math.random() < shootChance
-    
-    if (shouldShoot && nearGoal) {
-      this.executeShot(player)
-      this.ball.possessor = null
-    } else if (shouldPass) {
-      this.executePass(player)
-      this.ball.possessor = null
+    // Execute the chosen action
+    switch (bestAction.type) {
+      case 'shoot':
+        this.executeShot(player)
+        this.ball.possessor = null
+        break
+        
+      case 'pass':
+        if (bestAction.target && 'team' in bestAction.target) {
+          // Pass to specific teammate
+          const passTarget = bestAction.target as Player
+          this.executePassToTarget(player, passTarget)
+        } else {
+          // Fallback to best pass
+          this.executePass(player)
+        }
+        this.ball.possessor = null
+        break
+        
+      case 'clear':
+        // Execute clearance (long pass/shot away from danger)
+        this.executeClearance(player)
+        this.ball.possessor = null
+        break
+        
+      case 'hold':
+        // Shield the ball - reduce movement speed but maintain possession
+        player.vx *= 0.5
+        player.vy *= 0.5
+        break
+        
+      case 'dribble':
+      default:
+        // Continue dribbling - no action needed
+        break
     }
   }
 
@@ -1923,7 +1949,7 @@ export class FutsalGameEngine {
   ): { vx: number; vy: number; vz: number; spin: { x: number; y: number; z: number } } {
     // Player shot attributes
     const shotPower = player.attributes.strength / 99
-    const shotAccuracy = player.attributes.finishing / 99
+    let shotAccuracy = player.attributes.finishing / 99
     const shotTechnique = player.attributes.technique / 99
     const composure = player.attributes.composure / 99
     
@@ -2003,6 +2029,67 @@ export class FutsalGameEngine {
     }
     
     return { vx, vy, vz, spin }
+  }
+
+  private executePassToTarget(player: Player, target: Player): void {
+    // Calculate pass physics directly to specified target
+    const dx = target.x - this.ball.x
+    const dy = target.y - this.ball.y
+    const dist = Math.hypot(dx, dy)
+    
+    // Lead the target based on their velocity
+    const leadTime = dist / 200 // Estimated ball speed
+    const leadX = target.vx * leadTime * 20
+    const leadY = target.vy * leadTime * 20
+    
+    const targetX = target.x + leadX
+    const targetY = target.y + leadY
+    const angle = Math.atan2(targetY - this.ball.y, targetX - this.ball.x)
+    
+    // Pass speed based on distance
+    const passSpeed = Math.min(6, 3 + dist / 100)
+    
+    // Apply pass
+    this.ball.vx = Math.cos(angle) * passSpeed
+    this.ball.vy = Math.sin(angle) * passSpeed
+    this.ball.vz = dist > 100 ? 1 : 0 // Loft for longer passes
+    
+    // Record pass
+    this.gameState.passCount[player.team]++
+    this.gameState.matchStats.passesAttempted[player.team]++
+    player.consecutiveTouches = 0
+    this.ball.lastTouchTime = Date.now()
+    
+    // Store pass info
+    this.ball.lastKicker = player
+    this.lastPassTarget = target
+    this.lastPassTime = Date.now()
+  }
+  
+  private executeClearance(player: Player): void {
+    // Clear the ball away from danger
+    const goalX = player.team === 'home' ? 0 : this.config.fieldWidth
+    const awayFromGoalX = player.team === 'home' ? this.config.fieldWidth : 0
+    
+    // Aim for far corner or wing
+    const targetY = Math.random() > 0.5 ? 0 : this.config.fieldHeight
+    const angle = Math.atan2(targetY - this.ball.y, awayFromGoalX - this.ball.x)
+    
+    // Strong clearance
+    const clearanceSpeed = 8 + Math.random() * 2
+    
+    this.ball.vx = Math.cos(angle) * clearanceSpeed
+    this.ball.vy = Math.sin(angle) * clearanceSpeed
+    this.ball.vz = 3 // High clearance
+    
+    // Add spin for distance
+    this.ball.spin = { x: -2, y: 0, z: 0 }
+    
+    // Record as a pass attempt
+    this.gameState.passCount[player.team]++
+    player.consecutiveTouches = 0
+    this.ball.lastTouchTime = Date.now()
+    this.ball.lastKicker = player
   }
 
   private executePass(player: Player): void {

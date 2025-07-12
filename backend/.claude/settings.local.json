@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm run deploy:check:*)",
       "Bash(firebase functions:list:*)",
-      "Bash(firebase projects:list:*)"
+      "Bash(firebase projects:list:*)",
+      "Bash(npm run deploy:*)"
     ],
     "deny": []
   }

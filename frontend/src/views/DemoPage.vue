@@ -21,11 +21,20 @@
           <v-card-title>Multiplayer Head-to-Head</v-card-title>
           <v-card-text>
             <div class="d-flex ga-4 flex-wrap">
-              <v-btn @click="joinQueue" color="primary" prepend-icon="mdi-account-group">Join Queue (mock)</v-btn>
+              <v-btn @click="joinQueue" color="primary" prepend-icon="mdi-account-group">Join Queue</v-btn>
+              <v-btn @click="sendGameUpdate" color="info" prepend-icon="mdi-sync" :disabled="!matchId">Send Game Update</v-btn>
               <v-btn @click="validateGameState" color="secondary" prepend-icon="mdi-check-circle">Validate Sample State</v-btn>
               <v-btn @click="handleDisconnect" color="error" prepend-icon="mdi-account-off">Simulate Disconnect</v-btn>
               <v-btn @click="completeMatch" color="success" prepend-icon="mdi-trophy">Complete Match (pick winner)</v-btn>
             </div>
+            
+            <v-alert v-if="currentMatch" type="info" class="mt-4">
+              <div><strong>Match Status:</strong> {{ currentMatch.status }}</div>
+              <div v-if="gameState">
+                <strong>Game State:</strong> Score {{ gameState.score?.home || 0 }} - {{ gameState.score?.away || 0 }}, 
+                Time: {{ Math.floor((gameState.time || 0) / 60) }}:{{ String((gameState.time || 0) % 60).padStart(2, '0') }}
+              </div>
+            </v-alert>
           </v-card-text>
         </v-card>
       </v-tabs-window-item>
@@ -53,12 +62,14 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/config/firebase'
 import FootballSimulation from '@/components/FootballSimulation.vue'
 import * as multiplayerService from '@/services/multiplayer'
+import { joinMatchmakingQueue, subscribeToMatch } from '@/services/firebase/matchmaking'
+import { updateGameState, subscribeToGameState } from '@/services/firebase/gameSync'
 
 const tab = ref('football')
 const showLogConsole = ref(false)
@@ -67,6 +78,9 @@ const gameState = ref(null)
 const isInLoop = ref(false)
 const matchId = ref(null)
 const userStore = useUserStore()
+const matchSubscription = ref(null)
+const gameStateSubscription = ref(null)
+const currentMatch = ref(null)
 
 // Logging helper
 const log = (message) => {
@@ -85,15 +99,27 @@ const joinQueue = async () => {
       throw new Error('User must be authenticated')
     }
     
-    const { success, queueId, data } = await multiplayerService.joinMatchmakingQueue({
-      userId: userStore.currentUser.uid,
-      displayName: userStore.displayName,
-      teamId: 'demo_team_' + userStore.currentUser.uid
-    })
+    // Use the Firebase matchmaking service as per README
+    const userProfile = {
+      displayName: userStore.displayName || 'Anonymous',
+      rating: 1200, // Default rating as per README
+      activeTeamId: 'demo_team_' + userStore.currentUser.uid
+    }
     
-    log('RESPONSE: Successfully joined matchmaking queue')
-    log(`RESPONSE: Queue ID: ${queueId}`)
-    log(`RESPONSE: ${JSON.stringify(data, null, 2)}`)
+    const { success, error } = await joinMatchmakingQueue(
+      userStore.currentUser.uid,
+      userProfile
+    )
+    
+    if (success) {
+      log('RESPONSE: Successfully joined matchmaking queue')
+      log(`RESPONSE: User ${userStore.currentUser.uid} is now in queue`)
+      
+      // Start listening for match assignment
+      listenForMatchAssignment()
+    } else {
+      throw new Error(error)
+    }
     
   } catch (error) {
     log(`ERROR: Failed to join queue - ${error.message}`)
@@ -198,6 +224,168 @@ const completeMatch = async () => {
     log(`ERROR: Failed to complete match - ${error.message}`)
   }
 }
+
+// Listen for match assignment after joining queue
+const listenForMatchAssignment = () => {
+  // This would typically involve listening to the matchmaking collection
+  // For demo purposes, we'll simulate finding a match after a delay
+  log('INFO: Waiting for match assignment...')
+  
+  setTimeout(() => {
+    // Simulate match found
+    const simulatedMatchId = 'demo_match_' + Date.now()
+    matchId.value = simulatedMatchId
+    log(`INFO: Match found! Match ID: ${simulatedMatchId}`)
+    
+    // Subscribe to match updates
+    subscribeToMatchUpdates(simulatedMatchId)
+  }, 3000)
+}
+
+// Subscribe to match updates
+const subscribeToMatchUpdates = (matchId) => {
+  log(`INFO: Subscribing to match ${matchId} updates...`)
+  
+  if (matchSubscription.value) {
+    matchSubscription.value() // Unsubscribe from previous
+  }
+  
+  matchSubscription.value = subscribeToMatch(matchId, (match) => {
+    currentMatch.value = match
+    log(`INFO: Match status update: ${match?.status || 'unknown'}`)
+    
+    if (match?.status === 'starting' || match?.status === 'active') {
+      // Start game state synchronization
+      startGameStateSync(matchId)
+    }
+  })
+}
+
+// Start game state synchronization
+const startGameStateSync = (matchId) => {
+  log('INFO: Starting game state synchronization...')
+  
+  if (gameStateSubscription.value) {
+    gameStateSubscription.value() // Unsubscribe from previous
+  }
+  
+  // Subscribe to game state updates
+  gameStateSubscription.value = subscribeToGameState(matchId, (state) => {
+    if (state) {
+      gameState.value = state
+      log(`INFO: Game state updated - Score: ${state.score?.home || 0} - ${state.score?.away || 0}`)
+    }
+  })
+  
+  // Simulate sending game state updates
+  simulateGamePlay(matchId)
+}
+
+// Simulate game play with state updates
+const simulateGamePlay = async (matchId) => {
+  log('INFO: Starting simulated game play...')
+  
+  // Initial game state
+  const initialState = {
+    ball: { position: { x: 0, y: 0, z: 0 }, velocity: { x: 0, y: 0, z: 0 } },
+    players: {
+      [userStore.currentUser.uid]: {
+        position: { x: -10, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
+        stamina: 100,
+        connected: true
+      }
+    },
+    score: { home: 0, away: 0 },
+    time: 0,
+    period: 'first'
+  }
+  
+  const { success, error } = await updateGameState(matchId, initialState, userStore.currentUser.uid)
+  
+  if (success) {
+    log('INFO: Initial game state sent successfully')
+  } else {
+    log(`ERROR: Failed to send game state - ${error}`)
+  }
+}
+
+// Send a game state update
+const sendGameUpdate = async () => {
+  try {
+    if (!matchId.value) {
+      throw new Error('No active match')
+    }
+    
+    log('REQUEST: Sending game state update...')
+    
+    // Simulate game progression
+    const currentTime = gameState.value?.time || 0
+    const currentScore = gameState.value?.score || { home: 0, away: 0 }
+    
+    // Random events
+    const events = ['move', 'pass', 'shoot', 'goal']
+    const event = events[Math.floor(Math.random() * events.length)]
+    
+    // Update score if goal
+    if (event === 'goal') {
+      if (Math.random() > 0.5) {
+        currentScore.home += 1
+      } else {
+        currentScore.away += 1
+      }
+      log(`INFO: GOAL! Score is now ${currentScore.home} - ${currentScore.away}`)
+    }
+    
+    const updatedState = {
+      ...gameState.value,
+      ball: { 
+        position: { 
+          x: Math.random() * 20 - 10, 
+          y: 0, 
+          z: Math.random() * 10 - 5 
+        }, 
+        velocity: { x: 0, y: 0, z: 0 } 
+      },
+      players: {
+        [userStore.currentUser.uid]: {
+          position: { 
+            x: Math.random() * 20 - 10, 
+            y: 0, 
+            z: Math.random() * 10 - 5 
+          },
+          rotation: { x: 0, y: Math.random() * Math.PI * 2, z: 0 },
+          stamina: Math.max(0, (gameState.value?.players?.[userStore.currentUser.uid]?.stamina || 100) - 1),
+          connected: true
+        }
+      },
+      score: currentScore,
+      time: currentTime + 1,
+      period: currentTime < 2700 ? 'first' : 'second'
+    }
+    
+    const { success, error } = await updateGameState(matchId.value, updatedState, userStore.currentUser.uid)
+    
+    if (success) {
+      log(`RESPONSE: Game state updated - Event: ${event}`)
+    } else {
+      throw new Error(error)
+    }
+    
+  } catch (error) {
+    log(`ERROR: Failed to send game update - ${error.message}`)
+  }
+}
+
+// Clean up subscriptions on unmount
+onUnmounted(() => {
+  if (matchSubscription.value) {
+    matchSubscription.value()
+  }
+  if (gameStateSubscription.value) {
+    gameStateSubscription.value()
+  }
+})
 
 // Utility functions
 const toggleLog = () => {
