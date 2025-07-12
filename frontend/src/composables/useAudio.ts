@@ -5,7 +5,7 @@ import type { AudioState } from '@/types/scene'
 let globalAudioState: AudioState | null = null
 let currentAudio: HTMLAudioElement | null = null
 
-export function useAudio(playPowerUpAnimation?: () => void) {
+export function useAudio() {
   // Audio elements for sound effects
   const ballBounceAudio = new Audio('/audio/ball_bounce.mp3')
   const ballKickAudio = new Audio('/audio/ball_kick_hit.mp3')
@@ -415,12 +415,6 @@ export function useAudio(playPowerUpAnimation?: () => void) {
   const playCoinHitTorusSound = () => {
     coinHitTorusAudio.currentTime = 0.4;
     coinHitTorusAudio.play().catch(e => console.error('Coin hit torus audio play failed:', e));
-    
-    // Trigger PowerUp animation when this sound plays
-    if (playPowerUpAnimation) {
-      console.log('🎵 Torus sound triggered PowerUp animation')
-      playPowerUpAnimation()
-    }
   }
 
   // Cleanup

@@ -18,36 +18,12 @@
     :shadow-blurSamples="15"
   />
 
-  <!-- Fill Light 1 -->
-  <TresDirectionalLight 
-    :position="[-5, 8, 10]" 
-    :intensity="lightingSettings.fillLightIntensity"
-    :cast-shadow="false"
-    color="#e6e6ff"
-  />
-
-  <!-- Fill Light 2 -->
+  <!-- Fill Light -->
   <TresDirectionalLight 
     :position="[0, 5, 10]" 
     :intensity="lightingSettings.fillLight2Intensity"
     :cast-shadow="false"
     color="#e0e0ff"
-  />
-
-  <!-- Front Light -->
-  <TresDirectionalLight 
-    :position="[0, 2, 8]" 
-    :intensity="lightingSettings.frontLightIntensity"
-    :cast-shadow="false"
-    color="#ffeedd"
-  />
-
-  <!-- Rim Light -->
-  <TresDirectionalLight 
-    :position="[-8, 10, -10]" 
-    :intensity="lightingSettings.rimLightIntensity"
-    :cast-shadow="false"
-    color="#aaccff"
   />
   
   <!-- Ambient Light -->

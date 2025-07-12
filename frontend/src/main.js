@@ -18,13 +18,6 @@ app.use(vuetify)
 // Register global components
 app.component('GameButton', GameButton)
 
-// Check Firebase config in development
-if (import.meta.env.DEV) {
-  import('./utils/firebase-check').then(({ verifyFirebaseSetup }) => {
-    verifyFirebaseSetup()
-  })
-}
-
 // Initialize authentication before mounting
 const userStore = useUserStore()
 userStore.initializeAuth()

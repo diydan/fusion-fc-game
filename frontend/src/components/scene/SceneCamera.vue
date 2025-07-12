@@ -11,7 +11,6 @@
 
   <!-- Orbit Controls -->
   <OrbitControls 
-    v-if="enableControls"
     ref="controls"
     :enabled="true"
     :enable-damping="true"
@@ -22,18 +21,15 @@
 </template>
 
 <script setup lang="ts">
-import { watch, ref, onMounted, nextTick, withDefaults } from 'vue'
+import { watch, ref, onMounted, nextTick } from 'vue'
 import { OrbitControls } from '@tresjs/cientos'
 
 interface Props {
   cameraPosition: [number, number, number]
   fov: number
-  enableControls?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  enableControls: true
-})
+const props = defineProps<Props>()
 const camera = ref()
 const controls = ref()
 
@@ -74,14 +70,12 @@ watch(() => props.fov, (newFov) => {
 // Setup orbit controls logging
 onMounted(async () => {
   await nextTick()
-  console.log('SceneCamera mounted with FOV:', props.fov, 'Controls enabled:', props.enableControls)
+  console.log('SceneCamera mounted with FOV:', props.fov)
 
-  // Setup orbit controls real-time logging only if controls are enabled
-  if (props.enableControls) {
-    setTimeout(() => {
-      setupOrbitControlsLogging()
-    }, 1000) // Wait for controls to be fully initialized
-  }
+  // Setup orbit controls real-time logging
+  setTimeout(() => {
+    setupOrbitControlsLogging()
+  }, 1000) // Wait for controls to be fully initialized
 })
 
 const setupOrbitControlsLogging = () => {

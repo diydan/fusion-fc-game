@@ -12,7 +12,7 @@ const glowMaterial = new THREE.MeshStandardMaterial({
 // Create a shared glow light
 const glowLight = new THREE.PointLight(0x00ffff, 2, 5)
 
-export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, triggerPowerUpFlash?: (target: 'character' | 'torus') => void, playCoinSpin?: () => void, playCoinHitTorusSound?: () => void) {
+export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, triggerPowerUpFlash?: (target: 'character' | 'torus') => void, playCoinSpin?: () => void, playCoinHitTorusSound?: () => void, playPowerUpAnimation?: () => void) {
   const shootCoin = () => {
     console.log('🎯 Shooting coin...');
     if (playCoinSpin) {
@@ -179,10 +179,17 @@ export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, tri
       } else if (hitCharacter) {
         shouldRemoveCoin = true
         hitTargetType = 'character'
-        console.log('💥 Coin hit character!')
+        console.log('💥 Coin hit character! Triggering PowerUp animation')
+        console.log('💥 playPowerUpAnimation function available:', !!playPowerUpAnimation)
         if (triggerPowerUpFlash) {
           console.log('💥 Calling triggerPowerUpFlash for character')
           triggerPowerUpFlash('character');
+        }
+        if (playPowerUpAnimation) {
+          console.log('💥 Calling playPowerUpAnimation function')
+          playPowerUpAnimation();
+        } else {
+          console.warn('💥 playPowerUpAnimation function not available!')
         }
       } else if (elapsedLifetime > coinMaxLifetime) {
         shouldRemoveCoin = true

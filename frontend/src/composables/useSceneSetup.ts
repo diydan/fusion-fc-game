@@ -66,7 +66,7 @@ export function useSceneSetup() {
     roughness: 0.1,
     emissiveIntensity: 0.06,
     envMapIntensity: 1.2,
-    brightness: 1,
+    brightness: 2,
     clearcoat: 0.0,
     clearcoatRoughness: 0.0,
     transparent: true,

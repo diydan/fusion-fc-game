@@ -1,293 +1,570 @@
 <template>
-  <div class="character-creator">
-    <v-container fluid class="pa-0 fill-height">
-      <v-row class="fill-height">
-        <!-- 3D Scene -->
-        <v-col cols="12" md="8" class="pa-0">
-          <div class="scene-container">
-            <TresCanvas v-bind="canvasProps">
-              <!-- Lighting -->
-              <TresAmbientLight :intensity="0.5" />
-              <TresDirectionalLight 
-                :position="[5, 5, 5]" 
-                :intensity="1"
-                :cast-shadow="true"
-              />
+  <v-app>
+    <!-- Mobile Navigation Drawer -->
+    <v-navigation-drawer
+      v-model="drawer"
+      location="right"
+      temporary
+      width="320"
+      class="mobile-drawer">
+      <template v-slot:prepend>
+        <v-list-item class="px-2">
+          <v-list-item-title class="text-h6 font-weight-bold">
+            <v-icon start>mdi-cog</v-icon>
+            Scene Controls
+          </v-list-item-title>
+          <template v-slot:append>
+            <v-btn icon variant="text" @click="drawer = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </template>
+        </v-list-item>
+      </template>
+
+      <v-divider></v-divider>
+
+      <!-- Scene Controls Sections -->
+      <v-expansion-panels v-model="activePanel" variant="accordion" multiple>
+        <!-- Performance Section -->
+        <v-expansion-panel value="performance">
+          <v-expansion-panel-title>
+            <v-icon start color="warning">mdi-speedometer</v-icon>
+            Performance
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <v-list density="compact">
+              <v-list-item>
+                <v-list-item-title class="text-caption">Frame Rate</v-list-item-title>
+                <v-chip :color="fpsColor" size="small">{{ fps }} FPS</v-chip>
+              </v-list-item>
               
-              <!-- Camera -->
-              <TresPerspectiveCamera
-                :position="[0, 2, 5]"
-                :fov="45"
-                :look-at="[0, 0, 0]"
-              />
-              
-              <!-- Character Model (Placeholder) -->
-              <TresMesh :position="[0, 0, 0]">
-                <TresCapsuleGeometry :args="[0.5, 1.5, 8, 16]" />
-                <TresMeshStandardMaterial :color="characterColor" />
-              </TresMesh>
-              
-              <!-- Ground -->
-              <TresMesh :position="[0, -1.5, 0]" :rotation="[-Math.PI / 2, 0, 0]">
-                <TresPlaneGeometry :args="[10, 10]" />
-                <TresMeshStandardMaterial color="#1a1a1a" />
-              </TresMesh>
-              
-              <!-- OrbitControls -->
-              <OrbitControls />
-            </TresCanvas>
-          </div>
-        </v-col>
-        
-        <!-- Control Panel -->
-        <v-col cols="12" md="4" class="control-panel">
-          <v-card flat class="pa-4 ma-2" color="surface">
-            <v-card-title class="text-h5 mb-4">
-              <v-icon class="mr-2">mdi-robot</v-icon>
-              Character Creator
-            </v-card-title>
-            
-            <v-card-text>
-              <!-- Basic Settings -->
-              <div class="mb-6">
-                <h3 class="text-h6 mb-3">Basic Settings</h3>
-                
-                <v-text-field
-                  v-model="characterName"
-                  label="Character Name"
-                  prepend-icon="mdi-account"
-                  variant="outlined"
-                  density="compact"
-                  class="mb-3"
-                />
-                
+              <v-list-item>
+                <v-list-item-title class="text-caption">Quality Level</v-list-item-title>
                 <v-select
-                  v-model="characterType"
-                  :items="characterTypes"
-                  label="Character Type"
-                  prepend-icon="mdi-shape"
+                  v-model="qualityLevel"
+                  :items="qualityOptions"
                   variant="outlined"
-                  density="compact"
-                  class="mb-3"
-                />
-              </div>
+                  density="compact">
+                </v-select>
+              </v-list-item>
+            </v-list>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+
+        <!-- Color Controls Section -->
+        <v-expansion-panel value="colors">
+          <v-expansion-panel-title>
+            <v-icon start color="pink">mdi-palette</v-icon>
+            Colors
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <v-list density="compact">
+              <v-list-item>
+                <v-list-item-title class="text-caption mb-3">Short Color</v-list-item-title>
+                <div class="mobile-color-slider">
+                  <v-slider
+                    v-model="shortColorHue"
+                    :min="0"
+                    :max="360"
+                    step="1"
+                    color="primary"
+                    track-color="grey-lighten-1"
+                    thumb-label="always"
+                    @update:model-value="updateShortColor">
+                    <template v-slot:thumb-label="{ modelValue }">
+                      <div class="color-thumb" :style="{ backgroundColor: `hsl(${modelValue}, 100%, 50%)` }"></div>
+                    </template>
+                  </v-slider>
+                  <div class="color-preview" :style="{ backgroundColor: `hsl(${shortColorHue}, 100%, 50%)` }"></div>
+                </div>
+              </v-list-item>
               
-              <!-- Appearance -->
-              <div class="mb-6">
-                <h3 class="text-h6 mb-3">Appearance</h3>
-                
-                <v-color-picker
-                  v-model="characterColor"
-                  mode="hex"
-                  :modes="['hex', 'rgb']"
-                  hide-inputs
-                  class="mb-3"
-                />
-                
-                <v-slider
-                  v-model="characterScale"
-                  label="Size"
-                  :min="0.5"
-                  :max="2"
-                  :step="0.1"
-                  thumb-label
-                  prepend-icon="mdi-resize"
-                  class="mb-3"
-                />
-              </div>
+              <v-list-item>
+                <v-list-item-title class="text-caption mb-3">Torus Emission</v-list-item-title>
+                <div class="mobile-color-slider">
+                  <v-slider
+                    v-model="torusColorHue"
+                    :min="0"
+                    :max="360"
+                    step="1"
+                    color="primary"
+                    track-color="grey-lighten-1"
+                    thumb-label="always"
+                    @update:model-value="updateTorusColor">
+                    <template v-slot:thumb-label="{ modelValue }">
+                      <div class="color-thumb" :style="{ backgroundColor: `hsl(${modelValue}, 100%, 50%)` }"></div>
+                    </template>
+                  </v-slider>
+                  <div class="color-preview" :style="{ backgroundColor: `hsl(${torusColorHue}, 100%, 50%)` }"></div>
+                </div>
+              </v-list-item>
+            </v-list>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+
+        <!-- Music Section -->
+        <v-expansion-panel value="music">
+          <v-expansion-panel-title>
+            <v-icon start color="blue">mdi-music</v-icon>
+            Music
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <v-list density="compact">
+              <v-list-item>
+                <v-list-item-title class="text-caption">Current Track</v-list-item-title>
+                <v-chip size="small" color="primary">{{ audioState.trackName || 'No Track' }}</v-chip>
+              </v-list-item>
               
-              <!-- Animation Controls -->
-              <div class="mb-6">
-                <h3 class="text-h6 mb-3">Animation</h3>
-                
-                <v-switch
-                  v-model="autoRotate"
-                  label="Auto Rotate"
+
+              
+              <v-list-item v-if="audioState.isMusicPlaying">
+                <v-progress-linear
+                  :model-value="audioState.progress || 0"
                   color="primary"
-                  class="mb-3"
-                />
-                
-                <v-slider
-                  v-model="rotationSpeed"
-                  :disabled="!autoRotate"
-                  label="Rotation Speed"
-                  :min="0.1"
-                  :max="5"
-                  :step="0.1"
-                  thumb-label
-                  prepend-icon="mdi-rotate-3d-variant"
-                />
+                  height="4"
+                  rounded>
+                </v-progress-linear>
+              </v-list-item>
+            </v-list>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+      </v-expansion-panels>
+
+      <!-- Action Buttons -->
+      <template v-slot:append>
+        <div class="pa-4">
+          <v-btn
+            block
+            color="primary"
+            variant="elevated"
+            class="mb-2"
+            @click="triggerAction">
+            <v-icon start>mdi-play</v-icon>
+            Trigger Action
+          </v-btn>
+          
+          <v-btn
+            block
+            color="secondary"
+            variant="outlined"
+            @click="resetScene">
+            <v-icon start>mdi-restore</v-icon>
+            Reset Scene
+          </v-btn>
+        </div>
+      </template>
+    </v-navigation-drawer>
+
+    <v-main>
+      <!-- 3D Scene Container -->
+      <div 
+        class="scene-container" 
+        :class="{ 'screen-shake-active': isScreenShaking }"
+        @touchstart="handleTouchStart"
+        @touchmove="handleTouchMove"
+        @touchend="handleTouchEnd">
+        
+        <!-- Mobile optimized background -->
+        <div 
+          v-if="!isMobile || qualityLevel !== 'low'"
+          class="background-video-container">
+          <video 
+            ref="backgroundVideo"
+            :autoplay="!isMobile"
+            loop 
+            muted 
+            playsinline
+            :poster="isMobile ? '/textures/stadium_bg_mobile.jpg' : '/textures/stadium_bg.jpg'"
+            class="background-video"
+            :style="getBackgroundStyle()">
+            <source 
+              :src="isMobile ? '/video/stadium_mobile.mp4' : '/video/stadium.mp4'" 
+              type="video/mp4" />
+          </video>
+        </div>
+
+        <!-- Fallback background for low quality -->
+        <div 
+          v-else
+          class="background-fallback"
+          :style="{ backgroundImage: 'url(/textures/stadium_bg_mobile.jpg)' }">
+        </div>
+
+        <!-- Original 3D Scene Canvas -->
+        <MobileSelectBotScene ref="sceneCanvas" />
+
+        <!-- Touch Control Hints -->
+        <div v-if="showTouchHints" class="touch-hints">
+          <v-card 
+            class="pa-4 ma-4 glass-effect" 
+            rounded="lg"
+            @click="showTouchHints = false">
+            <v-card-text class="text-center">
+              <v-icon size="large" class="mb-2">mdi-gesture-swipe</v-icon>
+              <div class="text-body-2 mb-2">Touch Controls</div>
+              <div class="text-caption">
+                • Single touch: Rotate camera<br>
+                • Two fingers: Zoom in/out<br>
+                • Tap: Interact with scene
               </div>
-              
-              <!-- Actions -->
-              <v-divider class="mb-4" />
-              
-              <v-btn
-                color="primary"
-                block
-                size="large"
-                @click="saveCharacter"
-                :loading="saving"
-              >
-                <v-icon left>mdi-content-save</v-icon>
-                Save Character
-              </v-btn>
-              
-              <v-btn
-                variant="outlined"
-                block
-                size="large"
+              <v-btn 
+                size="small" 
+                color="primary" 
                 class="mt-2"
-                @click="resetCharacter"
-              >
-                <v-icon left>mdi-refresh</v-icon>
-                Reset
+                @click="showTouchHints = false">
+                Got it!
               </v-btn>
             </v-card-text>
           </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
-  </div>
+        </div>
+      </div>
+    </v-main>
+
+
+
+  </v-app>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
-import { TresCanvas } from '@tresjs/core'
-import { OrbitControls } from '@tresjs/cientos'
+<script setup lang="ts">
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useDisplay } from 'vuetify'
+import MobileSelectBotScene from "@/components/MobileSelectBotScene.vue"
+import { useAudio } from '@/composables/useAudio'
 
-// Canvas configuration
-const canvasProps = {
-  clearColor: '#000000',
-  shadows: true,
-  alpha: false,
-  windowSize: true,
-}
+// Vuetify composables
+const { mobile } = useDisplay()
+const isMobile = computed(() => mobile.value)
 
-// Character properties
-const characterName = ref('Robot Player')
-const characterType = ref('Striker')
-const characterColor = ref('#3366FF')
-const characterScale = ref(1)
-const autoRotate = ref(true)
-const rotationSpeed = ref(1)
-const saving = ref(false)
+// UI State
+const drawer = ref(false)
+const showTouchHints = ref(true)
 
-// Character type options
-const characterTypes = [
-  'Striker',
-  'Midfielder',
-  'Defender',
-  'Goalkeeper',
-  'All-Rounder'
+// Performance tracking
+const fps = ref(60)
+
+// Quality settings
+const qualityLevel = ref('medium')
+const qualityOptions = [
+  { title: 'Low (Best Performance)', value: 'low' },
+  { title: 'Medium (Balanced)', value: 'medium' },
+  { title: 'High (Best Quality)', value: 'high' }
 ]
 
-// Watch for auto-rotate changes
-watch(autoRotate, (newValue) => {
-  if (newValue) {
-    startRotation()
-  } else {
-    stopRotation()
+// Simple scene state
+const isScreenShaking = ref(false)
+const activePanel = ref(['performance'])
+
+// Color controls state
+const shortColorHue = ref(218) // Default blue-ish
+const torusColorHue = ref(195) // Default blue-ish
+
+// Audio system - get toggle function for play button, global footer handles full controls
+const { audioState, toggleBackgroundMusic } = useAudio()
+
+// Scene reference
+const sceneCanvas = ref()
+
+// Computed properties
+const fpsColor = computed(() => {
+  if (fps.value >= 50) return 'success'
+  if (fps.value >= 30) return 'warning'
+  return 'error'
+})
+
+const qualityColor = computed(() => {
+  switch (qualityLevel.value) {
+    case 'high': return 'success'
+    case 'medium': return 'warning'
+    case 'low': return 'error'
+    default: return 'primary'
   }
 })
 
-// Animation frame
-let animationId = null
+// Touch handling
+const touchState = ref({
+  startX: 0,
+  startY: 0,
+  startDistance: 0,
+  isMultiTouch: false
+})
 
-const startRotation = () => {
-  // Implementation for rotation animation
-  // This would be connected to the 3D model rotation
-}
-
-const stopRotation = () => {
-  if (animationId) {
-    cancelAnimationFrame(animationId)
-    animationId = null
+const handleTouchStart = (event: TouchEvent) => {
+  if (event.touches.length === 1) {
+    touchState.value.startX = event.touches[0].clientX
+    touchState.value.startY = event.touches[0].clientY
+    touchState.value.isMultiTouch = false
+  } else if (event.touches.length === 2) {
+    const dx = event.touches[0].clientX - event.touches[1].clientX
+    const dy = event.touches[0].clientY - event.touches[1].clientY
+    touchState.value.startDistance = Math.sqrt(dx * dx + dy * dy)
+    touchState.value.isMultiTouch = true
+  }
+  
+  // Hide touch hints after first interaction
+  if (showTouchHints.value) {
+    setTimeout(() => { showTouchHints.value = false }, 3000)
   }
 }
 
-// Save character
-const saveCharacter = async () => {
-  saving.value = true
+const handleTouchMove = (event: TouchEvent) => {
+  event.preventDefault() // Prevent scrolling
   
-  // Simulate saving
-  await new Promise(resolve => setTimeout(resolve, 1500))
-  
-  const characterData = {
-    name: characterName.value,
-    type: characterType.value,
-    color: characterColor.value,
-    scale: characterScale.value,
-    timestamp: new Date().toISOString()
+  if (touchState.value.isMultiTouch && event.touches.length === 2) {
+    // Handle pinch-to-zoom
+    const dx = event.touches[0].clientX - event.touches[1].clientX
+    const dy = event.touches[0].clientY - event.touches[1].clientY
+    const currentDistance = Math.sqrt(dx * dx + dy * dy)
+    
+    const scale = currentDistance / touchState.value.startDistance
+    // You could emit this to the 3D scene for camera zoom
   }
-  
-  console.log('Saving character:', characterData)
-  
-  // Here you would typically save to your backend or local storage
-  localStorage.setItem('savedCharacter', JSON.stringify(characterData))
-  
-  saving.value = false
 }
 
-// Reset character to defaults
-const resetCharacter = () => {
-  characterName.value = 'Robot Player'
-  characterType.value = 'Striker'
-  characterColor.value = '#3366FF'
-  characterScale.value = 1
-  autoRotate.value = true
-  rotationSpeed.value = 1
+const handleTouchEnd = (event: TouchEvent) => {
+  touchState.value.isMultiTouch = false
 }
+
+// Simple performance monitoring
+const updateFps = (newFps: number) => {
+  fps.value = Math.round(newFps)
+}
+
+// Color control methods
+const updateShortColor = (hue: number) => {
+  const color = `hsl(${hue}, 100%, 50%)`
+  console.log('🎨 Short color updated:', color)
+  
+  // Find and call the original scene's color update method
+  if (sceneCanvas.value && sceneCanvas.value.updateOverlayColor) {
+    sceneCanvas.value.updateOverlayColor(color)
+  } else if (sceneCanvas.value && sceneCanvas.value.$refs) {
+    // Try to access through $refs if needed
+    console.log('🔍 Looking for color update method in scene...')
+  }
+}
+
+const updateTorusColor = (hue: number) => {
+  const color = `hsl(${hue}, 100%, 50%)`
+  console.log('🎨 Torus color updated:', color)
+  
+  // Find and call the original scene's torus color update method
+  if (sceneCanvas.value && sceneCanvas.value.updateTorusEmission) {
+    sceneCanvas.value.updateTorusEmission(color)
+  }
+}
+
+// Music control - simple toggle to start/pause music, global footer handles full controls
+const toggleMusic = () => {
+  console.log('🎵 Toggle music from SelectBotMobile')
+  toggleBackgroundMusic()
+}
+
+// Simple scene interactions
+const triggerAction = () => {
+  console.log('🎬 Triggering action sequence')
+  // The original scene handles its own interactions
+}
+
+const resetScene = () => {
+  console.log('🔄 Resetting scene')
+  // The original scene handles its own reset
+}
+
+const triggerScreenShake = () => {
+  isScreenShaking.value = true
+  setTimeout(() => {
+    isScreenShaking.value = false
+  }, 500)
+}
+
+const onSceneReady = () => {
+  console.log('✅ Scene ready with shared audio system')
+}
+
+// Background style for mobile optimization
+const getBackgroundStyle = () => {
+  return {
+    transform: 'translate(-50%, -50%)',
+    opacity: isMobile.value && qualityLevel.value === 'low' ? 0.5 : 0.8
+  }
+}
+
+// Set initial quality based on device
+onMounted(() => {
+  if (isMobile.value) {
+    // Start with medium quality on mobile
+    qualityLevel.value = 'medium'
+    // Show touch hints for mobile users
+    showTouchHints.value = true
+  } else {
+    qualityLevel.value = 'high'
+    showTouchHints.value = false
+  }
+  
+  console.log('🎵 Mobile view initialized with shared audio system')
+})
 </script>
 
 <style scoped>
-.character-creator {
-  height: calc(100vh - 64px);
-  background: #0a0a0a;
+.scene-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  transition: transform 0.1s ease-out;
 }
 
-.scene-container {
+.scene-container.screen-shake-active {
+  animation: screenShake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes screenShake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-2px, 0, 0); }
+  40%, 60% { transform: translate3d(2px, 0, 0); }
+}
+
+.background-video-container {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  position: relative;
-  background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0a 100%);
+  z-index: -1;
 }
 
-.control-panel {
-  background: rgba(9, 9, 121, 0.1);
+.background-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+
+.background-fallback {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: -1;
+}
+
+.mobile-ui-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.status-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  pointer-events: auto;
+}
+
+.action-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  pointer-events: auto;
+}
+
+.touch-hints {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  z-index: 200;
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(10px);
-  overflow-y: auto;
-  max-height: calc(100vh - 64px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.control-panel::-webkit-scrollbar {
-  width: 8px;
+.mobile-drawer {
+  background: rgba(33, 33, 33, 0.95) !important;
+  backdrop-filter: blur(10px);
 }
 
-.control-panel::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.control-panel::-webkit-scrollbar-thumb {
-  background: rgba(51, 102, 255, 0.5);
-  border-radius: 4px;
-}
-
-.control-panel::-webkit-scrollbar-thumb:hover {
-  background: rgba(51, 102, 255, 0.7);
-}
-
-@media (max-width: 959px) {
-  .character-creator {
-    height: calc(100vh - 120px);
+/* Touch-friendly sizing */
+@media (max-width: 600px) {
+  .v-btn {
+    min-height: 48px !important;
   }
   
-  .scene-container {
-    height: 50vh;
+  .v-slider {
+    margin: 8px 0 !important;
   }
   
-  .control-panel {
-    max-height: 50vh;
+  .v-expansion-panel-text {
+    padding: 8px 16px !important;
   }
+}
+
+/* Prevent pull-to-refresh and other iOS behaviors */
+.scene-container {
+  touch-action: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+}
+
+/* Hide scrollbars on mobile */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile Color Slider Styles */
+.mobile-color-slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.color-preview {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.color-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Music player is now handled by global footer */
+
+.scene-container {
+  height: 100vh;
 }
 </style>

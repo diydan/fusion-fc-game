@@ -1,0 +1,1470 @@
+<template>
+  <div class="mobile-scene-container" :class="{ 'screen-shake-active': isScreenShaking }">
+    <!-- Background Video (optimized for mobile) -->
+    <video 
+      ref="backgroundVideo"
+      :autoplay="!isPowerSaveMode"
+      loop 
+      muted 
+      playsinline
+      poster="/textures/stadium_bg.jpg"
+      class="mobile-background-video"
+      :style="{ 
+        top: `calc(50% + ${videoOffsetY}px)`,
+        filter: `blur(${videoBlur}px)`
+      }"
+      @loadeddata="setVideoPlaybackRate"
+      @ended="ensureVideoLoop"
+    >
+      <source src="/video/stadium.mp4" type="video/mp4" />
+      Your browser does not support the video tag.
+    </video>
+
+    <!-- 3D Scene (reduced quality for mobile) -->
+    <SceneCanvas 
+      :POWER_PREFERENCE="mobilePowerPreference"
+      :bloom-enabled="mobileBloomEnabled"
+      :bloom-intensity="mobileCameraBloom"
+      :dof-enabled="false"
+      :dof-focus="10"
+      :dof-aperture="0.025"
+      :dof-max-blur="0.01"
+      :style="{ 
+        filter: getMobileCombinedFilter(),
+        transition: 'filter 0.2s ease-out'
+      }"
+      @scene-created="onSceneCreated"
+      @scene-ready="onSceneReady"
+      @scene-render="onSceneRender"
+    >
+      <!-- Camera optimized for mobile -->
+      <SceneCamera :camera-position="mobileCameraPosition" :fov="mobileCameraFov" />
+      
+      <!-- Simplified fog for mobile -->
+      <TresFogExp2 
+        v-if="mobileFogEnabled"
+        :color="getFogColorWithOpacity()"
+        :density="mobileFogDensity"
+      />
+      
+      <!-- Simplified lighting for mobile -->
+      <SceneLighting :lighting-settings="mobileLightingSettings" />
+      
+      <!-- Simplified ground plane -->
+      <TresMesh 
+        :position="[0, 0, 0]" 
+        :rotation="[-Math.PI / 2, 0, 0]" 
+        :receive-shadow="true"
+        :visible="showGrass"
+      >
+        <TresPlaneGeometry :args="[20, 20]" />
+        <TresShadowMaterial :color="0x000000" :opacity="0.1" />
+      </TresMesh>
+
+      <!-- Character Group -->
+      <TresGroup :position="[0, sceneOffsetY, 0]">
+        <TresGroup ref="modelGroup" :scale="characterScale" />
+      </TresGroup>
+
+      <!-- Goalkeeper Group -->
+      <TresGroup :position="[0, sceneOffsetY, -18]" :rotation="[0, 0, 0]" :visible="showGoalkeeper">
+        <TresGroup ref="goalkeeperGroup" :scale="[characterScale * 1.1, characterScale * 1.1, characterScale]" />
+      </TresGroup>
+
+      <!-- Goal Box Visualization - shows target area -->
+      <TresGroup :position="[0, 0, -18.5]" :visible="true">
+        <!-- Goal frame outline - bright green wireframe -->
+        <TresLineSegments>
+          <TresEdgesGeometry :args="[new THREE.BoxGeometry(8, 2.4, 0.1)]" />
+          <TresLineBasicMaterial :color="0x00ff00" :linewidth="3" />
+        </TresLineSegments>
+        
+        <!-- Corner markers for better visibility -->
+        <TresMesh :position="[-4, 0, 0.1]">
+          <TresSphereGeometry :args="[0.1, 8, 6]" />
+          <TresMeshBasicMaterial :color="0xff0000" />
+        </TresMesh>
+        <TresMesh :position="[4, 0, 0.1]">
+          <TresSphereGeometry :args="[0.1, 8, 6]" />
+          <TresMeshBasicMaterial :color="0xff0000" />
+        </TresMesh>
+        <TresMesh :position="[-4, 2.4, 0.1]">
+          <TresSphereGeometry :args="[0.1, 8, 6]" />
+          <TresMeshBasicMaterial :color="0xff0000" />
+        </TresMesh>
+        <TresMesh :position="[4, 2.4, 0.1]">
+          <TresSphereGeometry :args="[0.1, 8, 6]" />
+          <TresMeshBasicMaterial :color="0xff0000" />
+        </TresMesh>
+        
+        <!-- Semi-transparent goal area -->
+        <TresMesh :position="[0, 1.2, 0]">
+          <TresBoxGeometry :args="[8, 2.4, 0.1]" />
+          <TresMeshBasicMaterial :color="0x00ff00" :transparent="true" :opacity="0.15" />
+        </TresMesh>
+      </TresGroup>
+
+      <!-- Ball Group -->
+      <TresGroup
+        ref="ballModelGroup"
+        :position="ballState?.position || [0, 0, 0]"
+        :rotation="ballState?.rotation || [0, 0, 0]"
+        :visible="ballState ? !ballState.hidden : false"
+      />
+    </SceneCanvas>
+
+    <!-- Mobile Control Panel - Now positioned at top with high z-index -->
+    <MobileControlPanel
+      :is-ready="isReady"
+      :loading-status="loadingStatus"
+      :is-strike-sequence-active="animationState.isStrikeSequenceActive"
+      :is-music-playing="audioState.isMusicPlaying"
+      :current-animation="getCurrentAnimation()"
+      @trigger-strike="triggerMobileStrikeSequence"
+      @shoot-coin="shootCoin"
+      @toggle-music="toggleBackgroundMusic"
+      @trigger-dance="playWaveAnimation"
+      @reset-character="resetCharacterPosition"
+      @toggle-settings="showMobileSettings = !showMobileSettings"
+      @rotate-and-drop="rotateAndDropBall"
+      @trigger-strike2="triggerStrike2"
+    />
+
+    <!-- Mobile Settings Panel (Collapsible) -->
+    <div 
+      v-if="showMobileSettings" 
+      class="mobile-settings-panel"
+      @click.self="showMobileSettings = false"
+    >
+      <div class="mobile-settings-content">
+        <div class="mobile-settings-header">
+          <h3>Settings</h3>
+          <button @click="showMobileSettings = false" class="close-btn">×</button>
+        </div>
+        
+        <div class="mobile-settings-grid">
+          <!-- Character Scale -->
+          <div class="setting-item">
+            <label>Size</label>
+            <input 
+              type="range" 
+              v-model="characterScale" 
+              min="0.5" 
+              max="2" 
+              step="0.1"
+              class="mobile-slider"
+            />
+          </div>
+          
+          <!-- Scene Effects -->
+          <div class="setting-item">
+            <label>Effects</label>
+            <div class="toggle-group">
+              <button 
+                @click="mobileBloomEnabled = !mobileBloomEnabled"
+                :class="{ active: mobileBloomEnabled }"
+                class="toggle-btn"
+              >
+                Bloom
+              </button>
+              <button 
+                @click="mobileFogEnabled = !mobileFogEnabled"
+                :class="{ active: mobileFogEnabled }"
+                class="toggle-btn"
+              >
+                Fog
+              </button>
+              <button 
+                @click="showGrass = !showGrass"
+                :class="{ active: showGrass }"
+                class="toggle-btn"
+              >
+                Grass
+              </button>
+            </div>
+          </div>
+          
+          <!-- Power Save Mode -->
+          <div class="setting-item">
+            <label>Performance</label>
+            <div class="toggle-group">
+              <button 
+                @click="isPowerSaveMode = !isPowerSaveMode"
+                :class="{ active: isPowerSaveMode }"
+                class="toggle-btn"
+              >
+                Power Save
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Color Controls -->
+    <div class="mobile-color-controls" v-if="showMobileSettings">
+      <MobileColorSlider
+        label="Shirt"
+        :initial-hue="overlayColorHue"
+        @update:color="updateOverlayColor"
+      />
+      <MobileColorSlider
+        label="Glow"
+        :initial-hue="torusEmissionHue"
+        @update:color="updateTorusEmission"
+      />
+    </div>
+
+    <!-- Global Music Footer moved to top -->
+    <GlobalMusicFooter
+      :audio-state="audioState"
+      @toggle="toggleBackgroundMusic"
+      @stop="stopMusic"
+      @next-track="nextTrack"
+      @previous-track="previousTrack"
+      @toggle-lyrics="() => audioState.showLyrics = !audioState.showLyrics"
+    />
+
+    <!-- Mobile Loading Indicator -->
+    <div v-if="loadingStatus !== 'Ready'" class="mobile-loading">
+      <div class="loading-spinner"></div>
+      <p>{{ loadingStatus }}</p>
+    </div>
+
+    <!-- Mobile Performance Warning -->
+    <div v-if="showPerformanceWarning" class="mobile-performance-warning">
+      <div class="warning-content">
+        <h4>Performance Notice</h4>
+        <p>For better performance on your device, consider enabling Power Save mode.</p>
+        <div class="warning-actions">
+          <button @click="enablePowerSaveMode" class="primary-btn">Enable Power Save</button>
+          <button @click="showPerformanceWarning = false" class="secondary-btn">Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
+import * as THREE from 'three'
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
+
+// Components
+import SceneCanvas from './scene/SceneCanvas.vue'
+import SceneCamera from './scene/SceneCamera.vue'
+import SceneLighting from './scene/SceneLighting.vue'
+import MobileControlPanel from './mobile/MobileControlPanel.vue'
+import MobileColorSlider from './mobile/MobileColorSlider.vue'
+import GlobalMusicFooter from './ui/GlobalMusicFooter.vue'
+
+// Composables (reuse existing ones)
+import { useSceneSetup } from '@/composables/useSceneSetup'
+import { useAnimations } from '@/composables/useAnimations'
+import { useBallPhysics } from '@/composables/useBallPhysics'
+import { useAudio } from '@/composables/useAudio'
+import { useMobileOptimization } from '@/composables/useMobileOptimization'
+import { useCoinPhysics } from '@/composables/useCoinPhysics'
+
+// Mobile-specific state
+const showMobileSettings = ref(false)
+const showPerformanceWarning = ref(false)
+const isPowerSaveMode = ref(false)
+const showGoalkeeper = ref(false)
+
+// Mobile-optimized settings - now using same camera as desktop
+const mobilePowerPreference = ref<'high-performance' | 'low-power' | 'default'>('default')
+const mobileBloomEnabled = ref(false) // Disabled by default on mobile
+const mobileCameraBloom = ref(0.3) // Reduced intensity
+const mobileFogEnabled = ref(true)
+const mobileFogDensity = ref(0.01) // Lighter fog
+const mobileCameraFov = ref(42) // Same FOV as desktop
+// Zoom in 20% by moving camera closer (reduce Z distance by 20%) + move scene down 20%
+const mobileCameraPosition = ref<[number, number, number]>([-1.331, 1.805 * 0.8, 11.576 * 0.6]) // 20% closer for zoom + 20% lower Y position
+
+// Setup composables with mobile optimizations
+const {
+  loadingStatus,
+  isScreenShaking,
+  isReady,
+  sceneOffsetY,
+  characterScale,
+  showGrass,
+  videoOffsetY,
+  videoBlur,
+  lightingSettings,
+  materialSettings,
+  sceneRefs,
+  cameraPosition,
+  characterPosition,
+  onSceneCreated,
+  addTorusToCharacter,
+  updateTorusColor,
+  triggerScreenShake,
+  updateCameraPosition,
+  createGrassField,
+  createCenterCircle,
+  createFootballFieldLines,
+  loadGoalpostModel,
+  loadCornerFlags
+} = useSceneSetup()
+
+// Mobile-optimized lighting
+const mobileLightingSettings = computed(() => ({
+  ...lightingSettings,
+  ambientIntensity: Math.min(lightingSettings.ambientIntensity, 0.6),
+  directionalIntensity: Math.min(lightingSettings.directionalIntensity, 0.8),
+  enableShadows: false // Disable shadows on mobile for performance
+}))
+
+const { animationState, loadCharacterModel, updateAnimations, getCurrentAnimation, materials, triggerPowerUpFlash, playWaveAnimation, playPowerUpAnimation } = useAnimations(sceneRefs, materialSettings)
+const { ballState, loadBallModel, updateBallPhysics, animateBallToPosition, animateBallWithPhysics, stopBallAnimation } = useBallPhysics(sceneRefs, 0.1, cameraPosition)
+const { audioState, toggleBackgroundMusic, stopMusic, playBallKick, playCoinSpin, playCoinHitTorusSound, nextTrack, previousTrack } = useAudio()
+const { shootCoin } = useCoinPhysics(sceneRefs, cameraPosition, triggerPowerUpFlash, playCoinSpin, playCoinHitTorusSound, playPowerUpAnimation)
+
+// Mobile optimization composable
+const { 
+  detectPerformanceLevel,
+  optimizeForDevice,
+  enablePowerSaveMode: enablePowerSave,
+  getOptimalSettings
+} = useMobileOptimization()
+
+// Template refs
+const backgroundVideo = ref<HTMLVideoElement>()
+const modelGroup = ref()
+const goalkeeperGroup = ref()
+const ballModelGroup = ref()
+const overlayColorHue = ref(218)
+const torusEmissionHue = ref(195)
+
+// Play goalkeeper animation based on shot direction
+const playGoalkeeperAnimation = async (animationFile: string) => {
+  if (!goalkeeperGroup.value || !sceneRefs.goalkeeperMixer) {
+    console.warn('🥅 Cannot play goalkeeper animation - goalkeeper not ready')
+    return
+  }
+
+  try {
+    console.log(`🥅 Loading goalkeeper animation: ${animationFile}`)
+    const loader = new FBXLoader()
+    const animationFBX = await loader.loadAsync(animationFile)
+    
+    if (animationFBX.animations && animationFBX.animations.length > 0) {
+      const clip = animationFBX.animations[0]
+      const action = sceneRefs.goalkeeperMixer.clipAction(clip)
+      
+      // Stop current goalkeeper animation
+      sceneRefs.goalkeeperMixer.stopAllAction()
+      
+      // Play new animation once
+      action.setLoop(THREE.LoopOnce, 1)
+      action.clampWhenFinished = true
+      action.reset().play()
+      
+      console.log(`🥅 Goalkeeper animation started: ${clip.name}`)
+      
+      // Return to idle after animation completes
+      const onGoalkeeperFinished = (event: any) => {
+        if (event.action === action) {
+          sceneRefs.goalkeeperMixer.removeEventListener('finished', onGoalkeeperFinished)
+          
+          // Return to goalkeeper idle
+          setTimeout(async () => {
+            try {
+              const idleAnimation = await loader.loadAsync('/bot1/Goalkeeper Idle.fbx')
+              if (idleAnimation.animations.length > 0) {
+                const idleAction = sceneRefs.goalkeeperMixer.clipAction(idleAnimation.animations[0])
+                idleAction.reset().play()
+                console.log('🥅 Goalkeeper returned to idle')
+              }
+            } catch (error) {
+              console.error('🥅 Error returning goalkeeper to idle:', error)
+            }
+          }, 500)
+        }
+      }
+      sceneRefs.goalkeeperMixer.addEventListener('finished', onGoalkeeperFinished)
+    }
+  } catch (error) {
+    console.error(`🥅 Error loading goalkeeper animation ${animationFile}:`, error)
+  }
+}
+
+// Load goalkeeper (same character asset)
+const loadGoalkeeper = async () => {
+  console.log('🥅 Loading goalkeeper...')
+  console.log('Goalkeeper group ref:', goalkeeperGroup.value)
+  console.log('Show goalkeeper:', showGoalkeeper.value)
+  
+  try {
+    // Use FBXLoader directly for the goalkeeper
+    const loader = new FBXLoader()
+    const goalkeeperModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture2.fbx')
+    
+    console.log('Goalkeeper model loaded:', goalkeeperModel)
+    console.log('Goalkeeper model bounds:', new THREE.Box3().setFromObject(goalkeeperModel))
+    console.log('Goalkeeper model children:', goalkeeperModel.children.length)
+    
+    // Scale should match the parent group scale - don't double-scale
+    goalkeeperModel.scale.setScalar(1) // Parent group already has characterScale
+    
+    // Apply same material treatment as main character
+    goalkeeperModel.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = true
+        child.receiveShadow = true
+        
+        // Apply the same material setup as the main character
+        if (child.material instanceof THREE.MeshPhongMaterial && materials.base && materials.overlay) {
+          // Create a group with base and overlay meshes
+          const group = new THREE.Group()
+          
+          // Base mesh with shared base material
+          const baseMesh = child.clone()
+          baseMesh.material = materials.base
+          baseMesh.castShadow = true
+          baseMesh.receiveShadow = false
+          
+          // Overlay mesh with shared overlay material
+          const overlayMesh = child.clone()
+          overlayMesh.material = materials.overlay
+          overlayMesh.castShadow = false
+          overlayMesh.receiveShadow = false
+          
+          group.add(baseMesh)
+          group.add(overlayMesh)
+          
+          // Replace the original child with the group
+          child.parent?.add(group)
+          child.parent?.remove(child)
+          
+          console.log('Applied matching materials to goalkeeper mesh:', child.name)
+        }
+      }
+    })
+    
+    // Add to goalkeeper group
+    if (goalkeeperGroup.value) {
+      console.log('Adding goalkeeper to group...')
+      goalkeeperGroup.value.clear()
+      goalkeeperGroup.value.add(goalkeeperModel)
+      
+      // Make sure the goalkeeper group itself is visible
+      goalkeeperGroup.value.visible = true
+      
+      // Log the goalkeeper's world position
+      goalkeeperGroup.value.updateWorldMatrix(true, true)
+      const worldPos = new THREE.Vector3()
+      goalkeeperGroup.value.getWorldPosition(worldPos)
+      console.log('Goalkeeper world position:', worldPos)
+      
+      // Load goalkeeper idle animation
+      const idleAnimation = await loader.loadAsync('/bot1/Goalkeeper Idle.fbx')
+      if (idleAnimation.animations.length > 0 && sceneRefs.scene) {
+        const mixer = new THREE.AnimationMixer(goalkeeperModel)
+        const action = mixer.clipAction(idleAnimation.animations[0])
+        action.play()
+        
+        // Store mixer for updates
+        sceneRefs.goalkeeperMixer = mixer
+        console.log('Goalkeeper Idle animation started')
+      }
+      
+      // Double-check visibility of the entire hierarchy
+      console.log('Goalkeeper visibility check:')
+      console.log('- goalkeeperGroup visible:', goalkeeperGroup.value.visible)
+      console.log('- parent visible:', goalkeeperGroup.value.parent?.visible)
+      console.log('- showGoalkeeper ref:', showGoalkeeper.value)
+      console.log('- goalkeeper children count:', goalkeeperGroup.value.children.length)
+      
+    } else {
+      console.warn('Goalkeeper group ref not available')
+    }
+    
+    console.log('✅ Goalkeeper loaded successfully')
+  } catch (error) {
+    console.error('❌ Error loading goalkeeper:', error)
+  }
+}
+
+// Mobile-specific methods
+const enablePowerSaveMode = () => {
+  isPowerSaveMode.value = true
+  showPerformanceWarning.value = false
+  
+  // Apply power save optimizations
+  mobileBloomEnabled.value = false
+  mobileFogEnabled.value = false
+  showGrass.value = false
+  mobilePowerPreference.value = 'low-power'
+  
+  // Reduce video quality
+  if (backgroundVideo.value) {
+    backgroundVideo.value.playbackRate = 0.5
+  }
+  
+  console.log('🔋 Power save mode enabled')
+}
+
+// Enhanced mobile strike sequence with character movement
+const triggerMobileStrikeSequence = () => {
+  if (!sceneRefs.actions || sceneRefs.actions.length < 2) {
+    console.log('❌ Strike sequence not available - animations not loaded')
+    return
+  }
+
+  console.log('🎬 Starting enhanced mobile strike sequence')
+  animationState.isStrikeSequenceActive = true
+
+  // Phase 1: Ball rolls to position
+  animateBallToPosition([-0.030, 0.100, 0.800], 1500)
+
+  setTimeout(() => {
+    // Phase 2: Strike animation
+    if (sceneRefs.actions[animationState.currentIndex]) {
+      sceneRefs.actions[animationState.currentIndex].fadeOut(0.3)
+    }
+
+    animationState.currentIndex = 1
+    sceneRefs.actions[1].reset().fadeIn(0.3).play()
+
+    setTimeout(() => {
+      playBallKick()
+      triggerScreenShake(400)
+
+      // Phase 3: Character movement after kick
+      if (sceneRefs.modelGroup) {
+        const modelGroup = sceneRefs.modelGroup
+        const kickStartPosition = modelGroup.position.clone()
+
+        // Calculate movement toward camera with side offset
+        const currentCameraPos = new THREE.Vector3(...cameraPosition.value)
+        const directionTowardCamera = new THREE.Vector3()
+        directionTowardCamera.subVectors(currentCameraPos, kickStartPosition).normalize()
+
+        // Side offset for mobile (simpler calculation)
+        const rightOffset = new THREE.Vector3(3, 0, 0) // 3 units to the right
+
+        // Target position: toward camera + side offset
+        const kickTargetPosition = new THREE.Vector3()
+        kickTargetPosition.copy(kickStartPosition)
+          .add(directionTowardCamera.multiplyScalar(10)) // 10 units toward camera
+          .add(rightOffset)
+        kickTargetPosition.y = kickStartPosition.y // Keep on ground
+
+        const kickMovementDuration = 1800 // Mobile optimized duration
+        const kickStartTime = Date.now()
+
+        const animateKickMovement = () => {
+          const elapsed = Date.now() - kickStartTime
+          const progress = Math.min(elapsed / kickMovementDuration, 1)
+
+          modelGroup.position.lerpVectors(kickStartPosition, kickTargetPosition, progress)
+
+          if (progress < 1) {
+            requestAnimationFrame(animateKickMovement)
+          }
+        }
+
+        animateKickMovement()
+      }
+
+      // Phase 4: Ball physics
+      const cameraPos = sceneRefs.camera?.position || new THREE.Vector3(...cameraPosition.value)
+      const startPos = [-0.030, 0.100, 0.800]
+      const finalTarget = [cameraPos.x, cameraPos.y + 0.3, cameraPos.z - 0.3]
+
+      animateBallWithPhysics(startPos, finalTarget, 500, () => {
+        if (ballState) {
+          ballState.hidden = true
+        }
+      })
+    }, 300)
+
+  }, 1500)
+
+  // Phase 5: Transition to running animation
+  setTimeout(() => {
+    if (sceneRefs.actions && sceneRefs.actions[1]) {
+      sceneRefs.actions[1].fadeOut(0.2)
+    }
+
+    animationState.currentIndex = 2 // Running animation
+    if (sceneRefs.actions && sceneRefs.actions[2]) {
+      sceneRefs.actions[2].reset().fadeIn(0.2).play()
+    }
+  }, 2200)
+
+  // End sequence - character stays running
+  setTimeout(() => {
+    console.log('🎬 Mobile strike sequence completed - use reset to return')
+    // Character continues running - use reset button to return
+  }, 4000)
+}
+
+// Enhanced mobile character reset
+const triggerStrike2 = () => {
+  if (!sceneRefs.actions || sceneRefs.actions.length < 2) {
+    console.log('❌ Strike 2 not available - animations not loaded')
+    return
+  }
+
+  console.log('🥅 Starting Strike 2 sequence - shooting toward goal!')
+  animationState.isStrikeSequenceActive = true
+
+  // Phase 1: Ball rolls to position (same as Strike 1)
+  animateBallToPosition([-0.030, 0.100, 0.800], 1500)
+
+  setTimeout(() => {
+    // Phase 2: Strike animation
+    if (sceneRefs.actions[animationState.currentIndex]) {
+      sceneRefs.actions[animationState.currentIndex].fadeOut(0.3)
+    }
+
+    animationState.currentIndex = 1
+    sceneRefs.actions[1].reset().fadeIn(0.3).play()
+
+    setTimeout(() => {
+      playBallKick()
+      triggerScreenShake(400)
+
+      // Phase 3: Character movement after kick - two-stage movement
+      if (sceneRefs.modelGroup) {
+        const modelGroup = sceneRefs.modelGroup
+        const kickStartPosition = modelGroup.position.clone()
+        const kickStartRotation = modelGroup.rotation.y
+
+        // Stage 1: Run toward ball direction for 1 second
+        const ballDirection = new THREE.Vector3(0, 0, -1) // Toward goal (ball direction)
+        const ballChaseDistance = 8 // Run 8 units toward goal
+        const ballChasePosition = new THREE.Vector3()
+        ballChasePosition.copy(kickStartPosition)
+          .add(ballDirection.multiplyScalar(ballChaseDistance))
+        ballChasePosition.y = kickStartPosition.y
+
+        // Calculate rotation to face ball direction
+        const ballDirectionAngle = Math.atan2(ballDirection.x, ballDirection.z)
+
+        const stage1Duration = 1000 // 1 second
+        const stage1StartTime = Date.now()
+
+        const animateStage1 = () => {
+          const elapsed = Date.now() - stage1StartTime
+          const progress = Math.min(elapsed / stage1Duration, 1)
+
+          // Move toward ball
+          modelGroup.position.lerpVectors(kickStartPosition, ballChasePosition, progress)
+          
+          // Rotate to face ball direction
+          modelGroup.rotation.y = kickStartRotation + (ballDirectionAngle - kickStartRotation) * progress
+
+          if (progress < 1) {
+            requestAnimationFrame(animateStage1)
+          } else {
+            // Stage 2: Natural curved celebration run
+            const stage2StartPosition = modelGroup.position.clone()
+            const currentRotation = modelGroup.rotation.y
+            
+            // More realistic celebration path - wider arc toward touchline then corner
+            const cornerFlagPosition = new THREE.Vector3(-18, kickStartPosition.y, -22) // Past corner flag
+            const offScreenPosition = new THREE.Vector3(-25, kickStartPosition.y, -30) // Further off screen
+            
+            // Create natural arc - first toward touchline, then to corner
+            const touchlinePoint = new THREE.Vector3(-12, kickStartPosition.y, stage2StartPosition.z - 3)
+            const midArcPoint = new THREE.Vector3(-15, kickStartPosition.y, -12)
+            
+            // Three-phase movement for natural celebration - slower, more realistic
+            const phase1Duration = 1800 // 1.8s - curve toward touchline (slower)
+            const phase2Duration = 2000 // 2s - arc toward corner flag (slower)
+            const phase3Duration = 1500 // 1.5s - continue off screen (slower)
+            const totalDuration = phase1Duration + phase2Duration + phase3Duration
+            const stage2StartTime = Date.now()
+
+            let lastPosition = stage2StartPosition.clone()
+
+            const animateStage2 = () => {
+              const elapsed = Date.now() - stage2StartTime
+              const progress = Math.min(elapsed / totalDuration, 1)
+              let newPosition = new THREE.Vector3()
+              let targetDirection = new THREE.Vector3()
+              
+              if (elapsed < phase1Duration) {
+                // Phase 1: Gradual curve toward touchline
+                const t1 = elapsed / phase1Duration
+                const smoothT1 = t1 * t1 * (3 - 2 * t1) // Smooth step
+                newPosition.lerpVectors(stage2StartPosition, touchlinePoint, smoothT1)
+                targetDirection.subVectors(touchlinePoint, stage2StartPosition).normalize()
+              } else if (elapsed < phase1Duration + phase2Duration) {
+                // Phase 2: Arc toward corner flag  
+                const t2 = (elapsed - phase1Duration) / phase2Duration
+                const smoothT2 = t2 * t2 * (3 - 2 * t2)
+                
+                // Bezier curve from touchline through mid-arc to corner
+                const oneMinusT2 = 1 - smoothT2
+                newPosition.x = oneMinusT2 * oneMinusT2 * touchlinePoint.x + 
+                              2 * oneMinusT2 * smoothT2 * midArcPoint.x + 
+                              smoothT2 * smoothT2 * cornerFlagPosition.x
+                newPosition.y = touchlinePoint.y
+                newPosition.z = oneMinusT2 * oneMinusT2 * touchlinePoint.z + 
+                              2 * oneMinusT2 * smoothT2 * midArcPoint.z + 
+                              smoothT2 * smoothT2 * cornerFlagPosition.z
+                
+                targetDirection.subVectors(cornerFlagPosition, midArcPoint).normalize()
+              } else {
+                // Phase 3: Continue running off screen
+                const t3 = (elapsed - phase1Duration - phase2Duration) / phase3Duration
+                const smoothT3 = t3 * t3 * (3 - 2 * t3)
+                newPosition.lerpVectors(cornerFlagPosition, offScreenPosition, smoothT3)
+                targetDirection.subVectors(offScreenPosition, cornerFlagPosition).normalize()
+              }
+              
+              // Smooth rotation toward movement direction
+              if (targetDirection.length() > 0) {
+                const targetAngle = Math.atan2(targetDirection.x, targetDirection.z)
+                let angleDiff = targetAngle - modelGroup.rotation.y
+                
+                // Normalize angle difference for shortest rotation
+                while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI
+                while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI
+                
+                // Gradual rotation - more natural than instant
+                const rotationSpeed = 0.08 // Slower, more realistic rotation
+                modelGroup.rotation.y += angleDiff * rotationSpeed
+              }
+              
+              modelGroup.position.copy(newPosition)
+              lastPosition.copy(newPosition)
+
+              if (progress < 1) {
+                requestAnimationFrame(animateStage2)
+              } else {
+                console.log('Player completed celebration run and is off screen')
+                // Hide ball when player finishes running
+                if (ballState) {
+                  ballState.hidden = true
+                  console.log('⚽ Ball hidden - player finished celebration')
+                }
+              }
+            }
+
+            animateStage2()
+          }
+        }
+
+        animateStage1()
+      }
+
+      // Phase 4: Ball physics toward goal with random target selection
+      const startPos = [-0.030, 0.100, 0.800]
+      
+      // 11 goal target options with goalkeeper animations
+      // Goal posts: width 8 units (-4 to +4), height 2.4 units (0 to 2.4)
+      const goalTargets = [
+        { pos: [0, 1.2, -19], name: "Middle of net", animation: "/bot1/Goalkeeper Catch middle.fbx" },           // 1 - GOAL
+        { pos: [3.5, 2.2, -19], name: "Top right corner", animation: "/bot1/Goalkeeper Diving right.fbx" },      // 2 - GOAL (within posts)
+        { pos: [2, 1.2, -19], name: "Right center", animation: "/bot1/Goalkeeper Diving right.fbx" },            // 3 - GOAL
+        { pos: [5, 1.2, -18], name: "Miss right", animation: "/bot1/Goalkeeper Diving right.fbx" },              // 4 - MISS (wide)
+        { pos: [3, 0.5, -19], name: "Bottom right", animation: "/bot1/Goalkeeper Body right low.fbx" },          // 5 - GOAL
+        { pos: [-3, 0.5, -19], name: "Bottom left", animation: "/bot1/Goalkeeper Body left low.fbx" },           // 6 - GOAL
+        { pos: [-2, 1.2, -19], name: "Left center", animation: "/bot1/Goalkeeper Diving left.fbx" },             // 7 - GOAL
+        { pos: [-5, 1.2, -18], name: "Left miss", animation: "/bot1/Goalkeeper Diving left.fbx" },               // 8 - MISS (wide)
+        { pos: [-3.5, 2.2, -19], name: "Top left corner", animation: "/bot1/Goalkeeper Diving left.fbx" },       // 9 - GOAL (within posts)
+        { pos: [0, 2.2, -19], name: "Top center", animation: "/bot1/Goalkeeper Catch middle.fbx" },              // 10 - GOAL
+        { pos: [0, 3.5, -18], name: "Over the bar miss", animation: "/bot1/Goalkeeper Catch middle.fbx" }        // 11 - MISS (over bar)
+      ]
+      
+      // Randomly select a target
+      const randomTarget = goalTargets[Math.floor(Math.random() * goalTargets.length)]
+      console.log(`🎯 Shooting at: ${randomTarget.name}`)
+
+      // Trigger goalkeeper animation with slight delay to react to ball movement
+      setTimeout(() => {
+        playGoalkeeperAnimation(randomTarget.animation)
+      }, 300) // 0.3s delay for realistic reaction time
+
+      animateBallWithPhysics(startPos, randomTarget.pos, 1500, () => {
+        if (ballState) {
+          // Goal detection - check if ball is within goal posts
+          const ballFinalPos = ballState.position
+          console.log('🏁 Ball animation completed. Checking goal detection...', {
+            targetPos: randomTarget.pos,
+            ballFinalPos: ballFinalPos,
+            ballStatePosition: ballState.position
+          })
+          
+          // Goal dimensions (standard football goal)
+          const goalWidth = 8 // Total width: 8 units (-4 to +4)
+          const goalHeight = 2.4 // Standard height: 2.4 units
+          const goalZ = -18 // Goal line Z position
+          const goalTolerance = 1 // Allow some tolerance for ball to cross goal line
+          
+          // Check if ball is within goal boundaries
+          const withinGoalWidth = ballFinalPos[0] >= -goalWidth/2 && ballFinalPos[0] <= goalWidth/2
+          const withinGoalHeight = ballFinalPos[1] >= 0 && ballFinalPos[1] <= goalHeight
+          const crossedGoalLine = ballFinalPos[2] <= (goalZ + goalTolerance)
+          
+          console.log('🎯 Goal detection details:', {
+            ballX: ballFinalPos[0], goalWidthRange: `${-goalWidth/2} to ${goalWidth/2}`, withinWidth: withinGoalWidth,
+            ballY: ballFinalPos[1], goalHeightRange: `0 to ${goalHeight}`, withinHeight: withinGoalHeight,
+            ballZ: ballFinalPos[2], goalLineZ: goalZ, tolerance: goalTolerance, crossedLine: crossedGoalLine
+          })
+          
+          const actualGoal = withinGoalWidth && withinGoalHeight && crossedGoalLine
+          
+          if (actualGoal) {
+            console.log('')
+            console.log('🎉 ==========================================')
+            console.log('⚽ GOAL! GOAL! GOAL! BALL WENT IN!')
+            console.log('🎉 ==========================================')
+            console.log('Shot type:', randomTarget.name)
+            console.log('Ball final position:', ballFinalPos)
+            console.log('==========================================')
+            console.log('')
+          } else {
+            const reason = !withinGoalWidth ? 'wide' : 
+                         !withinGoalHeight ? 'high' : 
+                         !crossedGoalLine ? 'short' : 'unknown'
+            console.log('')
+            console.log('💥 ==========================================')
+            console.log('❌ MISS! BALL WENT', reason.toUpperCase())
+            console.log('💥 ==========================================')
+            console.log('Shot type:', randomTarget.name)
+            console.log('Ball final position:', ballFinalPos)
+            console.log('Reason:', reason)
+            console.log('==========================================')
+            console.log('')
+          }
+          
+          // Hide ball after a short delay
+          setTimeout(() => {
+            ballState.hidden = true
+          }, 500)
+        }
+      })
+    }, 600)
+  }, 1600)
+
+  // Phase 5: Transition to running animation
+  setTimeout(() => {
+    if (sceneRefs.actions && sceneRefs.actions[1]) {
+      sceneRefs.actions[1].fadeOut(0.2)
+    }
+
+    animationState.currentIndex = 2 // Running animation
+    if (sceneRefs.actions && sceneRefs.actions[2]) {
+      sceneRefs.actions[2].reset().fadeIn(0.2).play()
+    }
+  }, 2200)
+
+  // End sequence - adjusted for slower celebration (1s ball chase + 1.8s touchline + 2s corner + 1.5s off screen)
+  setTimeout(() => {
+    console.log('🥅 Strike 2 sequence completed - player ran off screen')
+    animationState.isStrikeSequenceActive = false
+  }, 8000)
+}
+
+const rotateAndDropBall = () => {
+  console.log('↩️ Turn button pressed - showing goalkeeper and placing ball...')
+  
+  // Show goalkeeper
+  showGoalkeeper.value = true
+  console.log('🥅 Goalkeeper is now visible')
+  
+  if (sceneRefs.modelGroup && ballState) {
+    // Rotate the character 180 degrees to face the goal
+    const modelGroup = sceneRefs.modelGroup
+    const currentRotation = modelGroup.rotation.y
+    const targetRotation = currentRotation + Math.PI
+    
+    // Place ball in front of player immediately
+    const modelPosition = modelGroup.position
+    const forwardOffset = 1.5 // In front of player
+    
+    // Calculate position in front of player after rotation
+    const ballX = modelPosition.x + Math.sin(targetRotation) * forwardOffset
+    const ballZ = modelPosition.z + Math.cos(targetRotation) * forwardOffset
+    const ballY = 0.1 // Ground level
+    
+    ballState.position = [ballX, ballY, ballZ]
+    ballState.hidden = false
+    console.log('⚽ Ball placed in front of player:', ballState.position)
+    
+    // Animate the rotation
+    const rotationDuration = 500
+    const startTime = Date.now()
+    const startRotation = currentRotation
+    
+    const animateRotation = () => {
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(elapsed / rotationDuration, 1)
+      
+      // Smooth easing
+      const easedProgress = 1 - Math.pow(1 - progress, 2)
+      
+      modelGroup.rotation.y = startRotation + (targetRotation - startRotation) * easedProgress
+      
+      if (progress < 1) {
+        requestAnimationFrame(animateRotation)
+      } else {
+        console.log('↩️ Character rotation complete - now facing goal')
+      }
+    }
+    
+    animateRotation()
+  }
+}
+
+const resetCharacterPosition = () => {
+  console.log('🔄 Enhanced mobile reset: Returning character to starting position...')
+
+  // Stop any ongoing ball animations
+  if (typeof stopBallAnimation === 'function') {
+    stopBallAnimation()
+  }
+
+  // Stop running animation if active
+  if (sceneRefs.actions && sceneRefs.actions[2]) {
+    sceneRefs.actions[2].fadeOut(0.4)
+  }
+
+  // Stop strike animation if active
+  if (sceneRefs.actions && sceneRefs.actions[1]) {
+    sceneRefs.actions[1].fadeOut(0.4)
+  }
+
+  if (sceneRefs.modelGroup) {
+    const modelGroup = sceneRefs.modelGroup
+    const currentPosition = modelGroup.position.clone()
+    const originalPosition = new THREE.Vector3(0, sceneOffsetY.value, 0)
+
+    const returnDuration = 1200 // Slightly longer for smoother movement
+    const startTime = Date.now()
+
+    const animateReturn = () => {
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(elapsed / returnDuration, 1)
+
+      // Smooth easing for better visual appeal
+      const easedProgress = 1 - Math.pow(1 - progress, 3) // Ease out cubic
+
+      modelGroup.position.lerpVectors(currentPosition, originalPosition, easedProgress)
+
+      if (progress < 1) {
+        requestAnimationFrame(animateReturn)
+      } else {
+        setTimeout(() => {
+          // Return to idle animation
+          animationState.currentIndex = 0
+          if (sceneRefs.actions && sceneRefs.actions[0]) {
+            sceneRefs.actions[0].reset().fadeIn(0.6).play()
+          }
+          animationState.isStrikeSequenceActive = false
+        }, 200)
+      }
+    }
+
+    animateReturn()
+  }
+
+  // Reset ball position
+  setTimeout(() => {
+    if (sceneRefs.camera && ballState) {
+      const camPos = sceneRefs.camera.position
+      ballState.position = [camPos.x, Math.max(0.1, camPos.y - 0.5), camPos.z - 2]
+      ballState.hidden = false
+      console.log('⚽ Ball unhidden and reset to camera position')
+    }
+  }, 300)
+}
+
+// Mobile video controls
+const setVideoPlaybackRate = () => {
+  if (backgroundVideo.value) {
+    backgroundVideo.value.playbackRate = isPowerSaveMode.value ? 0.3 : 0.5
+    backgroundVideo.value.loop = true
+    console.log('🎬 Mobile video playback rate set to:', backgroundVideo.value.playbackRate)
+  }
+}
+
+const ensureVideoLoop = () => {
+  if (backgroundVideo.value) {
+    backgroundVideo.value.currentTime = 0
+    backgroundVideo.value.play()
+  }
+}
+
+// Mobile-optimized combined filter
+const getMobileCombinedFilter = () => {
+  const filters = []
+  
+  // Simplified bloom for mobile
+  if (mobileBloomEnabled.value && mobileCameraBloom.value > 0) {
+    const bloomIntensity = mobileCameraBloom.value * 0.5 // Reduced intensity
+    const brightness = 1 + (bloomIntensity * 0.2)
+    const saturate = 1 + (bloomIntensity * 0.3)
+    
+    filters.push(`brightness(${brightness})`)
+    filters.push(`saturate(${saturate})`)
+  }
+  
+  return filters.length > 0 ? filters.join(' ') : 'none'
+}
+
+// Fog color helper
+const getFogColorWithOpacity = () => {
+  return new THREE.Color(0x666666) // Simple gray fog for mobile
+}
+
+// Color update methods
+const updateOverlayColor = (color: string) => {
+  if (materials.overlay) {
+    const threeColor = new THREE.Color(color)
+    materials.overlay.color.copy(threeColor)
+    materials.overlay.needsUpdate = true
+  }
+}
+
+const updateTorusEmission = (colorValue: string) => {
+  const newThreeColor = new THREE.Color(colorValue)
+  if (typeof updateTorusColor === 'function') {
+    updateTorusColor(newThreeColor)
+  }
+}
+
+// Scene event handlers
+const onSceneReady = (event: any) => {
+  if (event.scene && !sceneRefs.scene) {
+    sceneRefs.scene = event.scene.value || event.scene
+  }
+  
+  if (event.camera && !sceneRefs.camera) {
+    sceneRefs.camera = event.camera.value || event.camera
+  }
+  
+  if (event.renderer && !sceneRefs.renderer) {
+    sceneRefs.renderer = event.renderer.value || event.renderer
+  }
+  
+  if (sceneRefs.scene && sceneRefs.camera && sceneRefs.renderer) {
+    loadingStatus.value = 'Ready'
+  }
+}
+
+const onSceneRender = (event: any) => {
+  if (!sceneRefs.scene && event.scene) {
+    sceneRefs.scene = event.scene
+  }
+}
+
+// Animation loop
+const animationLoop = () => {
+  const deltaTime = updateAnimations()
+  updateBallPhysics(deltaTime)
+  
+  // Update goalkeeper animation
+  if (sceneRefs.goalkeeperMixer) {
+    sceneRefs.goalkeeperMixer.update(deltaTime)
+  }
+  
+  requestAnimationFrame(animationLoop)
+}
+
+// Performance detection on mount
+onMounted(async () => {
+  console.log('📱 Mobile scene component mounted')
+  console.log('📹 Initial mobile camera position:', mobileCameraPosition.value)
+  console.log('📹 Initial mobile camera FOV:', mobileCameraFov.value)
+
+  // Detect device performance
+  const performanceLevel = await detectPerformanceLevel()
+  console.log('📊 Device performance level:', performanceLevel)
+
+  // Apply optimal settings based on device
+  const optimalSettings = getOptimalSettings(performanceLevel)
+  Object.assign({
+    mobileBloomEnabled: mobileBloomEnabled.value,
+    mobileFogEnabled: mobileFogEnabled.value,
+    showGrass: showGrass.value
+  }, optimalSettings)
+
+  // Show performance warning for low-end devices
+  if (performanceLevel === 'low') {
+    setTimeout(() => {
+      showPerformanceWarning.value = true
+    }, 2000)
+  }
+
+  animationLoop()
+
+  // Watch for camera position changes
+  watch(mobileCameraPosition, (newPos, oldPos) => {
+    console.log('📹 Mobile camera position changed:', {
+      from: oldPos,
+      to: newPos,
+      change: newPos ? [
+        (newPos[0] - (oldPos?.[0] || 0)).toFixed(3),
+        (newPos[1] - (oldPos?.[1] || 0)).toFixed(3),
+        (newPos[2] - (oldPos?.[2] || 0)).toFixed(3)
+      ] : 'N/A'
+    })
+  }, { deep: true })
+
+  // Watch for FOV changes
+  watch(mobileCameraFov, (newFov, oldFov) => {
+    console.log('📹 Mobile camera FOV changed:', {
+      from: oldFov,
+      to: newFov,
+      change: (newFov - oldFov).toFixed(1) + '°'
+    })
+  })
+})
+
+// Watch for mobile-specific changes
+watch(isPowerSaveMode, (enabled) => {
+  if (enabled) {
+    enablePowerSave()
+  }
+})
+
+// Connect refs
+watch(modelGroup, (newModelGroup) => {
+  if (newModelGroup) {
+    sceneRefs.modelGroup = newModelGroup
+    loadCharacterModel().then(() => {
+      addTorusToCharacter()
+      // Add field elements like desktop version
+      createGrassField() // Add PBR grass texture field
+      createCenterCircle() // Add center circle and spot
+      createFootballFieldLines() // Add football field markings
+      loadGoalpostModel() // Add goalposts to both ends of the field
+      loadCornerFlags() // Add corner flags to all 4 corners
+      
+      // Load goalkeeper after main character is ready
+      loadGoalkeeper().then(() => {
+        console.log('Both characters should now be loaded')
+      })
+      
+      // Mark as ready
+      isReady.value = true
+      loadingStatus.value = 'Ready'
+    })
+  }
+}, { once: true })
+
+watch(goalkeeperGroup, (newGoalkeeperGroup) => {
+  if (newGoalkeeperGroup) {
+    console.log('Goalkeeper group ref connected:', newGoalkeeperGroup)
+    // Don't load goalkeeper here, wait for main character to load first
+  }
+})
+
+watch(ballModelGroup, (newBallGroup) => {
+  if (newBallGroup) {
+    sceneRefs.ballModelGroup = newBallGroup
+    // Ball model will be loaded after character loads
+    loadBallModel()
+  }
+}, { once: true })
+
+onBeforeUnmount(() => {
+  console.log('🧹 Mobile scene component unmounting...')
+})
+</script>
+
+<style scoped>
+.mobile-scene-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 100px 0 100px 0; /* Add padding for top music player and bottom control panel */
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+.mobile-scene-container.screen-shake-active {
+  animation: mobileScreenShake 0.3s ease-out;
+}
+
+@keyframes mobileScreenShake {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  25% { transform: translate3d(-2px, 1px, 0); }
+  50% { transform: translate3d(2px, -1px, 0); }
+  75% { transform: translate3d(-1px, 2px, 0); }
+}
+
+.mobile-background-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: translate(-50%, -50%);
+  z-index: -1;
+}
+
+.mobile-settings-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.mobile-settings-content {
+  background: rgba(30, 30, 30, 0.95);
+  border-radius: 16px;
+  padding: 24px;
+  margin: 20px;
+  max-width: 400px;
+  width: calc(100% - 40px);
+  max-height: 80vh;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobile-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  color: white;
+}
+
+.mobile-settings-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mobile-settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-item label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.mobile-slider {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.mobile-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #007AFF;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.mobile-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #007AFF;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+.toggle-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toggle-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+  min-width: 80px;
+}
+
+.toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.toggle-btn.active {
+  background: #007AFF;
+  border-color: #007AFF;
+}
+
+.mobile-color-controls {
+  position: fixed;
+  bottom: 120px;
+  left: 16px;
+  right: 16px;
+  z-index: 900;
+  display: flex;
+  gap: 16px;
+}
+
+.mobile-loading {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1500;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 24px;
+  border-radius: 16px;
+  text-align: center;
+  color: white;
+  backdrop-filter: blur(10px);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid #007AFF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.mobile-performance-warning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.warning-content {
+  background: rgba(30, 30, 30, 0.95);
+  border-radius: 16px;
+  padding: 24px;
+  margin: 20px;
+  max-width: 360px;
+  width: calc(100% - 40px);
+  text-align: center;
+  color: white;
+  border: 1px solid rgba(255, 165, 0, 0.3);
+}
+
+.warning-content h4 {
+  margin: 0 0 16px;
+  color: #FFA500;
+  font-size: 18px;
+}
+
+.warning-content p {
+  margin: 0 0 24px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.warning-actions {
+  display: flex;
+  gap: 12px;
+  flex-direction: column;
+}
+
+.primary-btn {
+  background: #007AFF;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.primary-btn:hover {
+  background: #0056CC;
+}
+
+.secondary-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 12px 24px;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Touch-friendly adjustments */
+@media (max-width: 600px) {
+  .mobile-settings-content {
+    margin: 16px;
+    padding: 20px;
+  }
+  
+  .toggle-btn {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  
+  .primary-btn,
+  .secondary-btn {
+    min-height: 48px;
+    font-size: 16px;
+  }
+}
+</style>

@@ -128,97 +128,109 @@ const router = createRouter({
       path: '/',
       name: 'dashboard',
       component: Dashboard,
-      beforeEnter: requireAuth
+      
     },
     {
       path: '/my-team',
       name: 'my-team',
       component: () => import('@/views/MyTeam.vue'),
-      beforeEnter: requireAuth
+      
     },
     {
       path: '/recruit',
       name: 'recruit',
       component: () => import('@/views/Recruit.vue'),
-      beforeEnter: requireAuth
+      
     },
     {
       path: '/my-games',
       name: 'my-games',
       component: () => import('@/views/MyGames.vue'),
-      beforeEnter: requireAuth
+      
     },
     {
       path: '/play-game/:matchId?',
       name: 'play-game',
       component: () => import('@/views/PlayGame.vue'),
-      beforeEnter: requireAuth
+      
     },
     {
       path: '/leaderboards',
       name: 'leaderboards',
       component: () => import('@/views/Leaderboards.vue'),
-      beforeEnter: requireAuth
+      
     },
     {
       path: '/tokens',
       name: 'tokens',
       component: () => import('@/views/TokensPowerUps.vue'),
-      beforeEnter: requireAuth
+      
     },
     {
       path: '/select-bot',
       name: 'select-bot',
       component: () => import('@/views/SelectBot.vue'),
-      beforeEnter: requireAuth
+      
+    },
+    {
+      path: '/character-creator',
+      name: 'character-creator',
+      component: () => import('@/views/CharacterCreator.vue'),
+      
     },
     {
       path: '/matchmaking',
       name: 'matchmaking',
       component: () => import('@/components/multiplayer/WaitingRoom.vue'),
-      beforeEnter: requireAuth
+      
     },
     {
       path: '/game/h2h/:matchId',
       name: 'h2h-game',
       component: () => import('@/views/H2HGameView.vue'),
-      beforeEnter: requireAuth
+      
     },
     {
       path: '/game/spectate/:matchId',
       name: 'spectate-game',
       component: () => import('@/views/SpectateView.vue'),
-      beforeEnter: requireAuth
+      
     },
     {
       path: '/profile',
       name: 'profile',
       component: () => import('@/views/Profile.vue'),
-      beforeEnter: requireAuth
+      
     },
     {
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/Settings.vue'),
-      beforeEnter: requireAuthOnly
+  
     },
     {
       path: '/theme',
       name: 'theme',
       component: () => import('@/views/Theme.vue'),
-      beforeEnter: requireAuth
+      
     },
     {
       path: '/buttons',
       name: 'buttons',
       component: () => import('@/views/ButtonDemo.vue'),
-      beforeEnter: requireAuth
+      
     },
     {
       path: '/sound-test',
       name: 'sound-test',
       component: () => import('@/views/SoundTest.vue'),
-      beforeEnter: requireAuth
+      
+    },
+    {
+      path: '/demo',
+      name: 'DemoPage',
+      component: () => import('@/views/DemoPage.vue'),
+      
     },
     {
       path: '/:pathMatch(.*)*',

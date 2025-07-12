@@ -64,10 +64,7 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
               resolve(texture)
             },
             undefined,
-            (error) => {
-              console.error('❌ Failed to load base texture:', error)
-              reject(error)
-            }
+            reject
           )
         }),
         new Promise<THREE.Texture>((resolve, reject) => {
@@ -78,10 +75,7 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
               resolve(texture)
             },
             undefined,
-            (error) => {
-              console.error('❌ Failed to load overlay texture:', error)
-              reject(error)
-            }
+            reject
           )
         })
       ])
@@ -97,8 +91,6 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
       characterModel.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           console.log(`Found mesh: ${child.name} (ID: ${child.uuid})`)
-          console.log(`  - Material type: ${child.material?.type}`)
-          console.log(`  - Has texture: ${(child.material as any)?.map ? 'YES' : 'NO'}`)
         }
         if (child.isBone) { // THREE.Bone is a subclass of Object3D, .isBone is a type guard
           console.log(`🦴 Found bone: ${child.name} (ID: ${child.uuid})`)
@@ -109,14 +101,7 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
       let overlayMaterialCreated = false
       characterModel.traverse((child) => {
         if (child instanceof THREE.Mesh) {
-          console.log(`🔍 Processing mesh: ${child.name}`);
-          
-          // Ensure textures are loaded before applying materials
-          if (!baseTexture || !overlayTexture) {
-            console.error('❌ Textures not loaded properly!');
-            return;
-          }
-          
+          console.log(`🔍 Processing mesh: `);
           if (child.name.toLowerCase().includes('arcreactor') && child.material) {
             arcreactorMeshRef.value = child;
             if (Array.isArray(child.material)) {

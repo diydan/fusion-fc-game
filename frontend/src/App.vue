@@ -208,10 +208,12 @@
         <span class="text-caption">Settings</span>
       </v-btn>
     </v-bottom-navigation>
+    <ToastContainer />
   </v-app>
 </template>
 
 <script setup>
+import ToastContainer from './components/ui/ToastContainer.vue'
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
