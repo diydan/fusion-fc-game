@@ -135,6 +135,7 @@ const formattedTime = computed(() => {
 
 // Initialize game
 const initializeGame = () => {
+  console.log('Initializing game...')
   const gameConfig = {
     fieldWidth: 600,
     fieldHeight: 400,
@@ -145,14 +146,49 @@ const initializeGame = () => {
     soundSystem: soundEnabled.value ? { playKickSound, playGoalSound, playWhistleSound } : null
   }
   
+  console.log('Game config:', gameConfig)
+  
   gameEngine = new FutsalGameEngine(gameConfig)
+  
+  // Check if engine was created
+  console.log('Game engine created:', gameEngine)
+  console.log('Initial players:', gameEngine.getPlayers())
+  console.log('Initial ball:', gameEngine.getBall())
+  
+  // Set kickoff team (home team for now)
+  const gameState = gameEngine.getGameState()
+  gameState.kickoffTeam = 'home'
+  
+  // The game will handle kickoff automatically when it starts
+  // Just make sure the ball is at center
+  const ball = gameEngine.getBall()
+  if (ball) {
+    ball.x = 300 // fieldWidth / 2
+    ball.y = 200 // fieldHeight / 2
+    ball.vx = 0
+    ball.vy = 0
+    ball.isStationary = true
+  }
+  
+  console.log('Game ready for kickoff')
+  console.log('Players:', gameEngine.getPlayers().length)
+  console.log('Ball position:', ball)
+  
   gameStarted.value = true
   render()
 }
 
 // Game loop
+let frameCount = 0
 const gameLoop = () => {
   if (!isPlaying.value || !gameEngine) return
+  
+  frameCount++
+  
+  // Debug: Check if update is being called (only first few frames)
+  if (frameCount < 5) {
+    console.log(`Game loop frame ${frameCount}, isPlaying:`, isPlaying.value)
+  }
   
   gameEngine.update(1/60 * gameSpeed.value)
   
@@ -162,6 +198,16 @@ const gameLoop = () => {
   awayScore.value = state.awayScore
   gameTime.value = state.gameTime
   gameOver.value = state.gameOver
+  
+  // Debug: Check game state every ~second
+  if (frameCount % 60 === 0) {
+    console.log('Game state:', {
+      time: state.gameTime.toFixed(1),
+      isPlaying: state.isPlaying,
+      score: `${state.homeScore}-${state.awayScore}`,
+      ballPos: gameEngine.getBall()
+    })
+  }
   
   if (state.gameOver) {
     gameStatus.value = state.homeScore > state.awayScore ? 
@@ -317,15 +363,29 @@ const togglePlayPause = () => {
   
   isPlaying.value = !isPlaying.value
   
-  if (isPlaying.value) {
+  if (isPlaying.value && gameEngine) {
+    console.log('Starting game...')
+    // Make sure the game engine is set to playing
+    const state = gameEngine.getGameState()
+    state.isPlaying = true
+    
     gameLoop()
     if (soundEnabled.value) playWhistleSound()
+  } else {
+    console.log('Pausing game...')
+    if (gameEngine) {
+      const state = gameEngine.getGameState()
+      state.isPlaying = false
+    }
   }
 }
 
 const resetGame = () => {
+  console.log('Resetting game...')
+  
   if (animationId) {
     cancelAnimationFrame(animationId)
+    animationId = null
   }
   
   isPlaying.value = false
@@ -335,8 +395,10 @@ const resetGame = () => {
   gameTime.value = 0
   gameOver.value = false
   gameStatus.value = ''
+  gameEngine = null
   
-  initializeGame()
+  // Re-render the empty field
+  render()
 }
 
 const toggleSound = () => {
@@ -380,7 +442,8 @@ watch(gameSpeed, (newSpeed) => {
 
 // Lifecycle
 onMounted(() => {
-  initializeGame()
+  // Don't auto-start the game, wait for user to click play
+  console.log('GameCanvas mounted')
 })
 
 onUnmounted(() => {

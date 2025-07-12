@@ -45,19 +45,65 @@
       
       <!-- Ground plane with grass texture -->
       <TresMesh 
-        :position="[0, 0, 0]" 
+        :position="[0, -0.005, 0]" 
         :rotation="[-Math.PI / 2, 0, 0]" 
         :receive-shadow="true"
         :visible="showGrass"
       >
-        <TresPlaneGeometry :args="[30, 30, 10, 10]" />
+        <TresPlaneGeometry :args="[40, 50, 10, 10]" />
         <TresMeshStandardMaterial 
           :map="grassTexture"
-          :roughness="0.8"
-          :metalness="0.2"
-          :color="0x3a5f3a"
+          :normal-map="grassNormal"
+          :roughness-map="grassRoughness"
+          :ao-map="grassAO"
+          :ao-map-intensity="0.8"
+          :roughness="0.9"
+          :metalness="0.0"
+          :color="0x8bbe1b"
         />
       </TresMesh>
+
+      <!-- Center Circle -->
+      <TresMesh
+        :position="[0, 0.001, 0]"
+        :rotation="[-Math.PI / 2, 0, 0]"
+        :visible="showGrass"
+      >
+        <TresRingGeometry :args="[4.5, 5, 64]" />
+        <TresMeshStandardMaterial 
+          :color="0xffffff"
+          :metalness="0.5"
+          :roughness="0.4"
+          :emissive="0xffffff"
+          :emissive-intensity="2"
+          :transparent="true"
+          :opacity="0.9"
+        />
+      </TresMesh>
+
+      <!-- Center Spot -->
+      <TresMesh
+        :position="[0, 0.001, 0]"
+        :rotation="[-Math.PI / 2, 0, 0]"
+        :visible="showGrass"
+      >
+        <TresCircleGeometry :args="[0.3, 16]" />
+        <TresMeshStandardMaterial 
+          :color="0xffffff"
+          :metalness="0.5"
+          :roughness="0.4"
+          :emissive="0xffffff"
+          :emissive-intensity="2"
+          :transparent="true"
+          :opacity="0.9"
+        />
+      </TresMesh>
+
+      <!-- Goal Posts -->
+      <TresGroup ref="goalpostGroup" />
+
+      <!-- Corner Flags -->
+      <TresGroup ref="cornerFlagsGroup" />
 
       <!-- Character Group -->
       <TresGroup :position="[0, sceneOffsetY, 0]">
@@ -403,12 +449,15 @@ const {
   loadCornerFlags
 } = useSceneSetup()
 
-// Simplified lighting
+// Use exact lighting settings from original
 const mobileLightingSettings = computed(() => ({
-  ...lightingSettings,
-  shadowEnabled: true,
-  ambientIntensity: 1.2,
-  directionalIntensity: 1.8
+  keyLightIntensity: 2,
+  fillLightIntensity: 3,
+  fillLight2Intensity: 3,
+  frontLightIntensity: 0.8,
+  rimLightIntensity: 4,
+  ambientIntensity: 2,
+  shadowEnabled: true
 }))
 
 const { animationState, loadCharacterModel, updateAnimations, getCurrentAnimation, materials, triggerPowerUpFlash, playWaveAnimation, playPowerUpAnimation } = useAnimations(sceneRefs, materialSettings)
@@ -582,11 +631,121 @@ const backgroundVideo = ref<HTMLVideoElement>()
 const modelGroup = ref()
 const goalkeeperGroup = ref()
 const ballModelGroup = ref()
+const goalpostGroup = ref()
+const cornerFlagsGroup = ref()
 const overlayColorHue = ref(218)
 const torusEmissionHue = ref(195)
 
-// Grass texture
+// Grass textures
 const grassTexture = ref(null)
+const grassNormal = ref(null)
+const grassRoughness = ref(null)
+const grassAO = ref(null)
+
+// Load goal posts
+const loadGoalposts = async () => {
+  try {
+    console.log('🥅 Loading Goalpost.FBX models...')
+    
+    const loader = new FBXLoader()
+    
+    // GOALPOST SETTINGS - Same as original
+    const GOALPOST_SCALE = 0.02
+    const GOALPOST_POSITION_X = 0
+    const GOALPOST_POSITION_Y = 1
+    const GOALPOST_POSITION_Z_1 = -19.5
+    const GOALPOST_POSITION_Z_2 = 19.5
+    
+    // Load first goalpost
+    const goalpostModel1 = await loader.loadAsync('/props/Goalpost.fbx')
+    goalpostModel1.scale.setScalar(GOALPOST_SCALE)
+    goalpostModel1.position.set(GOALPOST_POSITION_X, GOALPOST_POSITION_Y, GOALPOST_POSITION_Z_1)
+    
+    // Enable shadows for first goalpost
+    goalpostModel1.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = true
+        child.receiveShadow = true
+      }
+    })
+    
+    // Load second goalpost (mirror position)
+    const goalpostModel2 = await loader.loadAsync('/props/Goalpost.fbx')
+    goalpostModel2.scale.setScalar(GOALPOST_SCALE)
+    goalpostModel2.position.set(GOALPOST_POSITION_X, GOALPOST_POSITION_Y, GOALPOST_POSITION_Z_2)
+    goalpostModel2.rotation.set(0, Math.PI, 0) // Rotate 180 degrees
+    
+    // Enable shadows for second goalpost
+    goalpostModel2.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = true
+        child.receiveShadow = true
+      }
+    })
+    
+    // Add both goalposts to the group
+    if (goalpostGroup.value) {
+      goalpostGroup.value.add(goalpostModel1)
+      goalpostGroup.value.add(goalpostModel2)
+      console.log('✅ Both goalpost models loaded and added to scene')
+    }
+    
+  } catch (error) {
+    console.error('❌ Error loading goalpost models:', error)
+  }
+}
+
+// Load corner flags
+const loadCornerFlags = async () => {
+  try {
+    console.log('🚩 Loading Corner Flag.FBX models...')
+    
+    const loader = new FBXLoader()
+    
+    // CORNER FLAG SETTINGS - Same as original
+    const FLAG_SCALE = 0.1
+    const FLAG_POSITION_Y = 0
+    const FIELD_WIDTH = 15
+    const FIELD_LENGTH = 20
+    
+    // Corner positions for a football field
+    const cornerPositions = [
+      { x: -FIELD_WIDTH + 0.3, z: -FIELD_LENGTH }, // Top-left corner
+      { x: FIELD_WIDTH + 0.1, z: -FIELD_LENGTH },  // Top-right corner
+      { x: -FIELD_WIDTH + 0.3, z: FIELD_LENGTH },  // Bottom-left corner
+      { x: FIELD_WIDTH + 0.1, z: FIELD_LENGTH }    // Bottom-right corner
+    ]
+    
+    // Load and position each corner flag
+    for (let i = 0; i < cornerPositions.length; i++) {
+      const position = cornerPositions[i]
+      
+      const flagModel = await loader.loadAsync('/props/Flag.fbx')
+      
+      // Apply settings
+      flagModel.scale.setScalar(FLAG_SCALE)
+      flagModel.position.set(position.x, FLAG_POSITION_Y, position.z)
+      
+      // Enable shadows
+      flagModel.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.castShadow = true
+          child.receiveShadow = true
+        }
+      })
+      
+      // Add to group
+      if (cornerFlagsGroup.value) {
+        cornerFlagsGroup.value.add(flagModel)
+      }
+    }
+    
+    console.log('✅ All 4 corner flags loaded and added to scene')
+    
+  } catch (error) {
+    console.error('❌ Error loading corner flag models:', error)
+  }
+}
 
 // Play goalkeeper animation based on shot direction
 const playGoalkeeperAnimation = async (animationFile: string) => {
@@ -1091,15 +1250,59 @@ const animationLoop = () => {
 onMounted(async () => {
   console.log('📱 3D Game component mounted')
   
-  // Load grass texture
+  // Load grass textures
   const textureLoader = new THREE.TextureLoader()
-  textureLoader.load('/textures/grass1-bl/grass1-albedo3.png', (texture) => {
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping
-    texture.repeat.set(10, 10)
-    texture.colorSpace = THREE.SRGBColorSpace
-    grassTexture.value = texture
-    console.log('🌱 Grass texture loaded')
+  
+  // Load all PBR textures for grass
+  const texturePromises = [
+    // Diffuse/Albedo
+    new Promise((resolve) => {
+      textureLoader.load('/textures/grass1-bl/grass1-albedo3.png', (texture) => {
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+        texture.repeat.set(10, 10)
+        texture.colorSpace = THREE.SRGBColorSpace
+        grassTexture.value = texture
+        resolve(texture)
+      })
+    }),
+    // Normal
+    new Promise((resolve) => {
+      textureLoader.load('/textures/grass1-bl/grass1-normal1-ogl.png', (texture) => {
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+        texture.repeat.set(10, 10)
+        grassNormal.value = texture
+        resolve(texture)
+      })
+    }),
+    // Roughness
+    new Promise((resolve) => {
+      textureLoader.load('/textures/grass1-bl/grass1-rough.png', (texture) => {
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+        texture.repeat.set(10, 10)
+        grassRoughness.value = texture
+        resolve(texture)
+      })
+    }),
+    // AO
+    new Promise((resolve) => {
+      textureLoader.load('/textures/grass1-bl/grass1-ao.png', (texture) => {
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+        texture.repeat.set(10, 10)
+        grassAO.value = texture
+        resolve(texture)
+      })
+    })
+  ]
+  
+  Promise.all(texturePromises).then(() => {
+    console.log('🌱 All grass textures loaded')
   })
+
+  // Load goal posts
+  loadGoalposts()
+  
+  // Load corner flags
+  loadCornerFlags()
   
   // Show goalkeeper in penalty mode
   if (hidePlayerSelection.value) {
