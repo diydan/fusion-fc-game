@@ -142,6 +142,9 @@ export const logoGenerator = onRequest(
   }
 );
 
+// Export football simulation functions
+export {initGame, playIteration, startSecondHalf, getGameState} from "./football-sim";
+
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
 
