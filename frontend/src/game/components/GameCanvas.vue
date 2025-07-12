@@ -26,7 +26,7 @@
     />
 
     <div class="game-controls">
-      <button @click="togglePlayPause" :disabled="!gameStarted" class="control-btn">
+      <button @click="togglePlayPause" class="control-btn">
         {{ isPlaying ? 'Pause' : 'Play' }}
       </button>
       <button @click="resetGame" class="control-btn">Reset</button>
@@ -174,7 +174,6 @@ const initializeGame = () => {
   console.log('Players:', gameEngine.getPlayers().length)
   console.log('Ball position:', ball)
   
-  gameStarted.value = true
   render()
 }
 
@@ -359,17 +358,23 @@ const drawBall = (ctx, ball) => {
 const togglePlayPause = () => {
   if (!gameStarted.value) {
     initializeGame()
+    gameStarted.value = true
   }
   
   isPlaying.value = !isPlaying.value
   
   if (isPlaying.value && gameEngine) {
     console.log('Starting game...')
+    // Reset frame counter
+    frameCount = 0
+    
     // Make sure the game engine is set to playing
     const state = gameEngine.getGameState()
     state.isPlaying = true
     
+    // Start the game loop
     gameLoop()
+    
     if (soundEnabled.value) playWhistleSound()
   } else {
     console.log('Pausing game...')
@@ -382,6 +387,7 @@ const togglePlayPause = () => {
 
 const resetGame = () => {
   console.log('Resetting game...')
+  console.trace('Reset called from:')
   
   if (animationId) {
     cancelAnimationFrame(animationId)
@@ -442,8 +448,9 @@ watch(gameSpeed, (newSpeed) => {
 
 // Lifecycle
 onMounted(() => {
-  // Don't auto-start the game, wait for user to click play
   console.log('GameCanvas mounted')
+  // Just render the empty field
+  render()
 })
 
 onUnmounted(() => {

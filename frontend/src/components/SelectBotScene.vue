@@ -449,15 +449,10 @@ const {
   loadCornerFlags
 } = useSceneSetup()
 
-// Use exact lighting settings from original
+// Use lighting settings from composable, matching original
 const mobileLightingSettings = computed(() => ({
-  keyLightIntensity: 2,
-  fillLightIntensity: 3,
-  fillLight2Intensity: 3,
-  frontLightIntensity: 0.8,
-  rimLightIntensity: 4,
-  ambientIntensity: 2,
-  shadowEnabled: true
+  ...lightingSettings,
+  shadowEnabled: true // Enable shadows as we have proper shadow setup now
 }))
 
 const { animationState, loadCharacterModel, updateAnimations, getCurrentAnimation, materials, triggerPowerUpFlash, playWaveAnimation, playPowerUpAnimation } = useAnimations(sceneRefs, materialSettings)
@@ -642,110 +637,7 @@ const grassNormal = ref(null)
 const grassRoughness = ref(null)
 const grassAO = ref(null)
 
-// Load goal posts
-const loadGoalposts = async () => {
-  try {
-    console.log('🥅 Loading Goalpost.FBX models...')
-    
-    const loader = new FBXLoader()
-    
-    // GOALPOST SETTINGS - Same as original
-    const GOALPOST_SCALE = 0.02
-    const GOALPOST_POSITION_X = 0
-    const GOALPOST_POSITION_Y = 1
-    const GOALPOST_POSITION_Z_1 = -19.5
-    const GOALPOST_POSITION_Z_2 = 19.5
-    
-    // Load first goalpost
-    const goalpostModel1 = await loader.loadAsync('/props/Goalpost.fbx')
-    goalpostModel1.scale.setScalar(GOALPOST_SCALE)
-    goalpostModel1.position.set(GOALPOST_POSITION_X, GOALPOST_POSITION_Y, GOALPOST_POSITION_Z_1)
-    
-    // Enable shadows for first goalpost
-    goalpostModel1.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.castShadow = true
-        child.receiveShadow = true
-      }
-    })
-    
-    // Load second goalpost (mirror position)
-    const goalpostModel2 = await loader.loadAsync('/props/Goalpost.fbx')
-    goalpostModel2.scale.setScalar(GOALPOST_SCALE)
-    goalpostModel2.position.set(GOALPOST_POSITION_X, GOALPOST_POSITION_Y, GOALPOST_POSITION_Z_2)
-    goalpostModel2.rotation.set(0, Math.PI, 0) // Rotate 180 degrees
-    
-    // Enable shadows for second goalpost
-    goalpostModel2.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.castShadow = true
-        child.receiveShadow = true
-      }
-    })
-    
-    // Add both goalposts to the group
-    if (goalpostGroup.value) {
-      goalpostGroup.value.add(goalpostModel1)
-      goalpostGroup.value.add(goalpostModel2)
-      console.log('✅ Both goalpost models loaded and added to scene')
-    }
-    
-  } catch (error) {
-    console.error('❌ Error loading goalpost models:', error)
-  }
-}
-
-// Load corner flags
-const loadCornerFlags = async () => {
-  try {
-    console.log('🚩 Loading Corner Flag.FBX models...')
-    
-    const loader = new FBXLoader()
-    
-    // CORNER FLAG SETTINGS - Same as original
-    const FLAG_SCALE = 0.1
-    const FLAG_POSITION_Y = 0
-    const FIELD_WIDTH = 15
-    const FIELD_LENGTH = 20
-    
-    // Corner positions for a football field
-    const cornerPositions = [
-      { x: -FIELD_WIDTH + 0.3, z: -FIELD_LENGTH }, // Top-left corner
-      { x: FIELD_WIDTH + 0.1, z: -FIELD_LENGTH },  // Top-right corner
-      { x: -FIELD_WIDTH + 0.3, z: FIELD_LENGTH },  // Bottom-left corner
-      { x: FIELD_WIDTH + 0.1, z: FIELD_LENGTH }    // Bottom-right corner
-    ]
-    
-    // Load and position each corner flag
-    for (let i = 0; i < cornerPositions.length; i++) {
-      const position = cornerPositions[i]
-      
-      const flagModel = await loader.loadAsync('/props/Flag.fbx')
-      
-      // Apply settings
-      flagModel.scale.setScalar(FLAG_SCALE)
-      flagModel.position.set(position.x, FLAG_POSITION_Y, position.z)
-      
-      // Enable shadows
-      flagModel.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.castShadow = true
-          child.receiveShadow = true
-        }
-      })
-      
-      // Add to group
-      if (cornerFlagsGroup.value) {
-        cornerFlagsGroup.value.add(flagModel)
-      }
-    }
-    
-    console.log('✅ All 4 corner flags loaded and added to scene')
-    
-  } catch (error) {
-    console.error('❌ Error loading corner flag models:', error)
-  }
-}
+// Goal posts and corner flags are loaded from useSceneSetup composable
 
 // Play goalkeeper animation based on shot direction
 const playGoalkeeperAnimation = async (animationFile: string) => {
@@ -1299,7 +1191,7 @@ onMounted(async () => {
   })
 
   // Load goal posts
-  loadGoalposts()
+  loadGoalpostModel()
   
   // Load corner flags
   loadCornerFlags()
