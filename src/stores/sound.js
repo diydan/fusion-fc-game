@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useGameSound } from '@/composables/useGameSound'
 
 export const useSoundStore = defineStore('sound', {
   state: () => ({
@@ -58,23 +59,9 @@ export const useSoundStore = defineStore('sound', {
       } = options
 
       try {
-        // Create or get audio element
-        let audio = this.audioElements.get(soundId)
-        if (!audio) {
-          audio = new Audio(`/sounds/${soundId}.mp3`)
-          audio.preload = 'auto'
-          this.audioElements.set(soundId, audio)
-        }
-
-        audio.volume = volume
-        audio.loop = loop
-        
-        if (onended) {
-          audio.onended = onended
-        }
-
-        audio.currentTime = 0
-        return audio.play()
+        // Use synthetic sound system instead of audio files
+        const { playSound } = useGameSound()
+        return playSound(soundId, { volume, loop })
       } catch (error) {
         console.warn(`Failed to play sound: ${soundId}`, error)
       }

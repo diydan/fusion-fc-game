@@ -1,11 +1,12 @@
 <template>
   <v-card flat>
     <v-card-title class="text-center">
-      <h2 class="text-h4">Manager Profile</h2>
+      <h2 class="text-h4 mb-2">🎉 Congratulations!</h2>
+      <p class="text-h6 font-weight-regular">You've been hired as a new manager to Fusion FC</p>
     </v-card-title>
     
     <v-card-subtitle class="text-center text-body-1 mb-4">
-      Tell us about yourself
+      Let's set up your manager profile
     </v-card-subtitle>
 
     <v-card-text>
@@ -37,6 +38,34 @@
           hint="We'll use this to send important updates"
           persistent-hint
         />
+
+        <!-- Manager Bio -->
+        <v-textarea
+          v-model="managerBio"
+          label="Manager Bio"
+          placeholder="Tell us about your football management style..."
+          variant="outlined"
+          density="comfortable"
+          rows="3"
+          :rules="bioRules"
+          class="mb-4"
+          prepend-inner-icon="mdi-account-edit"
+          hint="Describe your management philosophy and experience"
+          persistent-hint
+        >
+          <template v-slot:append-inner>
+            <v-btn
+              icon
+              size="small"
+              variant="text"
+              @click="generateRandomBio"
+              :disabled="generatingBio"
+            >
+              <v-icon size="small">{{ generatingBio ? 'mdi-loading mdi-spin' : 'mdi-dice-6' }}</v-icon>
+              <v-tooltip activator="parent" location="top">Generate Random Bio</v-tooltip>
+            </v-btn>
+          </template>
+        </v-textarea>
 
         <!-- Avatar Selection -->
         <div class="mb-6">
@@ -71,15 +100,19 @@
                   <v-list-item-title>Use {{ authMethod }} avatar</v-list-item-title>
                 </v-list-item>
 
-                <!-- Generate default -->
+
+                <!-- Generate AI avatar -->
                 <v-list-item
-                  @click="generateDefaultAvatar"
-                  :active="avatarSource === 'generated'"
+                  @click="generateAIAvatar"
+                  :active="avatarSource === 'ai-generated'"
+                  :disabled="generatingAvatar || !managerName"
                 >
                   <template v-slot:prepend>
-                    <v-icon>mdi-robot</v-icon>
+                    <v-icon>{{ generatingAvatar ? 'mdi-loading mdi-spin' : 'mdi-face-man' }}</v-icon>
                   </template>
-                  <v-list-item-title>Generate avatar from initials</v-list-item-title>
+                  <v-list-item-title>
+                    {{ generatingAvatar ? 'Generating...' : 'Generate AI manager portrait' }}
+                  </v-list-item-title>
                 </v-list-item>
 
                 <!-- Upload custom -->
@@ -105,36 +138,19 @@
           </v-row>
         </div>
 
-        <!-- Team Preview -->
-        <team-preview
-          :team="data.team"
-          :manager-name="managerName"
-          :logo-size="120"
-          :show-jerseys="false"
-          :elevation="0"
-          class="mb-4"
-        />
+        <!-- Team Preview (hidden - will be shown after manager setup) -->
 
         <!-- Navigation Buttons -->
-        <v-row>
-          <v-col cols="6">
+        <v-row justify="center">
+          <v-col cols="12" sm="6">
             <game-button
               block
-              variant="outlined"
-              label="Back"
-              prepend-icon="mdi-arrow-left"
-              @click="goBack"
-              click-sound="pop"
-            />
-          </v-col>
-          <v-col cols="6">
-            <game-button
-              block
-              color="primary"
-              label="Continue"
+              color="success"
+              size="large"
+              label="Next"
               append-icon="mdi-arrow-right"
               type="submit"
-              :disabled="!valid || !managerName"
+              :disabled="!valid || !managerName || !managerBio"
               click-sound="success"
             />
           </v-col>
@@ -149,6 +165,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useUserStore } from '@/stores/user';
 import TeamPreview from './TeamPreview.vue';
 import GameButton from '@/components/GameButton.vue';
+import { generateTeamLogoWithProxy } from '@/services/logo-generator-proxy';
 
 const props = defineProps({
   data: {
@@ -167,14 +184,31 @@ const props = defineProps({
 
 const userStore = useUserStore();
 
+// Random bio snippets for manager profiles
+const BIO_SNIPPETS = [
+  "Tactical genius with a passion for attacking football and developing young talent through innovative training methods.",
+  "Experienced leader who believes in building team chemistry and fostering a winning mentality both on and off the pitch.",
+  "Strategic thinker focused on possession-based football with emphasis on quick passing and high-pressing defensive systems.",
+  "Motivational coach known for adapting tactics to opponent weaknesses while maximizing each player's individual strengths.",
+  "Results-driven manager with expertise in player development and creating cohesive team dynamics under pressure.",
+  "Innovative tactician who combines traditional football wisdom with modern data analytics to gain competitive advantages.",
+  "Inspirational leader committed to fair play, disciplined training, and building championship-caliber teams through dedication.",
+  "Versatile coach experienced in multiple formations, specializing in counter-attacking football and set-piece excellence.",
+  "Player-focused manager who prioritizes mental health, fitness optimization, and creating supportive team environments.",
+  "Championship-minded strategist with proven ability to identify talent and transform underperforming teams into winners."
+];
+
 // Form state
 const form = ref(null);
 const valid = ref(false);
 const managerName = ref('');
 const email = ref('');
+const managerBio = ref('');
 const avatarFile = ref(null);
 const avatarSource = ref('existing');
 const currentAvatar = ref(null);
+const generatingAvatar = ref(false);
+const generatingBio = ref(false);
 
 // Computed
 const needsEmail = computed(() => {
@@ -206,35 +240,27 @@ const emailRules = [
   v => /.+@.+\..+/.test(v) || 'Email must be valid'
 ];
 
+const bioRules = [
+  v => !!v || 'Bio is required',
+  v => v.length >= 20 || 'Bio must be at least 20 characters',
+  v => v.length <= 500 || 'Bio must be less than 500 characters'
+];
+
 // Methods
 const useExistingAvatar = () => {
   avatarSource.value = 'existing';
   currentAvatar.value = existingAvatar.value;
 };
 
-const generateDefaultAvatar = () => {
-  if (!managerName.value) return;
+const generateRandomBio = () => {
+  generatingBio.value = true;
   
-  avatarSource.value = 'generated';
-  const initials = managerName.value
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-  
-  // Create SVG avatar
-  const svg = `
-    <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-      <rect width="200" height="200" fill="${props.data.team.colors.primary}" />
-      <text x="100" y="120" font-family="Arial, sans-serif" font-size="80" font-weight="bold" 
-            text-anchor="middle" fill="white">
-        ${initials}
-      </text>
-    </svg>
-  `;
-  
-  currentAvatar.value = `data:image/svg+xml;base64,${btoa(svg)}`;
+  // Simulate a brief loading time for better UX
+  setTimeout(() => {
+    const randomIndex = Math.floor(Math.random() * BIO_SNIPPETS.length);
+    managerBio.value = BIO_SNIPPETS[randomIndex];
+    generatingBio.value = false;
+  }, 500);
 };
 
 const handleAvatarUpload = (file) => {
@@ -248,12 +274,40 @@ const handleAvatarUpload = (file) => {
   reader.readAsDataURL(file);
 };
 
+const generateAIAvatar = async () => {
+  if (!managerName.value || generatingAvatar.value) return;
+  
+  generatingAvatar.value = true;
+  avatarSource.value = 'ai-generated';
+  
+  try {
+    const { tempLogoUrl, error } = await generateTeamLogoWithProxy(
+      managerName.value,
+      { primary: '#1976D2', secondary: '#424242' }, // Default colors for manager
+      'professional football manager profile picture, realistic portrait, business attire, confident expression'
+    );
+    
+    if (error) {
+      throw new Error(error);
+    }
+    
+    currentAvatar.value = tempLogoUrl;
+  } catch (err) {
+    console.error('Avatar generation error:', err);
+    // Fallback to initials if AI generation fails
+    generateDefaultAvatar();
+  } finally {
+    generatingAvatar.value = false;
+  }
+};
+
 const submitManager = () => {
   if (!form.value.validate()) return;
   
   props.next({
     manager: {
       name: managerName.value,
+      bio: managerBio.value,
       avatar: currentAvatar.value,
       avatarSource: avatarSource.value,
       avatarFile: avatarFile.value,
@@ -271,6 +325,7 @@ onMounted(() => {
   // Pre-fill with existing data
   if (props.data.manager?.name) {
     managerName.value = props.data.manager.name;
+    managerBio.value = props.data.manager.bio || '';
     email.value = props.data.manager.email || '';
     currentAvatar.value = props.data.manager.avatar;
   } else {
@@ -280,6 +335,9 @@ onMounted(() => {
     if (existingAvatar.value) {
       useExistingAvatar();
     }
+    
+    // Generate a random bio on first load
+    generateRandomBio();
   }
 });
 </script>

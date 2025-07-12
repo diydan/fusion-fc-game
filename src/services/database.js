@@ -50,12 +50,29 @@ export const getUser = async (userId) => {
 export const updateUser = async (userId, updates) => {
   try {
     const docRef = doc(db, 'users', userId);
-    await updateDoc(docRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
+    
+    // Check if document exists first
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      // Document exists, update it
+      await updateDoc(docRef, {
+        ...updates,
+        updatedAt: serverTimestamp()
+      });
+    } else {
+      // Document doesn't exist, create it
+      await setDoc(docRef, {
+        uid: userId,
+        ...updates,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+    
     return { success: true, error: null };
   } catch (error) {
+    console.error('updateUser error:', error);
     return { success: false, error: error.message };
   }
 };

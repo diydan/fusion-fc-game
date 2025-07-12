@@ -127,6 +127,12 @@ const router = createRouter({
       beforeEnter: requireAuth
     },
     {
+      path: '/tokens',
+      name: 'tokens',
+      component: () => import('@/views/TokensPowerUps.vue'),
+      beforeEnter: requireAuth
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('@/views/Profile.vue'),

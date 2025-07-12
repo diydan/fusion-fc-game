@@ -24,34 +24,16 @@ const preloadedSounds = {
 export function useGameSound() {
   // Initialize audio pool for frequently used sounds
   const initializeAudioPool = (soundName, poolSize = 3) => {
-    if (!preloadedSounds[soundName]) return
-    
-    const pool = []
-    for (let i = 0; i < poolSize; i++) {
-      const audio = new Audio(preloadedSounds[soundName])
-      audio.volume = masterVolume.value
-      pool.push(audio)
-    }
-    audioPool.set(soundName, { pool, currentIndex: 0 })
+    // Not needed for synthetic sounds, kept for compatibility
+    return
   }
 
   // Play sound from pool (for rapid repeated sounds)
   const playPooledSound = (soundName) => {
     if (!soundEnabled.value) return
     
-    const poolData = audioPool.get(soundName)
-    if (!poolData) {
-      initializeAudioPool(soundName)
-      return playSound(soundName)
-    }
-    
-    const audio = poolData.pool[poolData.currentIndex]
-    audio.currentTime = 0
-    audio.volume = masterVolume.value
-    audio.play().catch(err => console.warn('Failed to play pooled sound:', err))
-    
-    // Rotate to next audio in pool
-    poolData.currentIndex = (poolData.currentIndex + 1) % poolData.pool.length
+    // For synthetic sounds, just play them directly
+    return playSound(soundName)
   }
 
   // Create synthetic sound using Web Audio API
@@ -63,13 +45,16 @@ export function useGameSound() {
     oscillator.connect(gainNode)
     gainNode.connect(audioContext.destination)
     
+    // Apply master volume to all sounds
+    const baseVolume = masterVolume.value
+    
     // Configure different sound types
     switch(type) {
       case 'button-click':
       case 'pop':
         oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
         oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1)
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+        gainNode.gain.setValueAtTime(0.3 * baseVolume, audioContext.currentTime)
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1)
         oscillator.start(audioContext.currentTime)
         oscillator.stop(audioContext.currentTime + 0.1)
@@ -77,7 +62,7 @@ export function useGameSound() {
       case 'coin':
         oscillator.frequency.setValueAtTime(1000, audioContext.currentTime)
         oscillator.frequency.setValueAtTime(1500, audioContext.currentTime + 0.1)
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+        gainNode.gain.setValueAtTime(0.3 * baseVolume, audioContext.currentTime)
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2)
         oscillator.start(audioContext.currentTime)
         oscillator.stop(audioContext.currentTime + 0.2)
@@ -86,7 +71,7 @@ export function useGameSound() {
         oscillator.frequency.setValueAtTime(400, audioContext.currentTime)
         oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1)
         oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2)
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+        gainNode.gain.setValueAtTime(0.3 * baseVolume, audioContext.currentTime)
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
         oscillator.start(audioContext.currentTime)
         oscillator.stop(audioContext.currentTime + 0.3)
@@ -94,7 +79,7 @@ export function useGameSound() {
       case 'error':
         oscillator.frequency.setValueAtTime(200, audioContext.currentTime)
         oscillator.type = 'sawtooth'
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+        gainNode.gain.setValueAtTime(0.3 * baseVolume, audioContext.currentTime)
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2)
         oscillator.start(audioContext.currentTime)
         oscillator.stop(audioContext.currentTime + 0.2)
@@ -115,14 +100,14 @@ export function useGameSound() {
         
         noise.connect(filter)
         filter.connect(gainNode)
-        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime)
+        gainNode.gain.setValueAtTime(0.2 * baseVolume, audioContext.currentTime)
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2)
         noise.start(audioContext.currentTime)
         break
       default:
         // Default click
         oscillator.frequency.setValueAtTime(600, audioContext.currentTime)
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
+        gainNode.gain.setValueAtTime(0.1 * baseVolume, audioContext.currentTime)
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05)
         oscillator.start(audioContext.currentTime)
         oscillator.stop(audioContext.currentTime + 0.05)
@@ -133,70 +118,10 @@ export function useGameSound() {
   const playSound = async (soundNameOrUrl, options = {}) => {
     if (!soundEnabled.value) return
     
-    const {
-      volume = masterVolume.value,
-      loop = false,
-      fadeIn = false,
-      fadeOut = false,
-      fadeDuration = 1000,
-      useSynthetic = true // New option to use synthetic sounds as fallback
-    } = options
-    
     try {
-      let audioUrl = preloadedSounds[soundNameOrUrl] || soundNameOrUrl
-      
-      // Check cache first
-      let audio = audioCache.get(audioUrl)
-      if (!audio) {
-        try {
-          audio = new Audio(audioUrl)
-          audioCache.set(audioUrl, audio)
-        } catch (error) {
-          // If loading fails and synthetic is enabled, create synthetic sound
-          if (useSynthetic && preloadedSounds[soundNameOrUrl]) {
-            createSyntheticSound(soundNameOrUrl)
-            return
-          }
-          throw error
-        }
-      }
-      
-      // Clone for overlapping sounds
-      const audioClone = audio.cloneNode()
-      audioClone.volume = fadeIn ? 0 : volume
-      audioClone.loop = loop
-      
-      // Add error handler for the clone
-      audioClone.addEventListener('error', () => {
-        // If real audio fails, try synthetic sound
-        if (useSynthetic && preloadedSounds[soundNameOrUrl]) {
-          createSyntheticSound(soundNameOrUrl)
-        }
-      })
-      
-      // Fade in effect
-      if (fadeIn) {
-        const fadeInInterval = setInterval(() => {
-          if (audioClone.volume < volume) {
-            audioClone.volume = Math.min(audioClone.volume + (volume / (fadeDuration / 100)), volume)
-          } else {
-            clearInterval(fadeInInterval)
-          }
-        }, 100)
-      }
-      
-      // Fade out effect
-      if (fadeOut && !loop) {
-        audioClone.addEventListener('timeupdate', () => {
-          const timeLeft = audioClone.duration - audioClone.currentTime
-          if (timeLeft < fadeDuration / 1000) {
-            audioClone.volume = Math.max(0, volume * (timeLeft / (fadeDuration / 1000)))
-          }
-        })
-      }
-      
-      await audioClone.play()
-      return audioClone // Return audio element for external control
+      // Always use synthetic sounds for better compatibility
+      createSyntheticSound(soundNameOrUrl, options)
+      return true
     } catch (error) {
       console.error('Error playing sound:', error)
       return null
@@ -213,14 +138,9 @@ export function useGameSound() {
 
   // Preload sounds for better performance
   const preloadSounds = (soundList = Object.keys(preloadedSounds)) => {
-    soundList.forEach(soundName => {
-      const url = preloadedSounds[soundName] || soundName
-      if (!audioCache.has(url)) {
-        const audio = new Audio(url)
-        audio.preload = 'auto'
-        audioCache.set(url, audio)
-      }
-    })
+    // Since we're using synthetic sounds, we don't need to preload audio files
+    // This function is kept for compatibility but doesn't do anything
+    return
   }
 
   // Toggle sound on/off

@@ -117,6 +117,7 @@
           <game-button
             block
             variant="outlined"
+            size="large"
             label="Back"
             prepend-icon="mdi-arrow-left"
             @click="goBack"
@@ -126,8 +127,9 @@
         <v-col cols="6">
           <game-button
             block
-            color="primary"
-            label="Continue"
+            color="success"
+            size="large"
+            label="Next"
             append-icon="mdi-arrow-right"
             @click="saveCustomization"
             :disabled="!teamName || !primaryColor || !secondaryColor"

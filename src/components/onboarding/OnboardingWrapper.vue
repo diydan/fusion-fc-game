@@ -117,12 +117,12 @@ const onboardingData = ref({
 // Stepper configuration
 const stepperItems = computed(() => [
   {
-    title: 'Team Preview',
-    subtitle: 'Your generated team'
-  },
-  {
     title: 'Manager Setup',
     subtitle: 'Your profile'
+  },
+  {
+    title: 'Team Preview',
+    subtitle: 'Your generated team'
   },
   {
     title: 'Customize',
@@ -180,7 +180,10 @@ const completeOnboarding = async () => {
 // Expose data and methods for parent component
 defineExpose({
   onboardingData,
-  currentStep
+  currentStep,
+  nextStep,
+  prevStep,
+  completeOnboarding
 });
 </script>
 

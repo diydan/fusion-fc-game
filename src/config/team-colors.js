@@ -1,20 +1,20 @@
 export const TEAM_COLORS = [
-  { name: 'Electric Blue', hex: '#00D4FF' },
-  { name: 'Neon Green', hex: '#39FF14' },
-  { name: 'Cyber Purple', hex: '#9D00FF' },
-  { name: 'Plasma Orange', hex: '#FF6B00' },
-  { name: 'Chrome Silver', hex: '#C0C0C0' },
-  { name: 'Hologram Pink', hex: '#FF10F0' },
-  { name: 'Quantum Red', hex: '#FF073A' },
-  { name: 'Digital Gold', hex: '#FFD700' },
-  { name: 'Matrix Black', hex: '#0A0A0A' },
-  { name: 'Laser White', hex: '#F8F8FF' },
-  { name: 'Fusion Yellow', hex: '#FFEA00' },
-  { name: 'Titanium Grey', hex: '#71797E' },
-  { name: 'Energy Teal', hex: '#00CED1' },
-  { name: 'Voltage Violet', hex: '#8B00FF' },
-  { name: 'Circuit Brown', hex: '#964B00' },
-  { name: 'Neon Navy', hex: '#002FA7' }
+  { name: 'Blue', hex: '#00D4FF' },
+  { name: 'Green', hex: '#39FF14' },
+  { name: 'Purple', hex: '#9D00FF' },
+  { name: 'Orange', hex: '#FF6B00' },
+  { name: 'Silver', hex: '#C0C0C0' },
+  { name: 'Pink', hex: '#FF10F0' },
+  { name: 'Red', hex: '#FF073A' },
+  { name: 'Gold', hex: '#FFD700' },
+  { name: 'Black', hex: '#0A0A0A' },
+  { name: 'White', hex: '#F8F8FF' },
+  { name: 'Yellow', hex: '#FFEA00' },
+  { name: 'Grey', hex: '#71797E' },
+  { name: 'Teal', hex: '#00CED1' },
+  { name: 'Violet', hex: '#8B00FF' },
+  { name: 'Brown', hex: '#964B00' },
+  { name: 'Navy', hex: '#002FA7' }
 ];
 
 // Get random two colors (ensuring they're different and have good contrast)

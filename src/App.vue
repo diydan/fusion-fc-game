@@ -107,6 +107,12 @@
           to="/leaderboards"
           rounded="xl"
         ></v-list-item>
+        <v-list-item
+          prepend-icon="mdi-wallet"
+          title="Tokens & PowerUps"
+          to="/tokens"
+          rounded="xl"
+        ></v-list-item>
 
         <v-divider class="my-2"></v-divider>
 
@@ -160,6 +166,10 @@
       <v-btn to="/leaderboards">
         <v-icon>mdi-trophy</v-icon>
         <span class="text-caption">Leaders</span>
+      </v-btn>
+      <v-btn to="/tokens">
+        <v-icon>mdi-wallet</v-icon>
+        <span class="text-caption">Tokens</span>
       </v-btn>
       <v-btn to="/settings">
         <v-icon>mdi-cog</v-icon>

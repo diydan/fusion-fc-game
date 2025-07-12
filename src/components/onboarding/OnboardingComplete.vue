@@ -54,24 +54,23 @@
         <v-col cols="12" sm="6">
           <game-button
             block
-            size="x-large"
-            color="primary"
-            label="Enter Game"
-            append-icon="mdi-arrow-right"
-            @click="enterGame"
-            click-sound="success"
-            class="elevation-4"
+            size="large"
+            variant="outlined"
+            label="Back"
+            prepend-icon="mdi-arrow-left"
+            @click="goBack"
+            click-sound="pop"
           />
         </v-col>
         <v-col cols="12" sm="6">
           <game-button
             block
-            size="x-large"
-            variant="outlined"
-            label="View Team"
-            prepend-icon="mdi-soccer"
-            @click="viewTeam"
-            click-sound="pop"
+            size="large"
+            color="success"
+            label="Enter Game"
+            append-icon="mdi-arrow-right"
+            @click="enterGame"
+            click-sound="success"
           />
         </v-col>
       </v-row>
@@ -116,6 +115,10 @@ const soundStore = useSoundStore();
 // Methods
 const enterGame = () => {
   props.complete();
+};
+
+const goBack = () => {
+  props.prev();
 };
 
 const viewTeam = () => {

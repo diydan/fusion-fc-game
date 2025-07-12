@@ -21,7 +21,8 @@
       "Bash(pnpm run:*)",
       "Bash(pkill:*)",
       "Bash(true)",
-      "Bash(open /Users/Dan/Code/fusion-fc-game/test-logo-endpoint.html)"
+      "Bash(open /Users/Dan/Code/fusion-fc-game/test-logo-endpoint.html)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

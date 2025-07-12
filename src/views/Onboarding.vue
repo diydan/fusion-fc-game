@@ -4,19 +4,20 @@
     @complete="handleComplete"
     @step-change="handleStepChange"
   >
-    <!-- Step 1: Initial Team -->
+    <!-- Step 1: Manager Setup -->
     <template #step1="{ next, data }">
-      <step1-initial-team
-        :data="data"
-        :next="handleStep1Next"
-      />
-    </template>
-
-    <!-- Step 2: Manager Setup -->
-    <template #step2="{ next, prev, data }">
       <step2-manager-setup
         :data="data"
         :next="next"
+        :prev="() => {}"
+      />
+    </template>
+
+    <!-- Step 2: Initial Team -->
+    <template #step2="{ next, prev, data }">
+      <step1-initial-team
+        :data="data"
+        :next="handleTeamNext"
         :prev="prev"
       />
     </template>
@@ -69,14 +70,14 @@ const soundStore = useSoundStore();
 // Refs
 const wrapper = ref(null);
 
-// Handle step 1 completion
-const handleStep1Next = (data) => {
-  // If user chose to skip to customize, go to step 3
+// Handle team step completion (step 2)
+const handleTeamNext = (data) => {
+  // If user chose to skip to customize, go to step 4
   if (data.skipToCustomize) {
-    wrapper.value.currentStep = 3;
+    wrapper.value.currentStep = 4;
     wrapper.value.onboardingData.team = data.team;
   } else {
-    // Normal flow: go to step 2
+    // Normal flow: go to step 3
     wrapper.value.nextStep(data);
   }
 };
@@ -85,7 +86,10 @@ const handleStep1Next = (data) => {
 const handleStepChange = async (step) => {
   // Save progress to database
   try {
-    await updateOnboardingProgress(userStore.currentUser.uid, step);
+    const result = await updateOnboardingProgress(userStore.currentUser.uid, step);
+    if (!result.success) {
+      console.error('Failed to save progress:', result.error);
+    }
   } catch (error) {
     console.error('Failed to save progress:', error);
   }
