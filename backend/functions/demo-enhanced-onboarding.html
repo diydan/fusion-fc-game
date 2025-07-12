@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Team Onboarding Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            color: #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .team-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .logo-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .logo-placeholder {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .logo-placeholder img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        
+        .logo-placeholder .placeholder-icon {
+            font-size: 60px;
+            color: white;
+        }
+        
+        .team-name {
+            font-size: 2em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .team-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .info-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        
+        .info-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .manager-card {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: white;
+            text-align: center;
+        }
+        
+        .manager-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .manager-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .stadium-card {
+            background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+            border-radius: 15px;
+            padding: 20px;
+            color: white;
+            text-align: center;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 0.8em;
+            opacity: 0.8;
+        }
+        
+        .colors {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .color-chip {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .generate-btn {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: block;
+            margin: 30px auto;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(46, 204, 113, 0.3);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚽ Fusion FC Manager</h1>
+            <p>Team generated instantly • $100K recruitment budget ready • No redundant steps!</p>
+        </div>
+        
+        <div id="teamDisplay">
+            <!-- Team will be generated here -->
+        </div>
+        
+        <button class="generate-btn" onclick="generateNewTeam()">
+            🎲 Generate New Team
+        </button>
+    </div>
+
+    <script>
+        // Sample manager avatars (using some we generated)
+        const SAMPLE_AVATARS = [
+            "https://storage.googleapis.com/fusion-fc.firebasestorage.app/manager-avatars/avatar-001-caucasian-40s.png",
+            "https://storage.googleapis.com/fusion-fc.firebasestorage.app/manager-avatars/avatar-002-african-50s.png", 
+            "https://storage.googleapis.com/fusion-fc.firebasestorage.app/manager-avatars/avatar-003-latino-30s.png",
+            "https://storage.googleapis.com/fusion-fc.firebasestorage.app/manager-avatars/avatar-004-asian-60s.png",
+            "https://storage.googleapis.com/fusion-fc.firebasestorage.app/manager-avatars/avatar-005-middle-eastern-40s.png",
+            "https://storage.googleapis.com/fusion-fc.firebasestorage.app/manager-avatars/avatar-008-asian-50s.png",
+            "https://storage.googleapis.com/fusion-fc.firebasestorage.app/manager-avatars/avatar-009-latino-40s.png"
+        ];
+
+        // Sample team logos (using some we generated)
+        const SAMPLE_LOGOS = [
+            "https://storage.googleapis.com/fusion-fc.firebasestorage.app/soccer-logo-placeholders/logo-01-phoenix-fc.png",
+            "https://storage.googleapis.com/fusion-fc.firebasestorage.app/soccer-logo-placeholders/logo-03-royal-lions.png",
+            "https://storage.googleapis.com/fusion-fc.firebasestorage.app/soccer-logo-placeholders/logo-04-steel-eagles.png",
+            "https://storage.googleapis.com/fusion-fc.firebasestorage.app/soccer-logo-placeholders/logo-09-ice-bears.png",
+            "https://storage.googleapis.com/fusion-fc.firebasestorage.app/soccer-logo-placeholders/logo-10-desert-scorpions.png"
+        ];
+
+        function generateTeamData() {
+            const prefixes = ['Cyber', 'Neon', 'Quantum', 'Fusion', 'Plasma', 'Digital', 'Hyper'];
+            const subjects = ['Hawks', 'Titans', 'Phoenix', 'Dragons', 'Knights', 'Rangers', 'Strikers'];
+            const suffixes = ['FC', 'United', 'Robotics', 'Squad', 'Athletic'];
+            const cities = ['Neo Tokyo', 'Cyber City', 'New Angeles', 'Tech Valley', 'Digital Harbor'];
+            const managerNames = ['Alex Thompson', 'Jordan Rivera', 'Casey Martinez', 'Taylor Chen', 'Morgan Williams'];
+            const personalities = ['Motivational', 'Tactical', 'Disciplined', 'Creative', 'Charismatic'];
+            
+            const teamName = `${prefixes[Math.floor(Math.random() * prefixes.length)]} ${subjects[Math.floor(Math.random() * subjects.length)]} ${suffixes[Math.floor(Math.random() * suffixes.length)]}`;
+            const city = cities[Math.floor(Math.random() * cities.length)];
+            const managerName = managerNames[Math.floor(Math.random() * managerNames.length)];
+            const personality = personalities[Math.floor(Math.random() * personalities.length)];
+            
+            const primaryColor = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
+            const secondaryColor = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
+            
+            const managerAvatar = SAMPLE_AVATARS[Math.floor(Math.random() * SAMPLE_AVATARS.length)];
+            const teamLogo = SAMPLE_LOGOS[Math.floor(Math.random() * SAMPLE_LOGOS.length)];
+            
+            return {
+                name: teamName,
+                city: city,
+                colors: {
+                    primary: primaryColor,
+                    secondary: secondaryColor
+                },
+                logo: teamLogo,
+                manager: {
+                    name: managerName,
+                    avatar: managerAvatar,
+                    experience: Math.floor(Math.random() * 20) + 1,
+                    reputation: Math.floor(Math.random() * 100) + 1,
+                    personality: personality,
+                    rank: 'Amateur',
+                    recruitmentBudget: 100000
+                },
+                stadium: {
+                    name: `${teamName.split(' ')[0]} Arena`,
+                    capacity: Math.floor(Math.random() * 40000) + 20000,
+                    atmosphere: Math.floor(Math.random() * 30) + 70
+                },
+                finances: {
+                    budget: Math.floor(Math.random() * 5000000) + 1000000
+                },
+                reputation: Math.floor(Math.random() * 50) + 25
+            };
+        }
+
+        function displayTeam(team) {
+            const teamDisplay = document.getElementById('teamDisplay');
+            
+            teamDisplay.innerHTML = `
+                <div class="team-card">
+                    <div class="logo-section">
+                        <div class="logo-placeholder">
+                            <img src="${team.logo}" alt="${team.name} logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <div class="placeholder-icon" style="display: none;">⚽</div>
+                        </div>
+                        <div class="team-name">${team.name}</div>
+                        <div class="colors">
+                            <div class="color-chip" style="background-color: ${team.colors.primary}"></div>
+                            <div class="color-chip" style="background-color: ${team.colors.secondary}"></div>
+                        </div>
+                        <p>${team.city} • Reputation: ${team.reputation}%</p>
+                    </div>
+                </div>
+                
+                <div class="manager-card">
+                    <div class="manager-avatar">
+                        <img src="${team.manager.avatar}" alt="${team.manager.name}" onerror="this.style.display='none';">
+                    </div>
+                    <h3>${team.manager.name}</h3>
+                    <p>${team.manager.rank} Manager</p>
+                    <div class="stats">
+                        <div class="stat">
+                            <span class="stat-value">${team.manager.experience}</span>
+                            <span class="stat-label">Years Experience</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">${team.manager.reputation}%</span>
+                            <span class="stat-label">Reputation</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">$${(team.manager.recruitmentBudget / 1000).toFixed(0)}K</span>
+                            <span class="stat-label">Recruitment Budget</span>
+                        </div>
+                    </div>
+                    <p style="margin-top: 10px; opacity: 0.9;">${team.manager.personality} • Ready to recruit!</p>
+                </div>
+                
+                <div class="stadium-card">
+                    <h3>🏟️ ${team.stadium.name}</h3>
+                    <div class="stats">
+                        <div class="stat">
+                            <span class="stat-value">${team.stadium.capacity.toLocaleString()}</span>
+                            <span class="stat-label">Capacity</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">${team.stadium.atmosphere}%</span>
+                            <span class="stat-label">Atmosphere</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">$${(team.finances.budget / 1000000).toFixed(1)}M</span>
+                            <span class="stat-label">Budget</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateNewTeam() {
+            const teamDisplay = document.getElementById('teamDisplay');
+            
+            // Show loading
+            teamDisplay.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Generating your new team...</p>
+                </div>
+            `;
+            
+            // Simulate loading time (in real app this would be instant)
+            setTimeout(() => {
+                const team = generateTeamData();
+                displayTeam(team);
+            }, 1000);
+        }
+
+        // Generate initial team
+        generateNewTeam();
+    </script>
+</body>
+</html>
