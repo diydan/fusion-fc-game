@@ -317,7 +317,7 @@ const mobileLightingSettings = computed(() => ({
   enableShadows: false // Disable shadows on mobile for performance
 }))
 
-const { animationState, loadCharacterModel, updateAnimations, getCurrentAnimation, materials, triggerPowerUpFlash, playWaveAnimation, playPowerUpAnimation } = useAnimations(sceneRefs, materialSettings)
+const { animationState, loadCharacterModel, updateAnimations, getCurrentAnimation, materials, triggerPowerUpFlash, playWaveAnimation, playPowerUpAnimation, updateOverlayColor: updateOverlayColorFromAnimation, updateArcreactorColor } = useAnimations(sceneRefs, materialSettings)
 const { ballState, loadBallModel, updateBallPhysics, animateBallToPosition, animateBallWithPhysics, stopBallAnimation } = useBallPhysics(sceneRefs, 0.1, cameraPosition)
 const { audioState, toggleBackgroundMusic, stopMusic, playBallKick, playCoinSpin, playCoinHitTorusSound, nextTrack, previousTrack } = useAudio()
 const { shootCoin } = useCoinPhysics(sceneRefs, cameraPosition, triggerPowerUpFlash, playCoinSpin, playCoinHitTorusSound, playPowerUpAnimation)
@@ -1018,17 +1018,22 @@ const getFogColorWithOpacity = () => {
 
 // Color update methods
 const updateOverlayColor = (color: string) => {
-  if (materials.overlay) {
-    const threeColor = new THREE.Color(color)
-    materials.overlay.color.copy(threeColor)
-    materials.overlay.needsUpdate = true
+  // Extract hue from HSL color string
+  const match = color.match(/hsl\((\d+),/)
+  if (match) {
+    const hue = parseInt(match[1])
+    // Use the useAnimations composable method
+    updateOverlayColorFromAnimation(hue, 1.0, 0.5)
   }
 }
 
 const updateTorusEmission = (colorValue: string) => {
-  const newThreeColor = new THREE.Color(colorValue)
-  if (typeof updateTorusColor === 'function') {
-    updateTorusColor(newThreeColor)
+  // Extract hue from HSL color string
+  const match = colorValue.match(/hsl\((\d+),/)
+  if (match) {
+    const hue = parseInt(match[1])
+    // Use the useAnimations composable method for arcreactor
+    updateArcreactorColor(hue, 1.0, 0.5)
   }
 }
 
@@ -1169,6 +1174,12 @@ watch(ballModelGroup, (newBallGroup) => {
 
 onBeforeUnmount(() => {
   console.log('🧹 Mobile scene component unmounting...')
+})
+
+// Expose methods for parent component
+defineExpose({
+  updateOverlayColor,
+  updateTorusEmission
 })
 </script>
 
