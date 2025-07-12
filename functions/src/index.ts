@@ -11,130 +11,124 @@ import {onRequest} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 
 // Genkit imports
-import {genkit, z} from "genkit";
-import {firebase} from "@genkit-ai/firebase";
+import {genkit} from "genkit";
+import {enableFirebaseTelemetry} from "@genkit-ai/firebase";
 import {vertexAI, imagen3} from "@genkit-ai/vertexai";
-import {openAI, dalle3} from "genkitx-openai";
-import {generate} from "@genkit-ai/ai";
+import {openAI, dallE3} from "genkitx-openai";
+import {getStorage} from "firebase-admin/storage";
+import {initializeApp} from "firebase-admin/app";
 
-// Initialize Genkit with Firebase and AI providers
+// Initialize Genkit with AI providers
 const ai = genkit({
   plugins: [
-    firebase(),
-    vertexAI({projectId: process.env.GCLOUD_PROJECT}),
+    vertexAI({projectId: process.env.GCLOUD_PROJECT, location: "us-central1"}),
     openAI({apiKey: process.env.OPENAI_API_KEY}),
   ],
 });
 
-// Logo generation flow
-export const generateLogo = ai.defineFlow(
-  {
-    name: "generateLogo",
-    inputSchema: z.object({
-      businessName: z.string().describe("The name of the business"),
-      businessType: z.string().describe("Type of business (e.g., restaurant, tech company, etc.)"),
-      style: z.string().optional().describe("Logo style (e.g., modern, vintage, minimalist)"),
-      colors: z.string().optional().describe("Preferred colors"),
-      provider: z.enum(["openai", "vertexai"]).optional().default("openai"),
-    }),
-    outputSchema: z.object({
-      imageUrl: z.string().describe("URL of the generated logo"),
-      prompt: z.string().describe("The prompt used to generate the logo"),
-      provider: z.string().describe("AI provider used"),
-    }),
-  },
-  async (input) => {
-    // Generate a detailed logo design prompt
-    const promptGeneration = await generate({
-      model: "gemini-1.5-flash",
-      prompt: `Create a detailed logo design prompt for a business with the following details:
-      - Business Name: ${input.businessName}
-      - Business Type: ${input.businessType}
-      - Style: ${input.style || "modern and professional"}
-      - Colors: ${input.colors || "use appropriate colors for the business type"}
-      
-      Generate a concise but detailed prompt that would create a professional logo. Include specific visual elements, typography suggestions, and design principles. The prompt should be suitable for AI image generation.`,
-    });
+// Initialize Firebase Admin
+const app = initializeApp();
+const storage = getStorage(app);
 
-    const logoPrompt = promptGeneration.text;
+// Enable Firebase telemetry
+enableFirebaseTelemetry();
+
+// Helper function to save logo to Firebase Storage
+const saveLogoToStorage = async (userId: string, logoUrl: string, logoData: any) => {
+  try {
+    const response = await fetch(logoUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download logo: ${response.statusText}`);
+    }
     
-    logger.info(`Generated logo prompt: ${logoPrompt}`);
-
-    let imageResult;
-    let providerUsed = input.provider;
-
-    try {
-      if (input.provider === "vertexai") {
-        // Use Vertex AI Imagen
-        imageResult = await generate({
-          model: imagen3,
-          prompt: logoPrompt,
-          config: {
-            width: 1024,
-            height: 1024,
-            seed: Math.floor(Math.random() * 1000000),
-          },
-        });
-      } else {
-        // Use OpenAI DALL-E 3
-        imageResult = await generate({
-          model: dalle3,
-          prompt: logoPrompt,
-          config: {
-            size: "1024x1024",
-            quality: "standard",
-          },
-        });
-      }
-    } catch (error) {
-      logger.error(`Error generating logo with ${input.provider}:`, error);
-      
-      // Fallback to the other provider
-      const fallbackProvider = input.provider === "openai" ? "vertexai" : "openai";
-      logger.info(`Falling back to ${fallbackProvider}`);
-      
-      try {
-        if (fallbackProvider === "vertexai") {
-          imageResult = await generate({
-            model: imagen3,
-            prompt: logoPrompt,
-            config: {
-              width: 1024,
-              height: 1024,
-              seed: Math.floor(Math.random() * 1000000),
-            },
-          });
-        } else {
-          imageResult = await generate({
-            model: dalle3,
-            prompt: logoPrompt,
-            config: {
-              size: "1024x1024",
-              quality: "standard",
-            },
-          });
+    const logoBuffer = await response.arrayBuffer();
+    const timestamp = Date.now();
+    const fileName = `logo_${timestamp}_${logoData.businessName.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+    const filePath = `generated-logos/${userId}/${fileName}`;
+    
+    const bucket = storage.bucket();
+    const file = bucket.file(filePath);
+    
+    await file.save(Buffer.from(logoBuffer), {
+      metadata: {
+        contentType: 'image/png',
+        metadata: {
+          businessName: logoData.businessName,
+          businessType: logoData.businessType,
+          style: logoData.style || '',
+          colors: logoData.colors || '',
+          provider: logoData.provider,
+          prompt: logoData.prompt,
+          generatedAt: new Date().toISOString()
         }
-        providerUsed = fallbackProvider;
-      } catch (fallbackError) {
-        logger.error(`Fallback provider also failed:`, fallbackError);
-        throw new Error(`Both AI providers failed to generate the logo`);
       }
-    }
-
-    // Extract image URL from the result
-    const imageUrl = imageResult.media?.[0]?.url || imageResult.output?.url;
+    });
     
-    if (!imageUrl) {
-      throw new Error("No image URL returned from AI provider");
-    }
-
-    return {
-      imageUrl,
-      prompt: logoPrompt,
-      provider: providerUsed,
-    };
+    const [url] = await file.getSignedUrl({
+      action: 'read',
+      expires: '03-09-2491' // Far future date
+    });
+    
+    return { storageUrl: url, storagePath: filePath, error: null };
+  } catch (error) {
+    logger.error('Error saving logo to storage:', error);
+    return { storageUrl: null, storagePath: null, error: error.message };
   }
-);
+};
+
+// Logo generation helper function
+const generateLogoImage = async (prompt: string, provider: string = "openai") => {
+  try {
+    if (provider === "vertexai") {
+      // Use Vertex AI Imagen
+      return await ai.generate({
+        model: imagen3,
+        prompt: prompt,
+        config: {
+          width: 1024,
+          height: 1024,
+          seed: Math.floor(Math.random() * 1000000),
+        },
+      });
+    } else {
+      // Use OpenAI DALL-E 3
+      return await ai.generate({
+        model: dallE3,
+        prompt: prompt,
+        config: {
+          size: "1024x1024",
+          quality: "standard",
+        },
+      });
+    }
+  } catch (error) {
+    logger.error(`Error generating logo with ${provider}:`, error);
+    throw error;
+  }
+};
+
+// Generate logo prompt using Gemini
+const generateLogoPrompt = async (businessName: string, businessType: string, style?: string, colors?: string) => {
+  const promptText = `Create a detailed logo design prompt for a business with the following details:
+  - Business Name: ${businessName}
+  - Business Type: ${businessType}
+  - Style: ${style || "modern and professional"}
+  - Colors: ${colors || "use appropriate colors for the business type"}
+  
+  Generate a concise but detailed prompt that would create a professional logo. Include specific visual elements, typography suggestions, and design principles. The prompt should be suitable for AI image generation.`;
+  
+  try {
+    const result = await ai.generate({
+      model: "gemini-1.5-flash",
+      prompt: promptText,
+    });
+    return result.text;
+  } catch (error) {
+    logger.error("Error generating logo prompt:", error);
+    // Fallback to a basic prompt
+    return `Professional logo design for ${businessName}, a ${businessType} business. ${style ? `Style: ${style}.` : "Modern and clean design."} ${colors ? `Colors: ${colors}.` : "Use appropriate brand colors."} High quality, vector-style, suitable for business use.`;
+  }
+};
 
 // HTTP endpoint for logo generation
 export const logoGenerator = onRequest(
@@ -146,20 +140,76 @@ export const logoGenerator = onRequest(
         return;
       }
 
-      const {businessName, businessType, style, colors, provider} = request.body;
+      const {businessName, businessType, style, colors, provider = "openai", userId, saveToStorage = false} = request.body;
 
       if (!businessName || !businessType) {
         response.status(400).send("Business name and type are required");
         return;
       }
 
-      const result = await generateLogo({
-        businessName,
-        businessType,
-        style,
-        colors,
-        provider,
-      });
+      if (saveToStorage && !userId) {
+        response.status(400).send("User ID is required when saving to storage");
+        return;
+      }
+
+      // Generate the logo prompt
+      const logoPrompt = await generateLogoPrompt(businessName, businessType, style, colors);
+      logger.info(`Generated logo prompt: ${logoPrompt}`);
+
+      let imageResult;
+      let providerUsed = provider;
+
+      try {
+        // Try to generate with the requested provider
+        imageResult = await generateLogoImage(logoPrompt, provider);
+      } catch (error) {
+        logger.error(`Error generating logo with ${provider}:`, error);
+        
+        // Fallback to the other provider
+        const fallbackProvider = provider === "openai" ? "vertexai" : "openai";
+        logger.info(`Falling back to ${fallbackProvider}`);
+        
+        try {
+          imageResult = await generateLogoImage(logoPrompt, fallbackProvider);
+          providerUsed = fallbackProvider;
+        } catch (fallbackError) {
+          logger.error(`Fallback provider also failed:`, fallbackError);
+          throw new Error(`Both AI providers failed to generate the logo`);
+        }
+      }
+
+      // Extract image URL from the result
+      const imageUrl = imageResult.media?.url || imageResult.output?.url || 
+                      (imageResult.media && Array.isArray(imageResult.media) && imageResult.media[0]?.url);
+      
+      if (!imageUrl) {
+        throw new Error("No image URL returned from AI provider");
+      }
+
+      const result = {
+        imageUrl,
+        prompt: logoPrompt,
+        provider: providerUsed,
+      };
+
+      // Optionally save to Firebase Storage
+      if (saveToStorage && userId) {
+        const storageResult = await saveLogoToStorage(userId, imageUrl, {
+          businessName,
+          businessType,
+          style,
+          colors,
+          provider: providerUsed,
+          prompt: logoPrompt
+        });
+        
+        if (storageResult.error) {
+          logger.warn('Failed to save logo to storage:', storageResult.error);
+        } else {
+          result.storageUrl = storageResult.storageUrl;
+          result.storagePath = storageResult.storagePath;
+        }
+      }
 
       response.json(result);
     } catch (error) {

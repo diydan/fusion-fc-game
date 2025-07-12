@@ -211,3 +211,9 @@ apphosting.yaml
 cors.json
 firebase.json
 firestore.rules
+STORAGE_REQUIREMENTS_MEETING_AGENDA.md
+STORAGE_REQUIREMENTS_SUMMARY.md
+STORAGE_REQUIREMENTS.md
+storage-rules-audit-report.md
+firestore-security-rules-helpers.pseudo
+storage.rules

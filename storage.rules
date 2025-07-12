@@ -5,8 +5,26 @@ rules_version = '2';
 //    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    // Avatar upload and read rules
+    match /avatars/{userId}/{file} {
+      allow read, write: if isAvatarOwner(path) && validImage() && validSize(5 * 1024 * 1024);
+    }
+    
     match /{allPaths=**} {
       allow read, write: if false;
     }
   }
+}
+
+// Helper functions for avatar rules
+function isAvatarOwner(path) {
+  return request.auth != null && path[3] == request.auth.uid;
+}
+
+function validImage() {
+  return request.resource.contentType.matches('image/.*');
+}
+
+function validSize(maxSize) {
+  return request.resource.size < maxSize;
 }

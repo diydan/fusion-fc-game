@@ -155,6 +155,10 @@ VITE_FIREBASE_MEASUREMENT_ID=your-measurement-id
 VITE_DEFAULT_CHAIN_ID=88882  # 88888 for mainnet, 88882 for testnet
 VITE_DEFAULT_NETWORK_NAME=Chiliz Spicy Testnet
 VITE_USE_TESTNET=true
+
+# AI Logo Generation (Firebase Functions)
+OPENAI_API_KEY=your-openai-api-key
+GCLOUD_PROJECT=fusion-fc
 ```
 
 ## Firebase Setup
@@ -180,6 +184,21 @@ VITE_USE_TESTNET=true
    gsutil cors set cors.json gs://your-bucket.appspot.com
    ```
 
+5. Set up AI Logo Generation:
+   ```bash
+   # Install dependencies
+   cd functions
+   npm install
+   
+   # Configure environment variables
+   cp .env.example .env
+   # Edit .env with your OpenAI API key
+   
+   # Build and deploy functions
+   npm run build
+   firebase deploy --only functions
+   ```
+
 ## Key Features Implemented
 
 ### 🎮 Game Components
@@ -199,11 +218,46 @@ VITE_USE_TESTNET=true
 - **Cloud Storage** - Avatar uploads and game assets
 - **Security Rules** - Multi-auth compatible rules
 - **Data Connect** - GraphQL integration ready
+- **AI Logo Generation** - Firebase Genkit with OpenAI and Vertex AI integration
 
 ### 📱 Responsive Design
 - **Mobile-First** - Optimized for mobile devices
 - **Desktop Support** - Full desktop experience with navigation drawer
 - **Adaptive UI** - Bottom navigation on mobile, sidebar on desktop
+
+### 🎨 AI Logo Generation
+- **Multi-Provider Support** - OpenAI DALL-E 3 and Google Vertex AI Imagen
+- **Intelligent Prompting** - Uses Google Gemini to generate detailed design prompts
+- **Automatic Fallback** - Switches between providers if one fails
+- **Professional Quality** - High-resolution 1024x1024 logos
+- **RESTful API** - HTTP endpoint for easy integration
+- **Customizable Parameters** - Business name, type, style, and color preferences
+
+#### Usage Example
+```javascript
+const response = await fetch('https://us-central1-fusion-fc.cloudfunctions.net/logoGenerator', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({
+    businessName: 'Fusion FC',
+    businessType: 'Gaming/Sports',
+    style: 'modern and dynamic',
+    colors: 'blue and orange',
+    provider: 'openai' // or 'vertexai'
+  })
+});
+const result = await response.json();
+console.log('Generated logo URL:', result.imageUrl);
+```
+
+#### Local Development
+```bash
+# Start Firebase emulator
+firebase emulators:start --only functions
+
+# Test logo generation
+node functions/test-logo.js
+```
 
 ## Development & Testing
 
@@ -216,6 +270,12 @@ VITE_USE_TESTNET=true
 - Visit `/sound-test` to test all game sounds
 - Test button click sounds throughout the app
 - Verify audio feedback on interactions
+
+### Test AI Logo Generation
+- Test logo generation locally with Firebase emulator
+- Use the test script: `node functions/test-logo.js`
+- Verify both OpenAI and Vertex AI providers work
+- Check fallback system between providers
 
 ### Test Responsive Design
 - Mobile: Bottom navigation, compact header
@@ -243,6 +303,9 @@ firebase deploy
 - [ ] Update CORS configuration with production domains
 - [ ] Enable App Check for additional security
 - [ ] Set up monitoring and analytics
+- [ ] Configure AI Logo Generation API keys (OpenAI and Google Cloud)
+- [ ] Deploy Firebase Functions with logo generation
+- [ ] Test logo generation in production environment
 
 ## Development Notes
 
@@ -277,6 +340,7 @@ firebase deploy
 - **`FIREBASE_SETUP.md`** - Complete Firebase setup and configuration
 - **`STORAGE_CORS_SETUP.md`** - Firebase Storage CORS configuration
 - **`firebase-setup.md`** - Detailed Firestore collections and security rules
+- **`functions/LOGO_GENERATION_README.md`** - AI Logo Generation setup and usage
 
 ### Testing Guides
 - **`test-multi-auth.md`** - Multi-authentication testing procedures

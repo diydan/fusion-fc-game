@@ -16,7 +16,7 @@ const testLogoGeneration = async () => {
   const options = {
     hostname: 'localhost',
     port: 5001, // Firebase emulator port
-    path: '/your-project-id/us-central1/logoGenerator',
+    path: '/fusion-fc/us-central1/logoGenerator',
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
