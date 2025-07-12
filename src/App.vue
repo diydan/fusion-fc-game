@@ -10,16 +10,9 @@
       elevation="1"
       height="56"
     >
-      <v-app-bar-title class="text-h6 font-weight-bold d-flex align-center">
-        <v-img
-          src="/Fusion-FC-logo.png"
-          :width="40"
-          :height="40"
-          class="me-2 logo"
-          contain
-          inline
-        />
-        <span class="title-logo">Fusion FC</span>
+      <v-app-bar-title class="text-h6 font-weight-bold">
+        <v-icon class="me-2" color="primary">mdi-soccer</v-icon>
+        Fusion FC
       </v-app-bar-title>
 
       <template v-slot:append>
@@ -41,17 +34,9 @@
       height="64"
       fixed
     >
-      <v-app-bar-title class="header-title">
-        <div class="header-content">
-          <v-img
-            src="/Fusion-FC-logo.png"
-            :width="40"
-            :height="40"
-            class="header-logo"
-            contain
-          />
-          <span class="title-logo">Fusion FC</span>
-        </div>
+      <v-app-bar-title class="text-h5 font-weight-bold">
+        <v-icon class="me-2" color="primary" size="28">mdi-soccer</v-icon>
+        Fusion FC
       </v-app-bar-title>
 
       <v-spacer></v-spacer>
@@ -132,12 +117,6 @@
           prepend-icon="mdi-wallet"
           title="Tokens & PowerUps"
           to="/tokens"
-          rounded="xl"
-        ></v-list-item>
-        <v-list-item
-          prepend-icon="mdi-robot"
-          title="Character Creator"
-          to="/character-creator"
           rounded="xl"
         ></v-list-item>
 
@@ -234,9 +213,9 @@ const logout = async () => {
 
 <style scoped>
 .v-navigation-drawer {
-  background: #010224 !important;
-  backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(83, 52, 131, 0.3) !important;
+  background: #090979 !important;
+  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(0, 63, 237, 0.5) !important;
   position: relative;
 }
 
@@ -254,10 +233,9 @@ const logout = async () => {
 }
 
 .mobile-header {
-  background: #010224 !important;
-  border-bottom: 1px solid rgba(83, 52, 131, 0.3) !important;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5) !important;
+  background: #1048ac !important;
+  border-bottom: 1px solid rgba(0, 63, 237, 0.5) !important;
+  backdrop-filter: blur(10px);
 }
 
 .main-content {
@@ -308,10 +286,9 @@ const logout = async () => {
 }
 
 .desktop-header {
-  background: #010224 !important;
-  border-bottom: 1px solid rgba(83, 52, 131, 0.3) !important;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5) !important;
+  background: #1048ac !important;
+  border-bottom: 1px solid rgba(0, 63, 237, 0.5) !important;
+  backdrop-filter: blur(10px);
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -330,10 +307,9 @@ const logout = async () => {
   z-index: 1000 !important;
   padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   margin: 0 !important;
-  background: #010224 !important;
-  border-top: 1px solid rgba(83, 52, 131, 0.3) !important;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.5) !important;
+  background: #090979 !important;
+  border-top: 1px solid rgba(0, 63, 237, 0.5) !important;
+  backdrop-filter: blur(10px);
 }
 
 .v-bottom-navigation .v-btn {
@@ -346,33 +322,6 @@ const logout = async () => {
   font-size: 10px !important;
   line-height: 1.2 !important;
   margin-top: 2px !important;
-}
-
-.header-title {
-  height: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-}
-
-.header-content {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  height: 100% !important;
-}
-
-.header-logo {
-  flex-shrink: 0 !important;
-}
-
-.title-logo {
-  font-family: 'Orbitron', monospace !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.5px !important;
-  line-height: 1 !important;
-  margin: 0 !important;
-  display: flex !important;
-  align-items: center !important;
 }
 
 .full-width-container {
@@ -395,9 +344,9 @@ const logout = async () => {
   }
 
   .v-navigation-drawer {
-    background: #010224 !important;
-    border-right: 1px solid rgba(83, 52, 131, 0.3) !important;
-    backdrop-filter: blur(20px);
+    background: #090979 !important;
+    border-right: 1px solid rgba(0, 63, 237, 0.5) !important;
+    backdrop-filter: blur(10px);
   }
 }
 </style>

@@ -11,7 +11,7 @@
               class="mx-auto"
               contain
             />
-            <h1 class="text-h3 mt-4">Fusion FC Game</h1>
+            <h1 class="text-h3 mt-4">Fusion FC</h1>
             <p class="text-subtitle-1 text-medium-emphasis">
               Join the ultimate football gaming experience
             </p>

@@ -25,7 +25,7 @@ export const signInWithMetaMaskDev = async () => {
 
     // Step 3: Create signature message
     const timestamp = Date.now();
-    const message = `Sign this message to authenticate with Fusion FC Game\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
+    const message = `Sign this message to authenticate with Fusion FC\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
 
     // Step 4: Sign message
     const { signature, error: signError } = await signMessage(signer, message);
