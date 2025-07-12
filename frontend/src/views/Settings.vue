@@ -169,21 +169,7 @@
             Reset Account
           </v-card-title>
           <v-card-text>
-            <v-alert
-              type="warning"
-              variant="tonal"
-              class="mb-4"
-            >
-              <v-alert-title>Warning</v-alert-title>
-              This action will permanently delete all your game progress including:
-              <ul class="mt-2">
-                <li>Manager profile and team</li>
-                <li>Player roster and recruitment history</li>
-                <li>All achievements and statistics</li>
-                <li>Game settings and preferences</li>
-              </ul>
-              This action cannot be undone.
-            </v-alert>
+
             
             <GameButton
               color="error"

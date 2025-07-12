@@ -208,7 +208,7 @@ background: radial-gradient(circle, hsla(223, 71%, 41%, 1) 0%, hsla(224, 64%, 61
 }
 
 .v-card {
-  background: rgba(26, 26, 46, 0.8) !important;
+  background: #010224 !important;
   backdrop-filter: blur(20px);
   border: 1px solid rgba(83, 52, 131, 0.4);
   border-radius: 16px !important;
@@ -219,7 +219,7 @@ background: radial-gradient(circle, hsla(223, 71%, 41%, 1) 0%, hsla(224, 64%, 61
 
   &:hover {
     transform: translateY(-2px);
-    background: rgba(26, 26, 46, 0.9) !important;
+    background: rgba(1, 2, 36, 0.95) !important;
     box-shadow:
       0 12px 40px rgba(0, 0, 0, 0.8),
       0 0 0 1px rgba(83, 52, 131, 0.4) inset;

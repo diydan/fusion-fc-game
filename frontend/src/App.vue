@@ -10,16 +10,17 @@
       elevation="1"
       height="56"
     >
-      <v-app-bar-title class="text-h6 font-weight-bold d-flex align-center">
-        <v-img
-          src="/Fusion-FC-logo.png"
-          :width="40"
-          :height="40"
-          class="me-2 logo"
-          contain
-          inline
-        />
-        <span class="title-logo">Fusion FC</span>
+      <v-app-bar-title class="header-title">
+        <div class="header-content">
+          <v-img
+            src="/Fusion-FC-logo.png"
+            :width="40"
+            :height="40"
+            class="header-logo"
+            contain
+          />
+          <span class="title-logo">Fusion FC</span>
+        </div>
       </v-app-bar-title>
 
       <template v-slot:append>
@@ -373,6 +374,17 @@ const logout = async () => {
   margin: 0 !important;
   display: flex !important;
   align-items: center !important;
+}
+
+/* Mobile header adjustments */
+@media (max-width: 959px) {
+  .mobile-header .header-title {
+    height: 56px !important;
+  }
+
+  .mobile-header .header-content {
+    height: 56px !important;
+  }
 }
 
 .full-width-container {
