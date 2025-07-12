@@ -87,6 +87,28 @@ const requireGuest = (to, from, next) => {
   }
 }
 
+const requireAuthOnly = (to, from, next) => {
+  const userStore = useUserStore()
+  
+  if (userStore.loading) {
+    // Wait for auth to initialize
+    const unwatch = userStore.$subscribe((mutation, state) => {
+      if (!state.loading) {
+        unwatch()
+        if (state.isAuthenticated) {
+          next()
+        } else {
+          next('/login')
+        }
+      }
+    })
+  } else if (userStore.isAuthenticated) {
+    next()
+  } else {
+    next('/login')
+  }
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -148,7 +170,7 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/Settings.vue'),
-      beforeEnter: requireAuth
+      beforeEnter: requireAuthOnly
     },
     {
       path: '/theme',
