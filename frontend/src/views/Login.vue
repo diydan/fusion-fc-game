@@ -4,7 +4,13 @@
       <v-row align="center" justify="center" class="fill-height ma-0">
         <v-col cols="12" sm="8" md="6" lg="4" xl="3" class="pa-4">
           <div class="text-center mb-8">
-            <v-icon size="80" color="primary">mdi-soccer</v-icon>
+            <v-img
+              src="/Fusion-FC-logo.png"
+              :width="80"
+              :height="80"
+              class="mx-auto"
+              contain
+            />
             <h1 class="text-h3 mt-4">Fusion FC Game</h1>
             <p class="text-subtitle-1 text-medium-emphasis">
               Join the ultimate football gaming experience

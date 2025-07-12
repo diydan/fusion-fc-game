@@ -68,6 +68,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useDisplay } from 'vuetify';
 import { useSoundStore } from '@/stores/sound';
+import { generateRandomTeam } from '@/services/team-generator';
+import { generateTeamLogo } from '@/services/logo-generator';
 
 const emit = defineEmits(['complete', 'step-change']);
 
@@ -108,7 +110,8 @@ const onboardingData = ref({
   },
   location: null,
   customLogoPrompt: '',
-  regenerateCount: 0
+  regenerateCount: 0,
+  preGeneratedTeam: null
 });
 
 // Stepper configuration
@@ -131,6 +134,11 @@ const stepperItems = computed(() => [
 const nextStep = (data = {}) => {
   // Update onboarding data
   Object.assign(onboardingData.value, data);
+  
+  // If we have pre-generated team data from the step, use it instead of wrapper's
+  if (data.preGeneratedTeam) {
+    onboardingData.value.preGeneratedTeam = data.preGeneratedTeam;
+  }
   
   // Play sound
   soundStore.playSound('pop');
@@ -169,6 +177,67 @@ const completeOnboarding = async () => {
     saving.value = false;
   }
 };
+
+// Pre-generate team data in the background as soon as onboarding starts
+const preGenerateTeamData = async () => {
+  console.log('🚀 Pre-generating team data in background immediately...');
+  
+  try {
+    // Generate the basic team structure
+    const randomTeam = generateRandomTeam();
+    
+    // Store it temporarily
+    onboardingData.value.preGeneratedTeam = {
+      ...randomTeam,
+      logo: null,
+      tempLogo: null
+    };
+    
+    console.log('✅ Basic team data pre-generated:', randomTeam.name);
+    
+    // Start logo generation in the background (don't await)
+    generateTeamLogoAsync(randomTeam);
+    
+  } catch (error) {
+    console.error('Team pre-generation error:', error);
+    // Don't throw - this is background work
+  }
+};
+
+// Generate logo asynchronously in the background
+const generateTeamLogoAsync = async (team) => {
+  console.log('🎨 Starting background logo generation for:', team.name);
+  
+  try {
+    const { tempLogoUrl, prompt, error: logoError } = await generateTeamLogo(
+      team.name,
+      team.colors
+    );
+    
+    if (logoError) {
+      console.warn('Logo pre-generation failed:', logoError);
+      return;
+    }
+    
+    // Update the pre-generated team data if it still exists
+    if (onboardingData.value.preGeneratedTeam && 
+        onboardingData.value.preGeneratedTeam.name === team.name) {
+      onboardingData.value.preGeneratedTeam.logo = tempLogoUrl;
+      onboardingData.value.preGeneratedTeam.tempLogo = tempLogoUrl;
+      onboardingData.value.preGeneratedTeam.logoPrompt = prompt;
+      console.log('✅ Logo pre-generated successfully for:', team.name);
+    }
+  } catch (error) {
+    console.error('Logo generation error:', error);
+    // Don't throw - this is background work
+  }
+};
+
+// Start pre-generation on mount
+onMounted(() => {
+  // Start pre-generation immediately
+  preGenerateTeamData();
+});
 
 // Expose data and methods for parent component
 defineExpose({

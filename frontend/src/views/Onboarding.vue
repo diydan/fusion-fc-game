@@ -8,7 +8,7 @@
     <template #step1="{ next, data }">
       <step2-manager-setup
         :data="data"
-        :next="next"
+        :next="handleManagerNext"
         :prev="() => {}"
       />
     </template>
@@ -18,6 +18,15 @@
       <step1-initial-team
         :data="data"
         :next="handleTeamNext"
+        :prev="prev"
+      />
+    </template>
+
+    <!-- Step 3: Ready to Recruit -->
+    <template #step3="{ complete, prev, data }">
+      <step3-ready-to-recruit
+        :data="data"
+        :complete="complete"
         :prev="prev"
       />
     </template>
@@ -43,6 +52,7 @@ import { uploadAvatar } from '@/services/storage';
 import OnboardingWrapper from '@/components/onboarding/OnboardingWrapper.vue';
 import Step1InitialTeam from '@/components/onboarding/Step1-InitialTeam.vue';
 import Step2ManagerSetup from '@/components/onboarding/Step2-ManagerSetup.vue';
+import Step3ReadyToRecruit from '@/components/onboarding/Step3-ReadyToRecruit.vue';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -51,9 +61,15 @@ const soundStore = useSoundStore();
 // Refs
 const wrapper = ref(null);
 
+// Handle manager step completion (step 1)
+const handleManagerNext = (data) => {
+  // Pass manager data to wrapper which will make it available to step 2
+  wrapper.value.nextStep(data);
+};
+
 // Handle team step completion (step 2)
 const handleTeamNext = (data) => {
-  // Go to next step (which will now complete onboarding)
+  // Go to next step
   wrapper.value.nextStep(data);
 };
 
@@ -160,9 +176,9 @@ const handleComplete = async (data) => {
     // 6. Play success sound
     soundStore.playSound('success');
     
-    // 7. Navigate to dashboard
+    // 7. Navigate to recruit page
     setTimeout(() => {
-      router.push('/dashboard');
+      router.push('/recruit');
     }, 1500);
     
   } catch (error) {

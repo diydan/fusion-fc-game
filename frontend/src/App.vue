@@ -10,8 +10,14 @@
       elevation="1"
       height="56"
     >
-      <v-app-bar-title class="text-h6 font-weight-bold">
-        <v-icon class="me-2" color="primary">mdi-soccer</v-icon>
+      <v-app-bar-title class="text-h6 font-weight-bold d-flex align-center">
+        <v-img
+          src="/Fusion-FC-logo.png"
+          :width="32"
+          :height="32"
+          class="me-2"
+          contain
+        />
         Fusion FC
       </v-app-bar-title>
 
@@ -34,8 +40,14 @@
       height="64"
       fixed
     >
-      <v-app-bar-title class="text-h5 font-weight-bold">
-        <v-icon class="me-2" color="primary" size="28">mdi-soccer</v-icon>
+      <v-app-bar-title class="text-h5 font-weight-bold d-flex align-center">
+        <v-img
+          src="/Fusion-FC-logo.png"
+          :width="40"
+          :height="40"
+          class="me-2"
+          contain
+        />
         Fusion FC Game
       </v-app-bar-title>
 
@@ -117,6 +129,12 @@
           prepend-icon="mdi-wallet"
           title="Tokens & PowerUps"
           to="/tokens"
+          rounded="xl"
+        ></v-list-item>
+        <v-list-item
+          prepend-icon="mdi-robot"
+          title="Character Creator"
+          to="/character-creator"
           rounded="xl"
         ></v-list-item>
 

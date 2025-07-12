@@ -76,8 +76,8 @@
               @click="showLogoDialog = true"
               :disabled="generatingLogo"
             >
-              <v-icon size="small">mdi-camera</v-icon>
-              <v-tooltip activator="parent" location="top">Change Logo</v-tooltip>
+              <v-icon size="small">mdi-pencil</v-icon>
+              <v-tooltip activator="parent" location="top">Edit Logo</v-tooltip>
             </v-btn>
           </div>
 
@@ -110,12 +110,12 @@
           </div>
 
           <!-- Manager Section -->
-          <v-card v-if="currentTeam.manager" variant="outlined" class="mb-4 manager-card">
+          <v-card v-if="displayManager" variant="outlined" class="mb-4 manager-card">
             <v-card-text class="text-center">
               <v-avatar size="80" class="mb-2">
                 <v-img 
-                  :src="currentTeam.manager.avatar.url" 
-                  :alt="currentTeam.manager.name"
+                  :src="displayManager.avatar" 
+                  :alt="displayManager.name"
                   cover
                 >
                   <template v-slot:placeholder>
@@ -123,20 +123,20 @@
                   </template>
                 </v-img>
               </v-avatar>
-              <h3 class="text-h6 mb-1">{{ currentTeam.manager.name }}</h3>
-              <p class="text-caption text-medium-emphasis mb-2">{{ currentTeam.manager.rank }} Manager</p>
+              <h3 class="text-h6 mb-1">{{ displayManager.name }}</h3>
+              <p class="text-caption text-medium-emphasis mb-2">Amateur Manager</p>
               <div class="d-flex justify-center align-center mb-2">
                 <v-chip size="small" color="primary" variant="outlined" class="me-2">
-                  {{ currentTeam.manager.experience }} XP
+                  0 XP
                 </v-chip>
                 <v-chip size="small" color="success" variant="outlined" class="me-2">
-                  {{ currentTeam.manager.reputation }}% reputation
+                  0% influence
                 </v-chip>
                 <v-chip size="small" color="warning" variant="outlined">
-                  ${{ (currentTeam.manager.recruitmentBudget / 1000).toFixed(0) }}K budget
+                  $100K budget
                 </v-chip>
               </div>
-              <p class="text-caption">{{ currentTeam.manager.personality }} • {{ currentTeam.manager.specialties.slice(0, 2).join(', ') }}</p>
+              <p class="text-caption">Ambitious • Learning, Development</p>
             </v-card-text>
           </v-card>
 
@@ -163,7 +163,6 @@
             <v-row justify="center">
               <v-col cols="auto">
                 <div class="text-center">
-                  <p class="text-caption mb-1">Home</p>
                   <v-menu>
                     <template v-slot:activator="{ props }">
                       <v-btn
@@ -195,13 +194,11 @@
                       </v-card-text>
                     </v-card>
                   </v-menu>
-                  <p class="text-caption mt-1">{{ currentTeam.colors?.primaryName }}</p>
                 </div>
               </v-col>
               
               <v-col cols="auto">
                 <div class="text-center">
-                  <p class="text-caption mb-1">Away</p>
                   <v-menu>
                     <template v-slot:activator="{ props }">
                       <v-btn
@@ -234,7 +231,6 @@
                       </v-card-text>
                     </v-card>
                   </v-menu>
-                  <p class="text-caption mt-1">{{ currentTeam.colors?.secondaryName }}</p>
                 </div>
               </v-col>
             </v-row>
@@ -252,20 +248,6 @@
 
       <!-- Action Buttons -->
       <v-row class="mt-6" justify="center">
-        <v-col cols="12" sm="4">
-          <game-button
-            block
-            color="primary"
-            size="large"
-            label="Random Team"
-            prepend-icon="mdi-dice-6"
-            @click="regenerateTeam"
-            :loading="loading"
-            :disabled="regenerateCount >= maxRegenerations"
-            click-sound="coin"
-          />
-        </v-col>
-        
         <v-col cols="6" sm="4">
           <game-button
             v-if="props.prev"
@@ -276,6 +258,18 @@
             prepend-icon="mdi-arrow-left"
             @click="props.prev"
             click-sound="pop"
+          />
+          <game-button
+            v-else
+            block
+            color="primary"
+            size="large"
+            label="Random"
+            prepend-icon="mdi-dice-6"
+            @click="regenerateTeam"
+            :loading="loading"
+            :disabled="regenerateCount >= maxRegenerations"
+            click-sound="coin"
           />
         </v-col>
         
@@ -323,22 +317,60 @@
     </v-card-text>
     
     <!-- Logo Generation Dialog -->
-    <v-dialog v-model="showLogoDialog" max-width="500">
+    <v-dialog v-model="showLogoDialog" max-width="500" :persistent="generatingLogo">
       <v-card>
-        <v-card-title>Generate New Logo</v-card-title>
+        <v-card-title>{{ generatingLogo ? 'Generating Your Logo...' : 'Generate New Logo' }}</v-card-title>
         <v-card-text>
-          <v-textarea
-            v-model="logoPrompt"
-            label="Describe your ideal logo (optional)"
-            placeholder="e.g., fierce dragon, minimalist shield, abstract tech pattern"
-            rows="3"
-            variant="outlined"
-            density="comfortable"
-            hint="Leave empty for an AI-generated design based on your team name and colors"
-            persistent-hint
-          />
+          <template v-if="!generatingLogo">
+            <v-textarea
+              v-model="logoPrompt"
+              label="Describe your ideal logo (optional)"
+              placeholder="e.g., fierce dragon, minimalist shield, abstract tech pattern"
+              rows="3"
+              variant="outlined"
+              density="comfortable"
+              hint="Leave empty for an AI-generated design based on your team name and colors"
+              persistent-hint
+            />
+          </template>
+          <template v-else>
+            <div class="text-center py-8">
+              <v-progress-circular
+                :size="80"
+                :width="8"
+                color="primary"
+                indeterminate
+                class="mb-4"
+              >
+                <template v-slot:default>
+                  <v-icon size="large">mdi-robot</v-icon>
+                </template>
+              </v-progress-circular>
+              <p class="text-h6 mb-2">Creating your unique team logo...</p>
+              <p class="text-body-2 text-medium-emphasis">
+                Our AI designer is crafting a logo that represents {{ currentTeam.name }}
+              </p>
+              <v-chip class="mt-4" size="small" variant="outlined">
+                <v-icon start size="small">mdi-timer-sand</v-icon>
+                This may take up to 20 seconds
+              </v-chip>
+              <v-fade-transition>
+                <div v-if="logoGenerationTime > 5" class="mt-4">
+                  <v-progress-linear
+                    :model-value="(logoGenerationTime / 20) * 100"
+                    color="primary"
+                    height="4"
+                    rounded
+                  />
+                  <p class="text-caption mt-2 text-medium-emphasis">
+                    {{ logoGenerationMessages[Math.min(Math.floor(logoGenerationTime / 5), logoGenerationMessages.length - 1)] }}
+                  </p>
+                </div>
+              </v-fade-transition>
+            </div>
+          </template>
         </v-card-text>
-        <v-card-actions>
+        <v-card-actions v-if="!generatingLogo">
           <v-spacer />
           <game-button
             variant="text"
@@ -363,7 +395,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import TeamPreview from './TeamPreview.vue';
 import GameButton from '@/components/GameButton.vue';
 import { generateRandomTeam } from '@/services/team-generator';
@@ -404,12 +436,50 @@ const generatingLogo = ref(false);
 const logoHistory = ref([]);
 const logoHistoryIndex = ref(-1);
 
+// Logo generation UI state
+const logoGenerationTime = ref(0);
+const logoGenerationTimer = ref(null);
+const logoGenerationMessages = [
+  "Analyzing team colors and style...",
+  "Designing unique elements...",
+  "Refining the details...",
+  "Finalizing your masterpiece..."
+];
+
 // Team colors
 const teamColors = ref(TEAM_COLORS);
+
+// Computed property for manager display
+const displayManager = computed(() => {
+  // Use manager data from step 1 if available
+  if (props.data.manager) {
+    return {
+      name: props.data.manager.name,
+      avatar: props.data.manager.avatar,
+      bio: props.data.manager.bio
+    };
+  }
+  // Otherwise use generated manager from current team
+  if (currentTeam.value.manager) {
+    return {
+      name: currentTeam.value.manager.name,
+      avatar: currentTeam.value.manager.avatar?.url,
+      bio: currentTeam.value.manager.bio
+    };
+  }
+  return null;
+});
 
 // Generate initial team on mount
 onMounted(() => {
   generateInitialTeam();
+});
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (logoGenerationTimer.value) {
+    clearInterval(logoGenerationTimer.value);
+  }
 });
 
 // Methods
@@ -448,6 +518,25 @@ const generateInitialTeam = async () => {
       
       // Generate random team
       const randomTeam = generateRandomTeam();
+      
+      // If we have manager data from step 1, use it
+      if (props.data.manager) {
+        randomTeam.manager = {
+          name: props.data.manager.name,
+          bio: props.data.manager.bio,
+          avatar: {
+            url: props.data.manager.avatar,
+            source: props.data.manager.avatarSource
+          },
+          rank: 'Amateur',
+          experience: 0,
+          reputation: 'Amateur',
+          personality: 'Ambitious',
+          specialties: ['Learning', 'Development'],
+          recruitmentBudget: 100000
+        };
+      }
+      
       currentTeam.value = {
         ...randomTeam,
         logo: null,
@@ -505,7 +594,48 @@ const regenerateTeam = async () => {
   // Clear logo history when regenerating a completely new team
   logoHistory.value = [];
   logoHistoryIndex.value = -1;
-  await generateInitialTeam();
+  
+  // When regenerating, we want to keep the manager data from step 1
+  loading.value = true;
+  error.value = null;
+  loadingMessage.value = 'Creating team name and colors...';
+  
+  try {
+    // Generate new random team
+    const randomTeam = generateRandomTeam();
+    
+    // If we have manager data from step 1, preserve it
+    if (props.data.manager) {
+      randomTeam.manager = {
+        name: props.data.manager.name,
+        bio: props.data.manager.bio,
+        avatar: {
+          url: props.data.manager.avatar,
+          source: props.data.manager.avatarSource
+        },
+        rank: 'Amateur',
+        experience: 0,
+        reputation: 'Amateur',
+        personality: 'Ambitious',
+        specialties: ['Learning', 'Development'],
+        recruitmentBudget: 100000
+      };
+    }
+    
+    currentTeam.value = {
+      ...randomTeam,
+      logo: null,
+      tempLogo: null
+    };
+    
+    // Start logo generation
+    generateLogoAsync(randomTeam.name, randomTeam.colors);
+    
+  } catch (err) {
+    console.error('Team generation error:', err);
+    error.value = 'Failed to generate team. Please try again.';
+    loading.value = false;
+  }
 };
 
 const acceptTeam = () => {
@@ -553,6 +683,12 @@ const updateColor = (type, color) => {
 const generateNewLogo = async () => {
   generatingLogo.value = true;
   error.value = null;
+  logoGenerationTime.value = 0;
+  
+  // Start the timer
+  logoGenerationTimer.value = setInterval(() => {
+    logoGenerationTime.value += 0.1;
+  }, 100);
   
   try {
     const customPrompt = logoPrompt.value.trim() || null;
@@ -582,8 +718,15 @@ const generateNewLogo = async () => {
   } catch (err) {
     console.error('Logo generation error:', err);
     error.value = 'Failed to generate logo. Please try again.';
+    showLogoDialog.value = false;
   } finally {
     generatingLogo.value = false;
+    // Clear the timer
+    if (logoGenerationTimer.value) {
+      clearInterval(logoGenerationTimer.value);
+      logoGenerationTimer.value = null;
+    }
+    logoGenerationTime.value = 0;
   }
 };
 

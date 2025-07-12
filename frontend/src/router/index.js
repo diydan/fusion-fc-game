@@ -161,6 +161,12 @@ const router = createRouter({
       beforeEnter: requireAuth
     },
     {
+      path: '/character-creator',
+      name: 'character-creator',
+      component: () => import('@/views/CharacterCreator.vue'),
+      beforeEnter: requireAuth
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('@/views/Profile.vue'),

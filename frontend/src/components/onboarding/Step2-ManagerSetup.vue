@@ -11,18 +11,17 @@
 
     <v-card-text>
       <v-form ref="form" v-model="valid" @submit.prevent="submitManager">
-        <!-- Manager Name (Wallet Address) -->
+        <!-- Manager Name -->
         <v-text-field
           v-model="managerName"
-          label="Manager ID (Wallet Address)"
-          placeholder="Your wallet address"
+          label="Manager Name"
+          placeholder="Enter your manager name"
           variant="outlined"
           density="comfortable"
-          readonly
           :rules="nameRules"
           class="mb-4"
-          prepend-inner-icon="mdi-wallet"
-          hint="Your unique manager identifier from your wallet"
+          prepend-inner-icon="mdi-account-tie"
+          hint="Choose a name for your manager profile"
           persistent-hint
         />
 
@@ -166,11 +165,9 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useUserStore } from '@/stores/user';
-import TeamPreview from './TeamPreview.vue';
 import GameButton from '@/components/GameButton.vue';
 import { generateTeamLogoWithProxy } from '@/services/logo-generator-proxy';
-import { generateRandomTeam } from '@/services/team-generator';
-import { generateTeamLogo } from '@/services/logo-generator';
+import { generateManagerProfile } from '@/services/manager-avatars';
 
 const props = defineProps({
   data: {
@@ -215,9 +212,7 @@ const currentAvatar = ref(null);
 const generatingAvatar = ref(false);
 const generatingBio = ref(false);
 
-// Pre-generation for next step
-const preGeneratingTeam = ref(false);
-const preGeneratedTeam = ref(null);
+// No pre-generation needed - using wrapper's pre-generated data
 
 // Computed
 const needsEmail = computed(() => {
@@ -234,14 +229,21 @@ const authMethod = computed(() => {
 });
 
 const existingAvatar = computed(() => {
-  return userStore.currentUser?.photoURL || userStore.avatarUrl;
+  const avatar = userStore.currentUser?.photoURL || userStore.avatarUrl;
+  console.log('Existing avatar check:', {
+    photoURL: userStore.currentUser?.photoURL,
+    avatarUrl: userStore.avatarUrl,
+    authMethod: userStore.authMethod,
+    result: avatar
+  });
+  return avatar;
 });
 
 // Validation rules
 const nameRules = [
-  v => !!v || 'Manager ID is required',
-  v => v.length >= 10 || 'Manager ID must be at least 10 characters',
-  v => v.length <= 100 || 'Manager ID must be less than 100 characters'
+  v => !!v || 'Manager name is required',
+  v => v.length >= 3 || 'Manager name must be at least 3 characters',
+  v => v.length <= 50 || 'Manager name must be less than 50 characters'
 ];
 
 const emailRules = [
@@ -303,10 +305,19 @@ const generateAIAvatar = async () => {
     currentAvatar.value = tempLogoUrl;
   } catch (err) {
     console.error('Avatar generation error:', err);
-    // Fallback to initials if AI generation fails
+    // Fallback to random manager avatar
     generateDefaultAvatar();
   } finally {
     generatingAvatar.value = false;
+  }
+};
+
+const generateDefaultAvatar = () => {
+  // Use a random manager avatar as fallback
+  const randomAvatar = generateManagerProfile();
+  if (randomAvatar && randomAvatar.avatar) {
+    currentAvatar.value = randomAvatar.avatar.url;
+    avatarSource.value = 'default';
   }
 };
 
@@ -322,89 +333,19 @@ const submitManager = () => {
       avatarFile: avatarFile.value,
       email: email.value
     },
-    // Include pre-generated team data if available
-    preGeneratedTeam: preGeneratedTeam.value
+    // Pass pre-generated team data from wrapper if available
+    preGeneratedTeam: props.data.preGeneratedTeam
   });
 };
 
-// Pre-generate team data in background when form is valid
-const preGenerateTeamData = async () => {
-  if (preGeneratingTeam.value || preGeneratedTeam.value) return;
-  
-  console.log('🚀 Pre-generating team data in background...');
-  preGeneratingTeam.value = true;
-  
-  try {
-    // Generate the basic team structure
-    const randomTeam = generateRandomTeam();
-    
-    // Add manager data to team context
-    const teamWithManager = {
-      ...randomTeam,
-      manager: {
-        name: managerName.value,
-        bio: managerBio.value,
-        avatar: {
-          url: currentAvatar.value,
-          source: avatarSource.value
-        },
-        // Starting manager stats
-        experience: 0, // Zero XP as default
-        reputation: 'Amateur', // Amateur rank as default
-        personality: 'Ambitious', // Default personality for new managers
-        specialties: ['Learning', 'Development'] // Default specialties for new managers
-      },
-      stadium: {
-        name: `${randomTeam.location || 'City'} Stadium`,
-        capacity: Math.floor(Math.random() * 50000) + 20000, // 20k-70k capacity
-        atmosphere: Math.floor(Math.random() * 20) + 80 // 80-100% atmosphere
-      },
-      logo: null,
-      tempLogo: null
-    };
-    
-    // Start logo generation (this is the slow part)
-    try {
-      const { tempLogoUrl, prompt, error: logoError } = await generateTeamLogo(
-        randomTeam.name,
-        randomTeam.colors
-      );
-      
-      if (!logoError && tempLogoUrl) {
-        teamWithManager.logo = tempLogoUrl;
-        teamWithManager.tempLogo = tempLogoUrl;
-        teamWithManager.logoPrompt = prompt;
-        console.log('✅ Team logo pre-generated successfully');
-      }
-    } catch (logoError) {
-      console.warn('Logo pre-generation failed:', logoError);
-      // Will generate fallback on team page
-    }
-    
-    preGeneratedTeam.value = teamWithManager;
-    console.log('✅ Team data pre-generation complete');
-    
-  } catch (error) {
-    console.error('Team pre-generation error:', error);
-  } finally {
-    preGeneratingTeam.value = false;
-  }
-};
+// No longer pre-generating team data here since Step 2 will now use wrapper's pre-generated data
+// and the manager info from this step
 
 const goBack = () => {
   props.prev();
 };
 
-// Watch for form completion to trigger pre-generation
-watch([managerName, managerBio, currentAvatar], ([name, bio, avatar]) => {
-  // Trigger pre-generation when we have the essential data
-  if (name && bio && avatar && name.length >= 2 && bio.length >= 20) {
-    // Debounce to avoid multiple triggers
-    setTimeout(() => {
-      preGenerateTeamData();
-    }, 1000);
-  }
-}, { immediate: false });
+// No longer watching for pre-generation since we'll use wrapper's pre-generated data
 
 // Initialize
 onMounted(() => {
@@ -415,13 +356,8 @@ onMounted(() => {
     email.value = props.data.manager.email || '';
     currentAvatar.value = props.data.manager.avatar;
   } else {
-    // Use wallet address as manager name (required field)
-    if (userStore.authMethod === 'metamask' && userStore.walletAddress) {
-      managerName.value = userStore.walletAddress;
-    } else if (userStore.currentUser?.uid) {
-      // For non-wallet users, use their UID as the manager ID
-      managerName.value = userStore.currentUser.uid;
-    }
+    // Leave manager name empty for user to fill in
+    managerName.value = '';
     
     email.value = userStore.currentUser?.email || '';
     if (existingAvatar.value) {
