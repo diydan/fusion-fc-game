@@ -1,6 +1,4 @@
-- check can access tokens in meta mask add inventory  ui
-- check vertex api
-- check log creator
+- covnert token to powerups 
 - check auto deploy on mater and stage
 - manager  dialog
     - motiva te team, provok oppostion

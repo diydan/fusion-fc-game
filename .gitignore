@@ -143,7 +143,6 @@ functions/dist/
 
 # Firebase Hosting
 .firebase/
-public/
 
 # Firebase config files with sensitive data
 # Note: src/config/firebase.js uses env vars, so it's safe to commit
@@ -227,3 +226,4 @@ AVATAR_RULES_IMPLEMENTATION.md
 TODO.md
 deploy-production.sh
 functions/demo-enhanced-onboarding.html
+TODO.md
