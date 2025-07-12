@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soccer Team Logo Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5em;
+            margin: 0;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #4ecdc4;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .generate-btn {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+        }
+        .example-btn {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+        .placeholder-section {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .placeholder-logo {
+            max-width: 200px;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin: 10px 0;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            color: white;
+        }
+        .generated-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            margin-top: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .loading {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(45deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 10px;
+            color: #8b4513;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff6b6b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            color: #e74c3c;
+            background: #fadbd8;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #e74c3c;
+        }
+        .placeholder-info {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚽ Soccer Team Logo Generator</h1>
+            <p>Create amazing soccer team logos with AI - no text, pure iconic designs!</p>
+        </div>
+        
+        <!-- Quick Examples -->
+        <div class="button-group">
+            <h3 style="width: 100%; margin: 0 0 10px 0;">Quick Examples:</h3>
+            <button class="example-btn" onclick="loadExample('phoenix')">🔥 Fire Phoenix</button>
+            <button class="example-btn" onclick="loadExample('ocean')">🌊 Ocean Predator</button>
+            <button class="example-btn" onclick="loadExample('thunder')">⚡ Thunder Beast</button>
+            <button class="example-btn" onclick="loadExample('royal')">👑 Royal Emblem</button>
+        </div>
+        
+        <form id="logoForm">
+            <div class="form-group">
+                <label for="teamName">Team Name:</label>
+                <input type="text" id="teamName" name="teamName" 
+                       placeholder="e.g., Phoenix FC, Thunder Wolves, Royal Lions" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="teamStyle">Logo Style Description:</label>
+                <textarea id="teamStyle" name="teamStyle" rows="3" 
+                          placeholder="e.g., fierce lion head with crown, eagle wings spread wide, dragon breathing fire"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="teamColors">Team Colors:</label>
+                <input type="text" id="teamColors" name="teamColors" 
+                       placeholder="e.g., red and gold, blue and silver, black and orange">
+            </div>
+            
+            <button type="submit" class="generate-btn" id="generateBtn">
+                🎨 Generate Custom Logo
+            </button>
+        </form>
+        
+        <!-- Placeholder Section -->
+        <div id="placeholderSection" class="placeholder-section" style="display: none;">
+            <h3>🎯 Here's a similar placeholder while we create your custom logo...</h3>
+            <img id="placeholderImage" class="placeholder-logo" src="" alt="Placeholder Logo">
+            <div id="placeholderInfo" class="placeholder-info"></div>
+            <p><small>This is a temporary placeholder. Your custom logo is being generated...</small></p>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <h3>🤖 Creating Your Custom Logo</h3>
+            <p>Our AI is crafting the perfect emblem for your team...</p>
+            <p><small>This usually takes 15-30 seconds</small></p>
+        </div>
+        
+        <div id="result" class="result" style="display: none;">
+            <h3>🏆 Your Custom Logo is Ready!</h3>
+            <img id="finalImage" class="generated-image" src="" alt="Generated Logo">
+            <div style="margin-top: 15px; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
+                <strong>AI Prompt Used:</strong>
+                <p id="promptText" style="margin: 5px 0 0 0; font-style: italic;"></p>
+            </div>
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        const ENDPOINT_URL = 'https://logogenerator-6unsift5pq-uc.a.run.app';
+        
+        // Logo placeholders array
+        const LOGO_PLACEHOLDERS = [
+            {
+                id: 1,
+                name: "Phoenix FC",
+                url: "https://storage.googleapis.com/fusion-fc.firebasestorage.app/soccer-logo-placeholders/logo-01-phoenix-fc.png",
+                colors: "red and orange flames",
+                style: "phoenix bird"
+            },
+            {
+                id: 3,
+                name: "Royal Lions", 
+                url: "https://storage.googleapis.com/fusion-fc.firebasestorage.app/soccer-logo-placeholders/logo-03-royal-lions.png",
+                colors: "gold and deep purple",
+                style: "lion head crown"
+            },
+            {
+                id: 4,
+                name: "Steel Eagles",
+                url: "https://storage.googleapis.com/fusion-fc.firebasestorage.app/soccer-logo-placeholders/logo-04-steel-eagles.png", 
+                colors: "metallic steel and black",
+                style: "eagle flight"
+            },
+            {
+                id: 9,
+                name: "Ice Bears",
+                url: "https://storage.googleapis.com/fusion-fc.firebasestorage.app/soccer-logo-placeholders/logo-09-ice-bears.png",
+                colors: "ice blue and pure white",
+                style: "polar bear ice"
+            },
+            {
+                id: 10,
+                name: "Desert Scorpions",
+                url: "https://storage.googleapis.com/fusion-fc.firebasestorage.app/soccer-logo-placeholders/logo-10-desert-scorpions.png",
+                colors: "sandy beige and black",
+                style: "scorpion tail"
+            }
+        ];
+
+        // Get random placeholder
+        function getRandomPlaceholder() {
+            return LOGO_PLACEHOLDERS[Math.floor(Math.random() * LOGO_PLACEHOLDERS.length)];
+        }
+
+        // Get matching placeholder based on user input
+        function getMatchingPlaceholder(teamColors, teamStyle) {
+            const colorKeywords = (teamColors || '').toLowerCase();
+            const styleKeywords = (teamStyle || '').toLowerCase();
+            
+            const matchingLogos = LOGO_PLACEHOLDERS.filter(logo => {
+                const logoColors = logo.colors.toLowerCase();
+                const logoStyle = logo.style.toLowerCase();
+                
+                // Color matching
+                if (colorKeywords.includes('red') && logoColors.includes('red')) return true;
+                if (colorKeywords.includes('blue') && logoColors.includes('blue')) return true;
+                if (colorKeywords.includes('gold') && logoColors.includes('gold')) return true;
+                if (colorKeywords.includes('orange') && logoColors.includes('orange')) return true;
+                if (colorKeywords.includes('black') && logoColors.includes('black')) return true;
+                
+                // Style matching
+                if (styleKeywords.includes('eagle') && logoStyle.includes('eagle')) return true;
+                if (styleKeywords.includes('lion') && logoStyle.includes('lion')) return true;
+                if (styleKeywords.includes('phoenix') && logoStyle.includes('phoenix')) return true;
+                if (styleKeywords.includes('bear') && logoStyle.includes('bear')) return true;
+                if (styleKeywords.includes('fire') && logoStyle.includes('phoenix')) return true;
+                if (styleKeywords.includes('royal') && logoStyle.includes('crown')) return true;
+                
+                return false;
+            });
+            
+            return matchingLogos.length > 0 ? 
+                matchingLogos[Math.floor(Math.random() * matchingLogos.length)] : 
+                getRandomPlaceholder();
+        }
+
+        // Show placeholder while generating
+        function showPlaceholder(teamColors, teamStyle) {
+            const placeholder = getMatchingPlaceholder(teamColors, teamStyle);
+            
+            document.getElementById('placeholderImage').src = placeholder.url;
+            document.getElementById('placeholderInfo').innerHTML = 
+                `<strong>${placeholder.name}</strong> - ${placeholder.colors}`;
+            document.getElementById('placeholderSection').style.display = 'block';
+        }
+
+        // Example presets
+        function loadExample(type) {
+            const examples = {
+                phoenix: {
+                    name: "Fire Phoenix FC",
+                    style: "phoenix bird with spread wings rising from flames, soccer ball incorporated",
+                    colors: "red, orange, and gold flames"
+                },
+                ocean: {
+                    name: "Ocean Predators",
+                    style: "shark fin breaking through waves with trident",
+                    colors: "ocean blue and white foam"
+                },
+                thunder: {
+                    name: "Thunder Wolves",
+                    style: "wolf head howling with lightning bolts",
+                    colors: "electric blue and storm gray"
+                },
+                royal: {
+                    name: "Royal Lions",
+                    style: "majestic lion head with golden crown",
+                    colors: "royal gold and deep purple"
+                }
+            };
+            
+            const example = examples[type];
+            document.getElementById('teamName').value = example.name;
+            document.getElementById('teamStyle').value = example.style;
+            document.getElementById('teamColors').value = example.colors;
+        }
+
+        // Form submission
+        document.getElementById('logoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const teamName = formData.get('teamName');
+            const teamStyle = formData.get('teamStyle');
+            const teamColors = formData.get('teamColors');
+            
+            // Hide previous results
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            
+            // Show placeholder immediately
+            showPlaceholder(teamColors, teamStyle);
+            
+            // Show loading state
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('generateBtn').disabled = true;
+            
+            try {
+                const response = await fetch(ENDPOINT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        businessName: teamName,
+                        businessType: 'Soccer Team',
+                        style: `${teamStyle}, no text, no typography, no letters, icon only, emblem style`,
+                        colors: teamColors
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Hide placeholder and loading
+                    document.getElementById('placeholderSection').style.display = 'none';
+                    
+                    // Show final result
+                    document.getElementById('finalImage').src = result.imageUrl;
+                    document.getElementById('promptText').textContent = result.prompt;
+                    document.getElementById('result').style.display = 'block';
+                } else {
+                    throw new Error(result.message || 'Failed to generate logo');
+                }
+                
+            } catch (error) {
+                document.getElementById('error').innerHTML = 
+                    `<strong>❌ Generation Failed:</strong> ${error.message}<br>
+                     <small>You can still use the placeholder above, or try again with different parameters.</small>`;
+                document.getElementById('error').style.display = 'block';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('generateBtn').disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -293,12 +293,14 @@
           <v-spacer />
           <game-button
             variant="text"
+            size="large"
             label="Cancel"
             @click="showLogoDialog = false"
             click-sound="pop"
           />
           <game-button
             color="primary"
+            size="large"
             label="Generate"
             prepend-icon="mdi-robot"
             @click="generateNewLogo"

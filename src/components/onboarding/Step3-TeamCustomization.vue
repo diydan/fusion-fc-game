@@ -90,6 +90,7 @@
             <game-button
               color="primary"
               variant="tonal"
+              size="large"
               label="Generate Custom Logo"
               prepend-icon="mdi-robot"
               @click="generateCustomLogo"
