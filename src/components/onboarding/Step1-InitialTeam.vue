@@ -109,6 +109,55 @@
             </v-btn>
           </div>
 
+          <!-- Manager Section -->
+          <v-card v-if="currentTeam.manager" variant="outlined" class="mb-4 manager-card">
+            <v-card-text class="text-center">
+              <v-avatar size="80" class="mb-2">
+                <v-img 
+                  :src="currentTeam.manager.avatar.url" 
+                  :alt="currentTeam.manager.name"
+                  cover
+                >
+                  <template v-slot:placeholder>
+                    <v-progress-circular indeterminate color="primary" />
+                  </template>
+                </v-img>
+              </v-avatar>
+              <h3 class="text-h6 mb-1">{{ currentTeam.manager.name }}</h3>
+              <p class="text-caption text-medium-emphasis mb-2">{{ currentTeam.manager.rank }} Manager</p>
+              <div class="d-flex justify-center align-center mb-2">
+                <v-chip size="small" color="primary" variant="outlined" class="me-2">
+                  {{ currentTeam.manager.experience }} XP
+                </v-chip>
+                <v-chip size="small" color="success" variant="outlined" class="me-2">
+                  {{ currentTeam.manager.reputation }}% reputation
+                </v-chip>
+                <v-chip size="small" color="warning" variant="outlined">
+                  ${{ (currentTeam.manager.recruitmentBudget / 1000).toFixed(0) }}K budget
+                </v-chip>
+              </div>
+              <p class="text-caption">{{ currentTeam.manager.personality }} • {{ currentTeam.manager.specialties.slice(0, 2).join(', ') }}</p>
+            </v-card-text>
+          </v-card>
+
+          <!-- Stadium Info -->
+          <v-card v-if="currentTeam.stadium" variant="outlined" class="mb-4 stadium-card">
+            <v-card-text class="text-center">
+              <v-icon size="40" color="primary" class="mb-2">mdi-stadium</v-icon>
+              <h3 class="text-h6 mb-1">{{ currentTeam.stadium.name }}</h3>
+              <div class="d-flex justify-center align-center">
+                <v-chip size="small" variant="outlined" class="me-2">
+                  <v-icon start size="small">mdi-account-group</v-icon>
+                  {{ currentTeam.stadium.capacity.toLocaleString() }}
+                </v-chip>
+                <v-chip size="small" variant="outlined">
+                  <v-icon start size="small">mdi-star</v-icon>
+                  {{ currentTeam.stadium.atmosphere }}% atmosphere
+                </v-chip>
+              </div>
+            </v-card-text>
+          </v-card>
+
           <!-- Team Colors with Inline Edit -->
           <div class="color-display mb-4">
             <v-row justify="center">
@@ -367,25 +416,52 @@ onMounted(() => {
 const generateInitialTeam = async () => {
   loading.value = true;
   error.value = null;
-  loadingMessage.value = 'Creating team name and colors...';
   
   try {
-    // Generate random team
-    const randomTeam = generateRandomTeam();
-    currentTeam.value = {
-      ...randomTeam,
-      logo: null,
-      tempLogo: null
-    };
-    
-    // Start logo generation early (don't wait for it)
-    generateLogoAsync(randomTeam.name, randomTeam.colors);
+    // Check if we have pre-generated team data from manager page
+    if (props.data.preGeneratedTeam) {
+      console.log('✅ Using pre-generated team data - instant load!');
+      loadingMessage.value = 'Loading your team...';
+      
+      currentTeam.value = props.data.preGeneratedTeam;
+      
+      // Add to logo history if we have a logo
+      if (currentTeam.value.logo) {
+        addToLogoHistory({
+          url: currentTeam.value.logo,
+          prompt: currentTeam.value.logoPrompt,
+          teamName: currentTeam.value.name,
+          colors: currentTeam.value.colors
+        });
+      }
+      
+      // Simulate brief loading for UX (so it doesn't feel too instant)
+      setTimeout(() => {
+        loading.value = false;
+        loadingMessage.value = '';
+      }, 300);
+      
+    } else {
+      // Fallback to normal generation if no pre-generated data
+      console.log('⏳ No pre-generated data, generating team normally...');
+      loadingMessage.value = 'Creating team name and colors...';
+      
+      // Generate random team
+      const randomTeam = generateRandomTeam();
+      currentTeam.value = {
+        ...randomTeam,
+        logo: null,
+        tempLogo: null
+      };
+      
+      // Start logo generation early (don't wait for it)
+      generateLogoAsync(randomTeam.name, randomTeam.colors);
+    }
     
   } catch (err) {
     console.error('Team generation error:', err);
     error.value = 'Failed to generate team. Please try again.';
-  } finally {
-    // Don't set loading to false here - let logo generation finish
+    loading.value = false;
   }
 };
 
@@ -648,5 +724,27 @@ const fallbackLogoStyle = computed(() => {
 
 .color-display v-btn:hover {
   transform: scale(1.1);
+}
+
+.manager-card {
+  background: linear-gradient(135deg, rgba(var(--v-theme-primary), 0.05) 0%, rgba(var(--v-theme-secondary), 0.05) 100%);
+  border: 1px solid rgba(var(--v-theme-primary), 0.2);
+  transition: all 0.3s ease;
+}
+
+.manager-card:hover {
+  border-color: rgba(var(--v-theme-primary), 0.4);
+  box-shadow: 0 4px 12px rgba(var(--v-theme-primary), 0.1);
+}
+
+.stadium-card {
+  background: linear-gradient(135deg, rgba(var(--v-theme-success), 0.05) 0%, rgba(var(--v-theme-info), 0.05) 100%);
+  border: 1px solid rgba(var(--v-theme-success), 0.2);
+  transition: all 0.3s ease;
+}
+
+.stadium-card:hover {
+  border-color: rgba(var(--v-theme-success), 0.4);
+  box-shadow: 0 4px 12px rgba(var(--v-theme-success), 0.1);
 }
 </style>

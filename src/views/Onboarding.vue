@@ -22,23 +22,6 @@
       />
     </template>
 
-    <!-- Step 3: Team Customization -->
-    <template #step3="{ next, prev, data }">
-      <step3-team-customization
-        :data="data"
-        :next="next"
-        :prev="prev"
-      />
-    </template>
-
-    <!-- Step 4: Complete -->
-    <template #step4="{ complete, prev, data }">
-      <onboarding-complete
-        :data="data"
-        :complete="complete"
-        :prev="prev"
-      />
-    </template>
   </onboarding-wrapper>
 </template>
 
@@ -60,8 +43,6 @@ import { uploadAvatar } from '@/services/storage';
 import OnboardingWrapper from '@/components/onboarding/OnboardingWrapper.vue';
 import Step1InitialTeam from '@/components/onboarding/Step1-InitialTeam.vue';
 import Step2ManagerSetup from '@/components/onboarding/Step2-ManagerSetup.vue';
-import Step3TeamCustomization from '@/components/onboarding/Step3-TeamCustomization.vue';
-import OnboardingComplete from '@/components/onboarding/OnboardingComplete.vue';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -72,14 +53,8 @@ const wrapper = ref(null);
 
 // Handle team step completion (step 2)
 const handleTeamNext = (data) => {
-  // If user chose to skip to customize, go to step 4
-  if (data.skipToCustomize) {
-    wrapper.value.currentStep = 4;
-    wrapper.value.onboardingData.team = data.team;
-  } else {
-    // Normal flow: go to step 3
-    wrapper.value.nextStep(data);
-  }
+  // Go to next step (which will now complete onboarding)
+  wrapper.value.nextStep(data);
 };
 
 // Handle step changes
@@ -151,8 +126,17 @@ const handleComplete = async (data) => {
     const userUpdates = {
       managerProfile: {
         name: data.manager.name,
+        bio: data.manager.bio,
         avatar: managerAvatarUrl,
-        teamId: teamId
+        avatarSource: data.manager.avatarSource,
+        teamId: teamId,
+        rank: 'Amateur',
+        recruitmentBudget: 100000,
+        // Manager stats
+        experience: 0,
+        reputation: 'Amateur',
+        personality: 'Ambitious',
+        specialties: ['Learning', 'Development']
       },
       onboardingCompleted: true,
       onboardingStep: 'completed'

@@ -115,6 +115,12 @@ const router = createRouter({
       beforeEnter: requireAuth
     },
     {
+      path: '/recruit',
+      name: 'recruit',
+      component: () => import('@/views/Recruit.vue'),
+      beforeEnter: requireAuth
+    },
+    {
       path: '/my-games',
       name: 'my-games',
       component: () => import('@/views/MyGames.vue'),

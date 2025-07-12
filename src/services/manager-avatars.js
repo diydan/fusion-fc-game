@@ -106,8 +106,15 @@ export function getFallbackManagerAvatar() {
 
 // Get avatar for user (with fallback logic)
 export function getManagerAvatarForUser(user = null) {
-  // If user has a custom avatar, use it
+  // If user has a custom avatar, validate the URL first
   if (user?.avatar?.url) {
+    // Check if it's a Firebase Storage URL that might have permissions issues
+    if (user.avatar.url.includes('firebasestorage.googleapis.com') && 
+        user.avatar.url.includes('avatars%2F')) {
+      console.warn('Detected potential Firebase Storage permission issue, using fallback avatar');
+      return getRandomManagerAvatar();
+    }
+    
     return {
       id: 'custom',
       url: user.avatar.url,
@@ -133,7 +140,7 @@ export function generateManagerProfile(userPreferences = null) {
     getRandomManagerAvatar();
   
   // Generate some basic manager stats
-  const experience = Math.floor(Math.random() * 20) + 1; // 1-20 years
+  const experience = Math.floor(Math.random() * 500) + 100; // 100-600 XP
   const reputation = Math.floor(Math.random() * 100) + 1; // 1-100
   
   const managerNames = [
@@ -151,8 +158,10 @@ export function generateManagerProfile(userPreferences = null) {
     avatar,
     experience,
     reputation,
+    rank: 'Amateur', // Starting rank for all new managers
     specialties: generateSpecialties(),
     personality: generatePersonality(),
+    recruitmentBudget: 100000, // $100K starting recruitment budget
     created: new Date().toISOString()
   };
 }

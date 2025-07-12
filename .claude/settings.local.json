@@ -7,7 +7,6 @@
       "Bash(pnpm install:*)",
       "Bash(npm install:*)",
       "Bash(/usr/local/bin/pnpm install)",
-      "Bash(npm install:*)",
       "Bash(ls:*)",
       "Bash(npm run:*)",
       "Bash(/usr/local/bin/pnpm add firebase ethers)",
@@ -22,7 +21,8 @@
       "Bash(pkill:*)",
       "Bash(true)",
       "Bash(open /Users/Dan/Code/fusion-fc-game/test-logo-endpoint.html)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": []
   }

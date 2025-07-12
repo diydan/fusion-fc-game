@@ -24,6 +24,13 @@
                 Connected
               </v-chip>
               <span class="text-caption">{{ truncateAddress(walletAddress, 6) }}</span>
+              <v-btn 
+                icon="mdi-content-copy" 
+                size="x-small" 
+                variant="text" 
+                @click="copyAddress"
+                class="ml-2"
+              />
               <v-spacer />
               <GameButton
                 color="primary"
@@ -135,14 +142,7 @@
               </template>
               
               <template v-slot:item.balance="{ item }">
-                <span class="font-weight-medium">{{ formatBalance(item.balance, item.decimals) }}</span>
-              </template>
-              
-              <template v-slot:item.value="{ item }">
-                <span v-if="item.usdValue" class="text-success font-weight-medium">
-                  ${{ item.usdValue.toFixed(2) }}
-                </span>
-                <span v-else class="text-medium-emphasis">--</span>
+                <span class="font-weight-medium">{{ item.formattedBalance || formatBalance(item.balance, item.decimals) }} {{ item.symbol }}</span>
               </template>
 
               <template v-slot:item.actions="{ item }">
@@ -160,9 +160,20 @@
                 <div class="text-center py-8">
                   <v-icon size="48" color="medium-emphasis" class="mb-4">mdi-coins</v-icon>
                   <p class="text-body-1 text-medium-emphasis mb-2">No tokens found</p>
-                  <p class="text-caption text-medium-emphasis">
+                  <p class="text-caption text-medium-emphasis mb-2">
                     Connect your wallet and ensure you're on the Chiliz network
                   </p>
+                  <p class="text-caption text-medium-emphasis" v-if="walletConnected">
+                    Wallet: {{ truncateAddress(walletAddress, 6) }} on {{ currentNetwork }}
+                  </p>
+                  <v-btn 
+                    variant="outlined" 
+                    size="small" 
+                    class="mt-2"
+                    @click="debugTokenFetch"
+                  >
+                    Debug Token Fetch
+                  </v-btn>
                 </div>
               </template>
             </v-data-table>
@@ -251,6 +262,98 @@
       </v-col>
     </v-row>
 
+    <!-- Teams Matrix Section -->
+    <v-row class="mt-6">
+      <v-col cols="12">
+        <v-card class="glass-card">
+          <v-card-title>
+            <h2 class="text-h5 mb-0">⚽ Teams Matrix</h2>
+          </v-card-title>
+          <v-card-text>
+            <!-- Simple teams matrix table - placeholder for full implementation -->
+            <v-alert type="info" variant="tonal" class="mb-4">
+              <template v-slot:prepend>
+                <v-icon>mdi-information</v-icon>
+              </template>
+              Teams Matrix showing stats and bonus tokens coming soon! View your current tokens above.
+            </v-alert>
+            
+            <!-- Sample teams display -->
+            <v-row>
+              <v-col cols="12" md="6" lg="3" v-for="team in sampleTeams" :key="team.token">
+                <v-card variant="outlined" class="text-center pa-4">
+                  <v-avatar size="48" class="mb-2">
+                    <v-img :src="team.logo" :alt="team.name"></v-img>
+                  </v-avatar>
+                  <h4 class="text-subtitle-1 mb-1">{{ team.name }}</h4>
+                  <v-chip size="small" color="primary" variant="outlined" class="mb-2">
+                    {{ team.token }}
+                  </v-chip>
+                  <p class="text-caption text-medium-emphasis">Overall: {{ team.overall }}</p>
+                </v-card>
+              </v-col>
+            </v-row>
+            
+            <!-- Bonus Tokens Section -->
+            <v-card class="mt-6" variant="outlined">
+              <v-card-text class="pa-6">
+                <h3 class="text-center mb-4">⚡ Performance Boost Tokens</h3>
+                <p class="text-center text-grey mb-6">Each token provides 1% bonus to specific attributes (max 100% total)</p>
+                
+                <v-row>
+                  <v-col cols="12" md="3">
+                    <v-card class="bonus-card">
+                      <div class="bonus-icon d-flex align-center justify-center">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-AM.svg" alt="Aston Martin" style="max-width: 70px; height: auto" class="mr-1">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-ROUSH.svg" alt="Roush" style="max-width: 70px; height: auto">
+                      </div>
+                      <h4>Motorsport Tokens</h4>
+                      <div class="bonus-value mt-3">+1% Speed</div>
+                    </v-card>
+                  </v-col>
+                  
+                  <v-col cols="12" md="3">
+                    <v-card class="bonus-card">
+                      <div class="bonus-icon d-flex align-center justify-center">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-SHARKS.svg" alt="Sharks" style="max-width: 70px; height: auto" class="mr-1">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-SFP.svg" alt="SF Pioneers" style="max-width: 70px; height: auto">
+                      </div>
+                      <h4>Rugby Tokens</h4>
+                      <div class="bonus-value mt-3">+1% Physical</div>
+                    </v-card>
+                  </v-col>
+                  
+                  <v-col cols="12" md="3">
+                    <v-card class="bonus-card">
+                      <div class="bonus-icon d-flex align-center justify-center flex-wrap">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-OG.svg" alt="OG" style="max-width: 70px; height: auto" class="ma-1">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-TH.svg" alt="Talon" style="max-width: 70px; height: auto" class="ma-1">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-ALL.svg" alt="Alliance" style="max-width: 70px; height: auto" class="ma-1">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-MIBR.svg" alt="MIBR" style="max-width: 70px; height: auto" class="ma-1">
+                      </div>
+                      <h4>Esports Tokens</h4>
+                      <div class="bonus-value mt-3">+1% Mental</div>
+                    </v-card>
+                  </v-col>
+                  
+                  <v-col cols="12" md="3">
+                    <v-card class="bonus-card">
+                      <div class="bonus-icon d-flex align-center justify-center">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-UFC.svg" alt="UFC" style="max-width: 70px; height: auto" class="mr-2">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-PFL.svg" alt="PFL" style="max-width: 70px; height: auto">
+                      </div>
+                      <h4>UFC & PFL Tokens</h4>
+                      <div class="bonus-value mt-3">+1% Aggression</div>
+                    </v-card>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
     <!-- Token Details Dialog -->
     <v-dialog v-model="tokenDialog" max-width="500">
       <v-card v-if="selectedToken">
@@ -263,7 +366,11 @@
             </v-list-item>
             <v-list-item>
               <v-list-item-title>Balance</v-list-item-title>
-              <v-list-item-subtitle>{{ formatBalance(selectedToken.balance, selectedToken.decimals) }} {{ selectedToken.symbol }}</v-list-item-subtitle>
+              <v-list-item-subtitle>{{ selectedToken.formattedBalance || formatBalance(selectedToken.balance, selectedToken.decimals) }} {{ selectedToken.symbol }}</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-title>Raw Balance</v-list-item-title>
+              <v-list-item-subtitle class="font-mono">{{ selectedToken.balance }}</v-list-item-subtitle>
             </v-list-item>
             <v-list-item>
               <v-list-item-title>Decimals</v-list-item-title>
@@ -339,6 +446,34 @@ const snackbar = ref({
   color: 'success'
 })
 
+// Sample teams data for preview
+const sampleTeams = ref([
+  {
+    name: 'Paris Saint-Germain',
+    token: '$PSG',
+    logo: 'https://www.socios.com/wp-content/uploads/2024/01/Token-PSG.svg',
+    overall: 90
+  },
+  {
+    name: 'FC Barcelona',
+    token: '$BAR',
+    logo: 'https://www.socios.com/wp-content/uploads/2024/01/Token-FCB.svg',
+    overall: 89
+  },
+  {
+    name: 'Manchester City',
+    token: '$CITY',
+    logo: 'https://www.socios.com/wp-content/uploads/2024/01/Token-CITY.svg',
+    overall: 88
+  },
+  {
+    name: 'Juventus',
+    token: '$JUV',
+    logo: 'https://www.socios.com/wp-content/uploads/2024/01/Token-JUV.svg',
+    overall: 83
+  }
+])
+
 // Computed
 const walletConnected = computed(() => {
   return walletAddress.value !== ''
@@ -349,7 +484,6 @@ const tokenHeaders = [
   { title: 'Token', key: 'symbol', align: 'start' },
   { title: 'Name', key: 'name', align: 'start' },
   { title: 'Balance', key: 'balance', align: 'end' },
-  { title: 'USD Value', key: 'value', align: 'end' },
   { title: 'Actions', key: 'actions', align: 'center', sortable: false }
 ]
 
@@ -367,6 +501,12 @@ const connectWallet = async () => {
   try {
     const address = await chilizWallet.connectWallet()
     walletAddress.value = address
+    
+    // Save wallet address to user profile
+    await userStore.updateUserProfile({
+      walletAddress: address,
+      lastWalletConnection: new Date().toISOString()
+    })
     
     // Switch to Chiliz network
     await chilizWallet.switchToChilizNetwork('testnet')
@@ -404,10 +544,11 @@ const refreshTokens = async () => {
       : 'Chiliz Spicy Testnet'
     
     // Format tokens for the table
-    tokens.value = walletSummary.tokens.map(token => ({
-      ...token,
-      usdValue: calculateUsdValue(token.symbol, parseFloat(token.formattedBalance))
-    }))
+    console.log('Raw wallet tokens:', walletSummary.tokens)
+    tokens.value = walletSummary.tokens.map(token => {
+      console.log('Token:', token.symbol, 'Balance:', token.balance, 'FormattedBalance:', token.formattedBalance, 'Decimals:', token.decimals)
+      return { ...token }
+    })
     
     // Generate PowerUps based on token holdings
     powerUps.value = generateMockPowerUps(walletSummary.tokens)
@@ -436,14 +577,21 @@ const calculateUsdValue = (symbol, balance) => {
 }
 
 const formatBalance = (balance, decimals) => {
+  // If balance is already a formatted string (like from formattedBalance)
   if (typeof balance === 'string' && balance.includes('.')) {
-    // Already formatted
-    return parseFloat(balance).toLocaleString()
+    const num = parseFloat(balance)
+    return num < 1 ? num.toFixed(4) : num.toLocaleString()
   }
   
-  const divisor = Math.pow(10, decimals)
-  const formatted = (parseInt(balance) / divisor).toFixed(2)
-  return parseFloat(formatted).toLocaleString()
+  // If balance is a raw number string from the contract
+  if (typeof balance === 'string' && !isNaN(balance)) {
+    const divisor = Math.pow(10, decimals || 18)
+    const formatted = parseFloat(balance) / divisor
+    return formatted < 1 ? formatted.toFixed(4) : formatted.toLocaleString()
+  }
+  
+  // Fallback for any other format
+  return '0'
 }
 
 const viewTokenDetails = (token) => {
@@ -458,6 +606,49 @@ const viewPowerUpDetails = (powerUp) => {
 const activatePowerUp = (powerUp) => {
   powerUp.status = 'active'
   showSnackbar(`${powerUp.name} activated!`, 'success')
+}
+
+const copyAddress = async () => {
+  try {
+    await navigator.clipboard.writeText(walletAddress.value)
+    showSnackbar('Address copied to clipboard!', 'success')
+  } catch (error) {
+    console.error('Failed to copy address:', error)
+    showSnackbar('Failed to copy address', 'error')
+  }
+}
+
+const debugTokenFetch = async () => {
+  console.log('=== DEBUG TOKEN FETCH ===')
+  console.log('Wallet Address:', walletAddress.value)
+  console.log('Current Network:', currentNetwork.value)
+  console.log('Network Info:', networkInfo.value)
+  
+  try {
+    // Try direct balance check for known tokens
+    const testTokens = [
+      '0x677F7e16C7Dd57be1D4C8aD1244883214953DC47', // CHZ
+      '0x1234567890123456789012345678901234567890'  // Test token
+    ]
+    
+    for (const tokenAddr of testTokens) {
+      try {
+        const balance = await chilizWallet.getTokenBalance(tokenAddr, walletAddress.value)
+        console.log(`Token ${tokenAddr} balance:`, balance)
+      } catch (error) {
+        console.log(`Token ${tokenAddr} error:`, error.message)
+      }
+    }
+    
+    // Try explorer API
+    const explorerTokens = await chilizWallet.getTokensFromExplorer(walletAddress.value)
+    console.log('Explorer tokens:', explorerTokens)
+    
+    showSnackbar('Debug info logged to console', 'info')
+  } catch (error) {
+    console.error('Debug error:', error)
+    showSnackbar('Debug failed - check console', 'error')
+  }
 }
 
 const showSnackbar = (text, color = 'success') => {
@@ -493,21 +684,36 @@ onMounted(async () => {
     }
   })
   
-  // Check if wallet is already connected
+  // Check if wallet is already connected from user profile
   if (userStore.userProfile?.walletAddress) {
     try {
       walletAddress.value = userStore.userProfile.walletAddress
-      await chilizWallet.initialize()
-      networkInfo.value = await chilizWallet.getNetworkInfo()
+      console.log('Loading wallet from user profile:', walletAddress.value)
       
-      if (networkInfo.value.isChiliz) {
-        currentNetwork.value = `Chiliz ${networkInfo.value.networkType}`
-        await refreshTokens()
+      // Try to initialize wallet connection if MetaMask is available
+      if (typeof window.ethereum !== 'undefined') {
+        // Check if the stored address matches current MetaMask account
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' })
+        if (accounts.includes(walletAddress.value)) {
+          await chilizWallet.initialize()
+          networkInfo.value = await chilizWallet.getNetworkInfo()
+          
+          if (networkInfo.value.isChiliz) {
+            currentNetwork.value = `Chiliz ${networkInfo.value.networkType}`
+            await refreshTokens()
+            showSnackbar('Wallet automatically connected', 'success')
+          } else {
+            showSnackbar('Switch to Chiliz network to view tokens', 'info')
+          }
+        } else {
+          showSnackbar('Connect MetaMask to view tokens', 'info')
+        }
       } else {
-        showSnackbar('Switch to Chiliz network to view tokens', 'info')
+        showSnackbar('MetaMask not detected', 'warning')
       }
     } catch (error) {
       console.error('Failed to initialize wallet:', error)
+      showSnackbar('Failed to connect to stored wallet', 'warning')
     }
   }
 })
@@ -521,5 +727,47 @@ onUnmounted(() => {
 .font-mono {
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.8em;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-radius: 15px !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: blur(10px);
+}
+
+/* Bonus Tokens Section */
+.bonus-card {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  padding: 24px;
+  text-align: center;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.bonus-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.bonus-icon {
+  font-size: 3em;
+  margin-bottom: 12px;
+}
+
+.bonus-card h4 {
+  color: #2c3e50;
+  font-size: 1.3em;
+  margin-bottom: 8px;
+}
+
+.bonus-value {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #27ae60;
+  padding: 8px;
+  background: rgba(39, 174, 96, 0.1);
+  border-radius: 8px;
 }
 </style>

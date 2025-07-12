@@ -26,9 +26,19 @@
               :color="authMethodColor" 
               variant="tonal"
               prepend-icon="mdi-shield-check"
-              class="mb-4"
+              class="mb-2"
             >
               {{ authMethodLabel }}
+            </v-chip>
+            
+            <v-chip 
+              v-if="userStore.userProfile?.managerProfile?.rank"
+              color="primary" 
+              variant="outlined"
+              prepend-icon="mdi-account-star"
+              class="mb-4"
+            >
+              {{ userStore.userProfile.managerProfile.rank }} Manager
             </v-chip>
             
             <v-list density="compact" class="transparent">

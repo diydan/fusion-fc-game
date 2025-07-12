@@ -310,3 +310,65 @@ export const updateOnboardingProgress = async (userId, step, data = {}) => {
     return { success: false, error: error.message };
   }
 };
+
+// Manager profile operations
+export const updateManagerProfile = async (userId, managerUpdates) => {
+  try {
+    const updates = {
+      managerProfile: {
+        ...managerUpdates,
+        updatedAt: serverTimestamp()
+      }
+    };
+    
+    const result = await updateUser(userId, updates);
+    return result;
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const getManagerProfile = async (userId) => {
+  try {
+    const userData = await getUser(userId);
+    if (userData.data && userData.data.managerProfile) {
+      return { data: userData.data.managerProfile, error: null };
+    } else {
+      return { data: null, error: 'Manager profile not found' };
+    }
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
+};
+
+export const updateManagerStats = async (userId, statUpdates) => {
+  try {
+    // Get current manager profile
+    const { data: currentProfile, error: getError } = await getManagerProfile(userId);
+    if (getError) {
+      return { success: false, error: getError };
+    }
+    
+    // Merge stat updates with current profile
+    const updatedProfile = {
+      ...currentProfile,
+      ...statUpdates,
+      updatedAt: serverTimestamp()
+    };
+    
+    // Validate manager stats
+    if (typeof updatedProfile.experience !== 'number' || updatedProfile.experience < 0) {
+      return { success: false, error: 'Invalid experience value' };
+    }
+    
+    const validReputations = ['Amateur', 'Semi-Pro', 'Professional', 'Elite', 'Legendary'];
+    if (!validReputations.includes(updatedProfile.reputation)) {
+      return { success: false, error: 'Invalid reputation level' };
+    }
+    
+    const result = await updateManagerProfile(userId, updatedProfile);
+    return result;
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

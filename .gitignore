@@ -225,3 +225,5 @@ STORAGE_CORS_SETUP.md
 GAME_ASSET_RULES_IMPLEMENTATION.md
 AVATAR_RULES_IMPLEMENTATION.md
 TODO.md
+deploy-production.sh
+functions/demo-enhanced-onboarding.html

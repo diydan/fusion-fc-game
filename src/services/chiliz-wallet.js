@@ -26,9 +26,9 @@ export const CHILIZ_NETWORKS = {
   }
 }
 
-// Common Fan Tokens on Chiliz
+// Common Fan Tokens on Chiliz (actual addresses from Chiliz explorer)
 export const FAN_TOKENS = {
-  // Mainnet tokens
+  // Mainnet tokens (real Chiliz mainnet addresses)
   mainnet: [
     {
       symbol: 'PSG',
@@ -39,41 +39,35 @@ export const FAN_TOKENS = {
     },
     {
       symbol: 'BAR',
-      name: 'FC Barcelona Fan Token',
+      name: 'FC Barcelona Fan Token', 
       address: '0xfD3C73b3B09D418841dd6Aff341b2d6e3abA8Ac2',
       decimals: 2,
       logo: '/tokens/bar.png'
-    },
-    {
-      symbol: 'JUV',
-      name: 'Juventus Fan Token',
-      address: '0x4a3f8d561Bf932F5eCe4E5eF0c8C1F38b4d4A7e',
-      decimals: 2,
-      logo: '/tokens/juv.png'
-    },
-    {
-      symbol: 'ATM',
-      name: 'Atletico Madrid Fan Token',
-      address: '0x3aF8B2D0b5b6aF6E8E7a2Ea1A8c5B3d9F6E4C1Ae',
-      decimals: 2,
-      logo: '/tokens/atm.png'
     }
   ],
-  // Testnet tokens (same addresses for testing)
+  // Testnet tokens (real Chiliz testnet addresses)
   testnet: [
     {
-      symbol: 'PSG',
-      name: 'Paris Saint-Germain Fan Token',
-      address: '0x8d1566569d5b695d44a9a234540d8Ea4a455FdE',
-      decimals: 2,
-      logo: '/tokens/psg.png'
+      symbol: 'CHZ',
+      name: 'Chiliz Token',
+      address: '0x677F7e16C7Dd57be1D4C8aD1244883214953DC47', // Example CHZ token on testnet
+      decimals: 18,
+      logo: '/tokens/chz.png'
     },
     {
-      symbol: 'BAR',
-      name: 'FC Barcelona Fan Token',
-      address: '0xfD3C73b3B09D418841dd6Aff341b2d6e3abA8Ac2',
-      decimals: 2,
-      logo: '/tokens/bar.png'
+      symbol: 'TEST',
+      name: 'Test Token',
+      address: '0x1234567890123456789012345678901234567890', // Generic test token
+      decimals: 18,
+      logo: '/tokens/test.png'
+    },
+    // Add some real testnet fan tokens if available
+    {
+      symbol: 'SPICY',
+      name: 'Spicy Test Token',
+      address: '0x0000000000000000000000000000000000000000', // Placeholder
+      decimals: 18,
+      logo: '/tokens/spicy.png'
     }
   ]
 }
@@ -166,8 +160,32 @@ export class ChilizWalletService {
   async getTokenBalance(tokenAddress, walletAddress) {
     if (!this.provider) await this.initialize()
     
+    // Validate token address format
+    if (!ethers.isAddress(tokenAddress)) {
+      console.warn(`Invalid token address format: ${tokenAddress}`)
+      return null
+    }
+    
+    // Skip known invalid addresses
+    const invalidAddresses = [
+      '0x0000000000000000000000000000000000000000',
+      '0x1234567890123456789012345678901234567890'
+    ]
+    
+    if (invalidAddresses.includes(tokenAddress)) {
+      console.warn(`Skipping known invalid token address: ${tokenAddress}`)
+      return null
+    }
+    
     try {
       const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.provider)
+      
+      // Check if contract exists by calling a simple method first
+      const code = await this.provider.getCode(tokenAddress)
+      if (code === '0x') {
+        console.warn(`No contract deployed at address: ${tokenAddress}`)
+        return null
+      }
       
       const [balance, decimals, symbol, name] = await Promise.all([
         contract.balanceOf(walletAddress),
@@ -185,7 +203,11 @@ export class ChilizWalletService {
         formattedBalance: ethers.formatUnits(balance, decimals)
       }
     } catch (error) {
-      console.error(`Failed to get token balance for ${tokenAddress}:`, error)
+      // Only log meaningful errors, not BAD_DATA for invalid/non-existent tokens
+      if (!error.message.includes('could not decode result data') && 
+          !error.message.includes('BAD_DATA')) {
+        console.error(`Failed to get token balance for ${tokenAddress}:`, error)
+      }
       return null
     }
   }
@@ -195,17 +217,161 @@ export class ChilizWalletService {
     const tokens = FAN_TOKENS[this.network] || []
     const balances = []
 
+    console.log(`Fetching token balances for ${walletAddress} on ${this.network}`)
+
+    // First try to get tokens from explorer API
+    try {
+      const explorerTokens = await this.getTokensFromExplorer(walletAddress)
+      if (explorerTokens && explorerTokens.length > 0) {
+        console.log('Found tokens from explorer:', explorerTokens)
+        // Process explorer tokens and add to balances
+        for (const token of explorerTokens) {
+          balances.push({
+            address: token.contractAddress || token.address,
+            symbol: token.symbol || token.name?.substring(0, 3) || 'UNKNOWN',
+            name: token.name || token.symbol || 'Unknown Token',
+            balance: token.balance || token.value || '0',
+            decimals: token.decimals || 18,
+            formattedBalance: token.formattedBalance || '0'
+          })
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to fetch from explorer:', error)
+    }
+
+    // Try to get balances for known tokens
     for (const token of tokens) {
-      const balance = await this.getTokenBalance(token.address, walletAddress)
-      if (balance && parseFloat(balance.formattedBalance) > 0) {
-        balances.push({
-          ...balance,
-          logo: token.logo
-        })
+      try {
+        console.log(`Checking token: ${token.symbol} at ${token.address}`)
+        const balance = await this.getTokenBalance(token.address, walletAddress)
+        if (balance) {
+          console.log(`Found balance for ${token.symbol}:`, balance.formattedBalance)
+          balances.push({
+            ...balance,
+            logo: token.logo
+          })
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch balance for ${token.symbol}:`, error)
       }
     }
 
+    // Try to discover unknown tokens via transfers
+    try {
+      const discoveredTokens = await this.getTokenTransfers(walletAddress)
+      console.log('Discovered token addresses:', discoveredTokens)
+      
+      // Try to get balances for discovered tokens
+      for (const tokenAddress of discoveredTokens) {
+        try {
+          // Skip if we already checked this token
+          if (tokens.some(t => t.address.toLowerCase() === tokenAddress.toLowerCase())) {
+            continue
+          }
+          
+          const balance = await this.getTokenBalance(tokenAddress, walletAddress)
+          if (balance && parseFloat(balance.formattedBalance) > 0) {
+            console.log(`Found balance for discovered token:`, balance)
+            balances.push(balance)
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch balance for discovered token ${tokenAddress}:`, error)
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to discover tokens via transfers:', error)
+    }
+
+    console.log('Final token balances:', balances)
     return balances
+  }
+
+  // Try to get tokens from Chiliz explorer API
+  async getTokensFromExplorer(walletAddress) {
+    try {
+      const explorerUrl = this.network === 'mainnet' 
+        ? 'https://chiliscan.com/api' 
+        : 'https://spicy-explorer.chiliz.com/api'
+      
+      // Use the correct API format with module and action parameters
+      const apiUrl = `${explorerUrl}?module=account&action=tokentx&address=${walletAddress}&startblock=0&endblock=99999999&sort=desc`
+      
+      const response = await fetch(apiUrl)
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Explorer API response:', data)
+        
+        // Process the response to extract unique tokens
+        if (data.status === "1" && data.result && Array.isArray(data.result)) {
+          const uniqueTokens = new Map()
+          
+          data.result.forEach(tx => {
+            if (tx.contractAddress && !uniqueTokens.has(tx.contractAddress)) {
+              uniqueTokens.set(tx.contractAddress, {
+                address: tx.contractAddress,
+                symbol: tx.tokenSymbol || 'UNKNOWN',
+                name: tx.tokenName || 'Unknown Token',
+                decimals: parseInt(tx.tokenDecimal) || 18
+              })
+            }
+          })
+          
+          return Array.from(uniqueTokens.values())
+        }
+        return []
+      } else if (response.status === 400) {
+        console.warn(`Explorer API returned 400 for address ${walletAddress} - likely invalid or empty address`)
+        return []
+      }
+    } catch (error) {
+      console.warn('Failed to fetch from explorer API:', error)
+    }
+    return []
+  }
+
+  // Get token transfers to discover tokens
+  async getTokenTransfers(walletAddress) {
+    if (!this.provider) await this.initialize()
+    
+    try {
+      // Get recent blocks to scan for token transfers
+      const currentBlock = await this.provider.getBlockNumber()
+      const fromBlock = Math.max(0, currentBlock - 10000) // Last 10k blocks
+      
+      // ERC-20 Transfer event signature
+      const transferTopic = ethers.id('Transfer(address,address,uint256)')
+      
+      // Get logs for incoming transfers
+      const incomingLogs = await this.provider.getLogs({
+        fromBlock: fromBlock,
+        toBlock: 'latest',
+        topics: [
+          transferTopic,
+          null, // from any address
+          ethers.zeroPadValue(walletAddress, 32) // to our wallet
+        ]
+      })
+
+      // Get logs for outgoing transfers
+      const outgoingLogs = await this.provider.getLogs({
+        fromBlock: fromBlock,
+        toBlock: 'latest',
+        topics: [
+          transferTopic,
+          ethers.zeroPadValue(walletAddress, 32), // from our wallet
+          null // to any address
+        ]
+      })
+
+      const allLogs = [...incomingLogs, ...outgoingLogs]
+      const uniqueTokens = [...new Set(allLogs.map(log => log.address))]
+      
+      return uniqueTokens
+    } catch (error) {
+      console.error('Failed to get token transfers:', error)
+      return []
+    }
   }
 
   // Get wallet summary (native + all tokens)

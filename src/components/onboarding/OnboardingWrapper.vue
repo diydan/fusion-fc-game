@@ -22,12 +22,9 @@
           </template>
           
           <template v-slot:item.3>
-            <slot name="step3" :next="nextStep" :prev="prevStep" :data="onboardingData" />
+            <slot name="step3" :complete="completeOnboarding" :prev="prevStep" :data="onboardingData" />
           </template>
           
-          <template v-slot:item.4>
-            <slot name="step4" :complete="completeOnboarding" :prev="prevStep" :data="onboardingData" />
-          </template>
         </v-stepper>
       </v-col>
     </v-row>
@@ -117,20 +114,16 @@ const onboardingData = ref({
 // Stepper configuration
 const stepperItems = computed(() => [
   {
+    title: 'Team Generation',
+    subtitle: 'Your team awaits'
+  },
+  {
     title: 'Manager Setup',
     subtitle: 'Your profile'
   },
   {
-    title: 'Team Preview',
-    subtitle: 'Your generated team'
-  },
-  {
-    title: 'Customize',
-    subtitle: 'Make it yours'
-  },
-  {
-    title: 'Complete',
-    subtitle: 'Ready to play!'
+    title: 'Ready to Recruit',
+    subtitle: 'Build your squad!'
   }
 ]);
 
@@ -143,7 +136,7 @@ const nextStep = (data = {}) => {
   soundStore.playSound('pop');
   
   // Move to next step
-  if (currentStep.value < 4) {
+  if (currentStep.value < 3) {
     currentStep.value++;
     emit('step-change', currentStep.value);
   }
