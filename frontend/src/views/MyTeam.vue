@@ -204,9 +204,25 @@
                   >
                     <v-card-text>
                       <div class="d-flex align-center justify-space-between mb-2">
-                        <div>
-                          <h4 class="text-subtitle-1">{{ player.name }}</h4>
-                          <p class="text-caption text-medium-emphasis">{{ player.position }}</p>
+                        <div class="d-flex align-center gap-2">
+                          <v-avatar size="40">
+                            <v-img 
+                              v-if="player.bot?.model" 
+                              :src="player.bot.model"
+                              :alt="player.name"
+                            />
+                            <v-icon v-else>mdi-account</v-icon>
+                          </v-avatar>
+                          <div>
+                            <h4 class="text-subtitle-1">{{ player.name }}</h4>
+                            <p class="text-caption text-medium-emphasis">
+                              {{ player.position }}
+                              <v-chip v-if="player.bot" size="x-small" color="info" class="ml-1">
+                                <v-icon size="x-small" start>mdi-robot</v-icon>
+                                {{ player.bot.name }}
+                              </v-chip>
+                            </p>
+                          </div>
                         </div>
                         <v-avatar size="40" :color="getPlayerConditionColor(player.condition)">
                           <span class="text-caption font-weight-bold">

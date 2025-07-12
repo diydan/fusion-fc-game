@@ -22,6 +22,10 @@
       <v-avatar size="80">
         <v-img :src="player.avatar || '/default-player.png'" />
       </v-avatar>
+      <!-- Bot Badge -->
+      <div v-if="player.bot" class="bot-badge">
+        <v-icon size="16">mdi-robot</v-icon>
+      </div>
     </div>
 
     <!-- Player Info -->
@@ -82,6 +86,15 @@
       </v-btn>
       <v-btn
         size="small"
+        color="info"
+        variant="outlined"
+        @click.stop="$emit('select-bot')"
+        v-if="!player.bot"
+      >
+        <v-icon size="16">mdi-robot</v-icon>
+      </v-btn>
+      <v-btn
+        size="small"
         color="success"
         variant="outlined"
         @click.stop="$emit('recruit')"
@@ -134,7 +147,7 @@ const tierClass = computed(() => {
   return tierClasses[props.player.tier] || 'tier-amateur'
 })
 
-defineEmits(['click', 'compare', 'recruit'])
+defineEmits(['click', 'compare', 'recruit', 'select-bot'])
 </script>
 
 <style scoped>
@@ -219,6 +232,23 @@ defineEmits(['click', 'compare', 'recruit'])
   display: flex;
   justify-content: center;
   margin: 8px 0;
+  position: relative;
+}
+
+.bot-badge {
+  position: absolute;
+  bottom: 0;
+  right: 50%;
+  transform: translateX(50%);
+  background: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .player-info {

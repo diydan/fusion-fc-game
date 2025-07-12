@@ -282,6 +282,7 @@
               @click="openPlayerModal(player)"
               @compare="toggleComparison(player)"
               @recruit="recruitPlayer(player)"
+              @select-bot="openBotSelection(player)"
               :is-selected="selectedPlayers.some(p => p.id === player.id)"
             />
           </v-col>
@@ -324,6 +325,12 @@
                 </template>
                 <v-list-item-title>Tier: {{ playerToRecruit.tier?.toUpperCase() }}</v-list-item-title>
               </v-list-item>
+              <v-list-item v-if="playerToRecruit.bot">
+                <template v-slot:prepend>
+                  <v-icon>mdi-robot</v-icon>
+                </template>
+                <v-list-item-title>Bot: {{ playerToRecruit.bot.name }}</v-list-item-title>
+              </v-list-item>
             </div>
           </div>
         </v-card-text>
@@ -334,6 +341,13 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Bot Selection Modal -->
+    <BotSelectionModal
+      v-model="showBotSelectionModal"
+      :player="playerForBotSelection"
+      @select="assignBotToPlayer"
+    />
   </div>
 </template>
 
@@ -343,6 +357,7 @@ import PlayerCard from '@/components/recruit/PlayerCard.vue'
 import PlayerDetailModal from '@/components/recruit/PlayerDetailModal.vue'
 import PlayerComparisonCard from '@/components/recruit/PlayerComparisonCard.vue'
 import StatBar from '@/components/recruit/StatBar.vue'
+import BotSelectionModal from '@/components/bots/BotSelectionModal.vue'
 
 // Data
 const loading = ref(false)
@@ -358,6 +373,8 @@ const showPlayerModal = ref(false)
 const selectedPlayerDetail = ref(null)
 const showRecruitDialog = ref(false)
 const playerToRecruit = ref(null)
+const showBotSelectionModal = ref(false)
+const playerForBotSelection = ref(null)
 
 // Filter options
 const tierOptions = [
@@ -533,6 +550,43 @@ const confirmRecruitment = () => {
   playerToRecruit.value = null
 }
 
+const openBotSelection = (player) => {
+  playerForBotSelection.value = player
+  showBotSelectionModal.value = true
+}
+
+const assignBotToPlayer = (bot) => {
+  if (playerForBotSelection.value) {
+    // Find the player in the players array and update it
+    const playerIndex = players.value.findIndex(p => p.id === playerForBotSelection.value.id)
+    if (playerIndex !== -1) {
+      players.value[playerIndex] = {
+        ...players.value[playerIndex],
+        bot: bot
+      }
+    }
+    
+    // Update selected player detail if it's the same player
+    if (selectedPlayerDetail.value?.id === playerForBotSelection.value.id) {
+      selectedPlayerDetail.value = {
+        ...selectedPlayerDetail.value,
+        bot: bot
+      }
+    }
+    
+    // Update player to recruit if it's the same player
+    if (playerToRecruit.value?.id === playerForBotSelection.value.id) {
+      playerToRecruit.value = {
+        ...playerToRecruit.value,
+        bot: bot
+      }
+    }
+  }
+  
+  playerForBotSelection.value = null
+  showBotSelectionModal.value = false
+}
+
 const generateMorePlayers = async () => {
   generatingPlayers.value = true
   try {
@@ -596,7 +650,8 @@ const generateRandomPlayers = (count = 50) => {
         technical: Math.floor(Math.random() * 30) + baseStats.passing - 20
       },
       price,
-      avatar: null // Will use default
+      avatar: null, // Will use default
+      bot: null // No bot selected by default
     })
   }
 

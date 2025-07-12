@@ -137,8 +137,8 @@
         ></v-list-item>
         <v-list-item
           prepend-icon="mdi-robot"
-          title="Character Creator"
-          to="/character-creator"
+          title="Bot Selection"
+          to="/select-bot"
           rounded="xl"
         ></v-list-item>
 

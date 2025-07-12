@@ -161,9 +161,9 @@ const router = createRouter({
       beforeEnter: requireAuth
     },
     {
-      path: '/character-creator',
-      name: 'character-creator',
-      component: () => import('@/views/CharacterCreator.vue'),
+      path: '/select-bot',
+      name: 'select-bot',
+      component: () => import('@/views/SelectBot.vue'),
       beforeEnter: requireAuth
     },
     {

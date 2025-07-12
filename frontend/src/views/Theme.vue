@@ -718,6 +718,176 @@
       </v-col>
     </v-row>
 
+    <!-- Player Cards Section -->
+    <v-row class="mb-8">
+      <v-col cols="12">
+        <v-card class="mb-6">
+          <v-card-title class="text-h4">Player Cards</v-card-title>
+          <v-card-text>
+            <v-row>
+              <v-col cols="12">
+                <h3 class="mb-4">Single Player Cards</h3>
+                <v-row>
+                  <v-col v-for="player in samplePlayers" :key="player.id" cols="12" md="6" lg="4">
+                    <PlayerCard 
+                      :player="player" 
+                      @click="handlePlayerClick"
+                      @compare="handleCompare"
+                      @recruit="handleRecruit"
+                    />
+                  </v-col>
+                </v-row>
+              </v-col>
+            </v-row>
+            
+            <v-divider class="my-6"></v-divider>
+            
+            <v-row>
+              <v-col cols="12">
+                <h3 class="mb-4">Player Comparison Cards</h3>
+                <v-row>
+                  <v-col v-for="player in comparisonPlayers" :key="player.id" cols="12" md="4">
+                    <PlayerComparisonCard 
+                      :player="player" 
+                      @remove="handleRemoveComparison"
+                      @recruit="handleRecruit"
+                    />
+                  </v-col>
+                </v-row>
+              </v-col>
+            </v-row>
+            
+            <v-divider class="my-6"></v-divider>
+            
+            <v-row>
+              <v-col cols="12">
+                <h3 class="mb-4">Detailed Player Stats View</h3>
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <v-card class="player-detail-card">
+                      <v-card-title>
+                        <v-avatar size="48" class="mr-3">
+                          <v-img :src="featuredPlayer.avatar || '/default-player.png'" />
+                        </v-avatar>
+                        <div>
+                          <div class="text-h5">{{ featuredPlayer.name }}</div>
+                          <div class="text-subtitle-2">{{ featuredPlayer.position }} - {{ featuredPlayer.tier.toUpperCase() }}</div>
+                        </div>
+                      </v-card-title>
+                      
+                      <v-card-text>
+                        <!-- Radar Chart -->
+                        <div class="radar-section mb-6">
+                          <h4 class="mb-3">Performance Overview</h4>
+                          <div class="radar-wrapper">
+                            <PlayerRadarChart 
+                              :stats="featuredPlayer.stats" 
+                              :size="300"
+                              backgroundColor="rgba(66, 153, 225, 0.2)"
+                              borderColor="rgba(66, 153, 225, 0.8)"
+                            />
+                          </div>
+                        </div>
+                        
+                        <!-- Attribute Bars -->
+                        <h4 class="mb-3">Detailed Attributes</h4>
+                        
+                        <!-- Physical Attributes -->
+                        <div class="attributes-group mb-4">
+                          <h5 class="attributes-category">Physical</h5>
+                          <div class="attributes-list">
+                            <div v-for="attr in featuredPlayerPhysical" :key="attr.name" class="attribute-item">
+                              <span class="attr-label">{{ attr.label }}</span>
+                              <div class="attr-bar">
+                                <div class="attr-fill" :style="`width: ${attr.value}%`"></div>
+                              </div>
+                              <span class="attr-value">{{ attr.value }}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <!-- Technical Attributes -->
+                        <div class="attributes-group mb-4">
+                          <h5 class="attributes-category">Technical</h5>
+                          <div class="attributes-list">
+                            <div v-for="attr in featuredPlayerTechnical" :key="attr.name" class="attribute-item">
+                              <span class="attr-label">{{ attr.label }}</span>
+                              <div class="attr-bar">
+                                <div class="attr-fill" :style="`width: ${attr.value}%`"></div>
+                              </div>
+                              <span class="attr-value">{{ attr.value }}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <!-- Mental Attributes -->
+                        <div class="attributes-group">
+                          <h5 class="attributes-category">Mental</h5>
+                          <div class="attributes-list">
+                            <div v-for="attr in featuredPlayerMental" :key="attr.name" class="attribute-item">
+                              <span class="attr-label">{{ attr.label }}</span>
+                              <div class="attr-bar">
+                                <div class="attr-fill" :style="`width: ${attr.value}%`"></div>
+                              </div>
+                              <span class="attr-value">{{ attr.value }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </v-card-text>
+                    </v-card>
+                  </v-col>
+                  
+                  <v-col cols="12" md="6">
+                    <v-card class="player-detail-card">
+                      <v-card-title>Radar Chart Variations</v-card-title>
+                      <v-card-text>
+                        <v-row>
+                          <v-col cols="6">
+                            <h5 class="text-center mb-2">Default Style</h5>
+                            <PlayerRadarChart 
+                              :stats="featuredPlayer.stats" 
+                              :size="180"
+                            />
+                          </v-col>
+                          <v-col cols="6">
+                            <h5 class="text-center mb-2">Elite Style</h5>
+                            <PlayerRadarChart 
+                              :stats="featuredPlayer.stats" 
+                              :size="180"
+                              backgroundColor="rgba(139, 92, 246, 0.2)"
+                              borderColor="rgba(139, 92, 246, 0.8)"
+                            />
+                          </v-col>
+                          <v-col cols="6">
+                            <h5 class="text-center mb-2">Pro Style</h5>
+                            <PlayerRadarChart 
+                              :stats="featuredPlayer.stats" 
+                              :size="180"
+                              backgroundColor="rgba(16, 185, 129, 0.2)"
+                              borderColor="rgba(16, 185, 129, 0.8)"
+                            />
+                          </v-col>
+                          <v-col cols="6">
+                            <h5 class="text-center mb-2">Danger Style</h5>
+                            <PlayerRadarChart 
+                              :stats="featuredPlayer.stats" 
+                              :size="180"
+                              backgroundColor="rgba(239, 68, 68, 0.2)"
+                              borderColor="rgba(239, 68, 68, 0.8)"
+                            />
+                          </v-col>
+                        </v-row>
+                      </v-card-text>
+                    </v-card>
+                  </v-col>
+                </v-row>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
     <!-- Navigation & Tabs Section -->
     <v-row class="mb-8">
       <v-col cols="12">
@@ -797,6 +967,9 @@
 
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
+import PlayerCard from '@/components/recruit/PlayerCard.vue'
+import PlayerComparisonCard from '@/components/recruit/PlayerComparisonCard.vue'
+import PlayerRadarChart from '@/components/recruit/PlayerRadarChart.vue'
 
 const progressValue = ref(0)
 const activeTab = ref('tab1')
@@ -926,6 +1099,219 @@ const showSnackbar = (type) => {
   snackbar.color = type
   snackbar.show = true
 }
+
+// Sample player data
+const samplePlayers = ref([
+  {
+    id: 'p1',
+    name: 'Robo-Striker-X',
+    position: 'ST',
+    tier: 'elite',
+    nationality: 'Fusion City',
+    age: 23,
+    overall: 91,
+    price: 15000000,
+    stats: {
+      pace: 92,
+      shooting: 94,
+      passing: 82,
+      defense: 45,
+      physical: 86,
+      dribbling: 88,
+      mental: 85,
+      technical: 90
+    },
+    bot: false,
+    avatar: null
+  },
+  {
+    id: 'p2',
+    name: 'Cyber-Defender-Z',
+    position: 'CB',
+    tier: 'pro',
+    nationality: 'Tech District',
+    age: 26,
+    overall: 85,
+    price: 8500000,
+    stats: {
+      pace: 78,
+      shooting: 55,
+      passing: 72,
+      defense: 89,
+      physical: 92,
+      dribbling: 65,
+      mental: 82,
+      technical: 76
+    },
+    bot: true,
+    avatar: null
+  },
+  {
+    id: 'p3',
+    name: 'Midfield-Bot-7',
+    position: 'CM',
+    tier: 'semi-pro',
+    nationality: 'Neo Arena',
+    age: 21,
+    overall: 79,
+    price: 3500000,
+    stats: {
+      pace: 82,
+      shooting: 75,
+      passing: 85,
+      defense: 72,
+      physical: 78,
+      dribbling: 81,
+      mental: 77,
+      technical: 83
+    },
+    bot: false,
+    avatar: null
+  }
+])
+
+const comparisonPlayers = ref([
+  {
+    id: 'c1',
+    name: 'Speed-Runner-Alpha',
+    position: 'LW',
+    tier: 'elite',
+    nationality: 'Digital Zone',
+    age: 20,
+    overall: 88,
+    price: 12000000,
+    stats: {
+      pace: 96,
+      shooting: 84,
+      passing: 78,
+      defense: 38,
+      physical: 72,
+      dribbling: 90,
+      mental: 81,
+      technical: 87
+    }
+  },
+  {
+    id: 'c2',
+    name: 'Control-Unit-Beta',
+    position: 'CDM',
+    tier: 'pro',
+    nationality: 'Circuit City',
+    age: 24,
+    overall: 84,
+    price: 7500000,
+    stats: {
+      pace: 74,
+      shooting: 68,
+      passing: 86,
+      defense: 85,
+      physical: 88,
+      dribbling: 75,
+      mental: 89,
+      technical: 80
+    }
+  },
+  {
+    id: 'c3',
+    name: 'Goal-Machine-Gamma',
+    position: 'ST',
+    tier: 'pro',
+    nationality: 'Pixel Park',
+    age: 25,
+    overall: 86,
+    price: 9500000,
+    stats: {
+      pace: 85,
+      shooting: 91,
+      passing: 76,
+      defense: 42,
+      physical: 84,
+      dribbling: 82,
+      mental: 83,
+      technical: 88
+    }
+  }
+])
+
+// Handler functions
+const handlePlayerClick = () => {
+  showSnackbar('info')
+}
+
+const handleCompare = () => {
+  showSnackbar('info')
+}
+
+const handleRecruit = (player) => {
+  snackbar.text = `Recruited ${player.name}!`
+  snackbar.color = 'success'
+  snackbar.show = true
+}
+
+const handleRemoveComparison = (playerId) => {
+  const index = comparisonPlayers.value.findIndex(p => p.id === playerId)
+  if (index > -1) {
+    comparisonPlayers.value.splice(index, 1)
+  }
+}
+
+// Featured player for detailed view
+const featuredPlayer = ref({
+  id: 'featured',
+  name: 'Elite-Striker-Prime',
+  position: 'ST',
+  tier: 'elite',
+  nationality: 'Fusion Core',
+  age: 22,
+  overall: 93,
+  price: 25000000,
+  stats: {
+    pace: 94,
+    shooting: 96,
+    passing: 85,
+    defense: 48,
+    physical: 88,
+    dribbling: 92
+  },
+  avatar: null
+})
+
+// Detailed attributes for featured player
+const featuredPlayerPhysical = ref([
+  { name: 'pace', label: 'Pace', value: 94 },
+  { name: 'acceleration', label: 'Acceleration', value: 92 },
+  { name: 'sprintSpeed', label: 'Sprint Speed', value: 96 },
+  { name: 'agility', label: 'Agility', value: 89 },
+  { name: 'balance', label: 'Balance', value: 87 },
+  { name: 'jumping', label: 'Jumping', value: 85 },
+  { name: 'stamina', label: 'Stamina', value: 88 },
+  { name: 'strength', label: 'Strength', value: 86 },
+  { name: 'reactions', label: 'Reactions', value: 91 }
+])
+
+const featuredPlayerTechnical = ref([
+  { name: 'finishing', label: 'Finishing', value: 97 },
+  { name: 'shotPower', label: 'Shot Power', value: 95 },
+  { name: 'longShots', label: 'Long Shots', value: 92 },
+  { name: 'positioning', label: 'Positioning', value: 96 },
+  { name: 'volleys', label: 'Volleys', value: 88 },
+  { name: 'penalties', label: 'Penalties', value: 94 },
+  { name: 'heading', label: 'Heading', value: 86 },
+  { name: 'freeKick', label: 'Free Kick', value: 82 },
+  { name: 'curve', label: 'Curve', value: 85 }
+])
+
+const featuredPlayerMental = ref([
+  { name: 'vision', label: 'Vision', value: 88 },
+  { name: 'composure', label: 'Composure', value: 92 },
+  { name: 'concentration', label: 'Concentration', value: 90 },
+  { name: 'anticipation', label: 'Anticipation', value: 94 },
+  { name: 'decisions', label: 'Decisions', value: 89 },
+  { name: 'determination', label: 'Determination', value: 95 },
+  { name: 'leadership', label: 'Leadership', value: 87 },
+  { name: 'workRate', label: 'Work Rate', value: 91 },
+  { name: 'aggression', label: 'Aggression', value: 78 }
+])
 
 onMounted(() => {
   // Animate progress value
@@ -1463,5 +1849,68 @@ onMounted(() => {
   font-size: var(--font-sm);
   color: var(--text-tertiary);
   font-family: monospace;
+}
+
+/* Player Detail Card */
+.player-detail-card {
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.radar-section {
+  text-align: center;
+}
+
+.radar-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-4);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-lg);
+}
+
+.attributes-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.attributes-list .attribute-item {
+  display: grid;
+  grid-template-columns: 140px 1fr 40px;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.attributes-list .attr-label {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  text-align: left;
+}
+
+.attributes-list .attr-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.attributes-list .attr-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%);
+  transition: width 0.3s ease;
+}
+
+.attributes-list .attr-value {
+  font-size: var(--font-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.text-center {
+  text-align: center;
 }
 </style>
