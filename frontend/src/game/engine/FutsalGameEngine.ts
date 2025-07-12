@@ -1298,16 +1298,21 @@ export class FutsalGameEngine {
       const numDefenders = defenders.length
       
       if (numDefenders > 1) {
-        // Spread defenders across the width
-        const spacing = (this.config.fieldHeight * 0.6) / (numDefenders - 1)
-        const startY = this.config.fieldHeight * 0.2
+        // Dynamic spacing based on field size and number of defenders
+        const fieldMargin = 40 // Keep defenders away from touchlines
+        const usableHeight = this.config.fieldHeight - (fieldMargin * 2)
+        const spacing = usableHeight / (numDefenders - 1)
+        const startY = fieldMargin
         
         player.targetX = defenseLineX
         player.targetY = startY + defenderIndex * spacing
         
-        // Shift towards ball side
+        // Shift towards ball side with bounds checking
         const ballSideShift = (this.ball.y - this.config.fieldHeight / 2) * 0.2 * compactness
-        player.targetY += ballSideShift * tacticalAwareness
+        const shiftedY = player.targetY + ballSideShift * tacticalAwareness
+        
+        // Ensure defender stays within field bounds
+        player.targetY = Math.max(fieldMargin, Math.min(this.config.fieldHeight - fieldMargin, shiftedY))
       } else {
         // Single defender stays central
         player.targetX = defenseLineX
@@ -1574,6 +1579,58 @@ export class FutsalGameEngine {
     const baseSpeed = 2.5 + (player.attributes.pace / 99) * 2.5
     const maxSpeed = baseSpeed * (0.6 + staminaFactor * 0.4) * (0.8 + (player.attributes.agility / 99) * 0.2)
     return maxSpeed
+  }
+
+  private calculateRepulsionForce(player: Player, otherPlayer: Player, idealDistance: number): Vector2D {
+    const dx = player.x - otherPlayer.x
+    const dy = player.y - otherPlayer.y
+    const distance = Math.hypot(dx, dy)
+    
+    if (distance < idealDistance && distance > 0) {
+      // Repulsion force increases as players get closer
+      const strength = (idealDistance - distance) / idealDistance
+      const force = strength * 2.0 // Adjust strength as needed
+      
+      return {
+        x: (dx / distance) * force,
+        y: (dy / distance) * force
+      }
+    }
+    
+    return { x: 0, y: 0 }
+  }
+
+  private applyBallPlayerCollisions(): void {
+    // Check collisions with all players
+    for (const player of this.players) {
+      if (player.isSentOff || player === this.ball.possessor) continue
+      
+      const dx = this.ball.x - player.x
+      const dy = this.ball.y - player.y
+      const distance = Math.hypot(dx, dy)
+      const minDistance = player.radius + this.ball.radius + 2 // Small buffer
+      
+      if (distance < minDistance && distance > 0) {
+        // Ball is too close to player - push it away
+        const pushForce = (minDistance - distance) / minDistance
+        const pushX = (dx / distance) * pushForce * 3
+        const pushY = (dy / distance) * pushForce * 3
+        
+        // Apply push to ball velocity
+        this.ball.vx += pushX
+        this.ball.vy += pushY
+        
+        // If ball is on ground and moving slowly, add small bounce
+        if (this.ball.z < 0.5 && Math.hypot(this.ball.vx, this.ball.vy) < 2) {
+          this.ball.vz = Math.max(this.ball.vz, 0.3)
+        }
+        
+        // Also push ball position slightly to prevent overlap
+        const positionPush = Math.max(0, minDistance - distance) * 0.5
+        this.ball.x += (dx / distance) * positionPush
+        this.ball.y += (dy / distance) * positionPush
+      }
+    }
   }
 
   private updatePlayerMovement(player: Player, maxSpeed: number, accelRate: number): void {
@@ -1997,7 +2054,12 @@ export class FutsalGameEngine {
     // Pressure affects accuracy
     const pressure = this.calculatePressure(player)
     const pressureMultiplier = 1 - pressure * 0.5
-    const effectiveAccuracy = shotAccuracy * composure * pressureMultiplier
+    
+    // Fatigue affects accuracy - tired players are less accurate
+    const fatigueFactor = player.stamina / player.maxStamina
+    const fatigueMultiplier = 0.7 + fatigueFactor * 0.3 // Between 0.7 and 1.0
+    
+    const effectiveAccuracy = shotAccuracy * composure * pressureMultiplier * fatigueMultiplier
     
     // Shot error
     const maxError = Math.PI / 6 // 30 degrees
@@ -2373,9 +2435,11 @@ export class FutsalGameEngine {
         break
     }
     
-    // Pass error based on quality and pressure
+    // Pass error based on quality, pressure and fatigue
     const pressure = this.calculatePressure(player)
-    const errorFactor = (1 - passQuality) * (1 + pressure) * 0.1
+    const fatigueFactor = player.stamina / player.maxStamina
+    const fatigueMultiplier = 0.7 + fatigueFactor * 0.3 // Between 0.7 and 1.0
+    const errorFactor = (1 - passQuality * fatigueMultiplier) * (1 + pressure) * 0.1
     const errorAngle = (Math.random() - 0.5) * errorFactor
     
     // Final velocity
@@ -2548,6 +2612,9 @@ export class FutsalGameEngine {
         this.ball.airTime = 0
       }
       
+      // Apply ball-player collisions to prevent stuck situations
+      this.applyBallPlayerCollisions()
+      
       // Apply spin effects on ball trajectory (Magnus effect)
       const spinFactor = 0.01
       this.ball.vx += this.ball.spin.y * spinFactor * dt
@@ -2667,6 +2734,26 @@ export class FutsalGameEngine {
       this.ball.spin.x *= 0.94
       this.ball.spin.y *= 0.94
       this.ball.spin.z *= 0.88 // side spin decays faster
+      
+      // Magnus effect - ball curves due to spin
+      if (this.ball.z > 0.1 || currentSpeed > 1) {
+        const magnusStrength = 0.015 * dt
+        
+        // Side spin causes horizontal curve
+        if (Math.abs(this.ball.spin.z) > 0.1) {
+          const curveForce = this.ball.spin.z * magnusStrength * currentSpeed
+          // Perpendicular to velocity
+          const velAngle = Math.atan2(this.ball.vy, this.ball.vx)
+          this.ball.vx += Math.sin(velAngle) * curveForce
+          this.ball.vy -= Math.cos(velAngle) * curveForce
+        }
+        
+        // Top/back spin affects vertical movement and distance
+        if (this.ball.z > 0.1 && Math.abs(this.ball.spin.x) > 0.1) {
+          // Backspin creates lift, topspin pulls down
+          this.ball.vz += this.ball.spin.x * magnusStrength * 0.5
+        }
+      }
       
       // Check if ball is essentially stopped
       const totalSpeed = Math.hypot(this.ball.vx, this.ball.vy, this.ball.vz)
@@ -2992,11 +3079,22 @@ export class FutsalGameEngine {
       })
       
       if (receivingPlayer) {
-        const firstTouchQuality = (
+        // Calculate first touch quality with ball speed and fatigue factors
+        const baseQuality = (
           receivingPlayer.attributes.firstTouch / 99 * 0.5 +
           receivingPlayer.attributes.technique / 99 * 0.3 +
           receivingPlayer.attributes.composure / 99 * 0.2
         )
+        
+        // Harder to control fast balls
+        const speedDifficulty = Math.min(1, ballSpeed / 10) // 0 to 1 based on ball speed
+        const speedMultiplier = 1 - speedDifficulty * 0.3 // Max 30% reduction for very fast balls
+        
+        // Fatigue affects first touch
+        const fatigueFactor = receivingPlayer.stamina / receivingPlayer.maxStamina
+        const fatigueMultiplier = 0.8 + fatigueFactor * 0.2 // Between 0.8 and 1.0
+        
+        const firstTouchQuality = baseQuality * speedMultiplier * fatigueMultiplier
         
         // Check if this is a completed pass
         if (this.ball.lastKicker && this.lastPassTarget && this.lastPassTime) {
@@ -3022,13 +3120,18 @@ export class FutsalGameEngine {
         this.ball.isThroughBall = undefined
         
         if (Math.random() > firstTouchQuality) {
+          // Poor first touch - ball bounces away
           const errorAngle = Math.random() * Math.PI * 2
-          const errorDistance = (1 - firstTouchQuality) * 30
+          const errorDistance = (1 - firstTouchQuality) * (20 + ballSpeed * 2) // More error for faster balls
           this.ball.vx = Math.cos(errorAngle) * errorDistance * 0.2
           this.ball.vy = Math.sin(errorAngle) * errorDistance * 0.2
+          this.ball.vz = Math.random() * 0.5 // Small bounce
         } else {
-          this.ball.vx *= firstTouchQuality * 0.1
-          this.ball.vy *= firstTouchQuality * 0.1
+          // Good first touch - control the ball
+          const controlFactor = firstTouchQuality * 0.1
+          this.ball.vx *= controlFactor
+          this.ball.vy *= controlFactor
+          this.ball.vz = 0 // Bring ball to ground
           this.ball.possessor = receivingPlayer
           this.ball.lastKicker = receivingPlayer
           this.gameState.possession = receivingPlayer.team
@@ -3582,14 +3685,19 @@ export class FutsalGameEngine {
   // Goal detection
   private checkGoals(): void {
     const goalY = (this.config.fieldHeight - this.config.goalWidth) / 2
+    const goalHeight = 80 // Futsal goal height (approximately 2 meters)
+    
+    // Check if ball is within goal area and below crossbar
     if (this.ball.x <= this.config.goalDepth && 
         this.ball.y >= goalY && 
-        this.ball.y <= goalY + this.config.goalWidth) {
+        this.ball.y <= goalY + this.config.goalWidth &&
+        this.ball.z <= goalHeight) {
       this.gameState.awayScore++
       this.handleGoalScored('away')
     } else if (this.ball.x >= this.config.fieldWidth - this.config.goalDepth && 
                this.ball.y >= goalY && 
-               this.ball.y <= goalY + this.config.goalWidth) {
+               this.ball.y <= goalY + this.config.goalWidth &&
+               this.ball.z <= goalHeight) {
       this.gameState.homeScore++
       this.handleGoalScored('home')
     }

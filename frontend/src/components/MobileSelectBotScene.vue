@@ -306,7 +306,8 @@ const {
   createCenterCircle,
   createFootballFieldLines,
   loadGoalpostModel,
-  loadCornerFlags
+  loadCornerFlags,
+  updateTorusColor: updateTorusColorFromSetup
 } = useSceneSetup()
 
 // Mobile-optimized lighting
@@ -1028,12 +1029,15 @@ const updateOverlayColor = (color: string) => {
 }
 
 const updateTorusEmission = (colorValue: string) => {
-  // Extract hue from HSL color string
+  // Extract hue from HSL color string and create THREE.Color
   const match = colorValue.match(/hsl\((\d+),/)
   if (match) {
     const hue = parseInt(match[1])
-    // Use the useAnimations composable method for arcreactor
-    updateArcreactorColor(hue, 1.0, 0.5)
+    // Create a THREE.Color from HSL
+    const color = new THREE.Color()
+    color.setHSL(hue / 360, 1.0, 0.5)
+    // Use the useSceneSetup method to update the actual torus
+    updateTorusColorFromSetup(color)
   }
 }
 
