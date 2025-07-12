@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@firebasegen/default-connector": "file:dataconnect-generated/js/default-connector",
+    "@genkit-ai/firebase": "^1.14.1",
+    "@genkit-ai/googleai": "^1.14.1",
     "@mdi/font": "^7.4.47",
     "ethers": "^6.15.0",
     "firebase": "^11.10.0",
