@@ -43,15 +43,20 @@
       <!-- Simplified lighting -->
       <SceneLighting :lighting-settings="mobileLightingSettings" />
       
-      <!-- Simplified ground plane -->
+      <!-- Ground plane with grass texture -->
       <TresMesh 
         :position="[0, 0, 0]" 
         :rotation="[-Math.PI / 2, 0, 0]" 
-        :receive-shadow="false"
+        :receive-shadow="true"
         :visible="showGrass"
       >
-        <TresPlaneGeometry :args="[20, 20]" />
-        <TresShadowMaterial :color="0x000000" :opacity="0.1" />
+        <TresPlaneGeometry :args="[30, 30, 10, 10]" />
+        <TresMeshStandardMaterial 
+          :map="grassTexture"
+          :roughness="0.8"
+          :metalness="0.2"
+          :color="0x3a5f3a"
+        />
       </TresMesh>
 
       <!-- Character Group -->
@@ -401,7 +406,9 @@ const {
 // Simplified lighting
 const mobileLightingSettings = computed(() => ({
   ...lightingSettings,
-  enableShadows: false
+  shadowEnabled: true,
+  ambientIntensity: 1.2,
+  directionalIntensity: 1.8
 }))
 
 const { animationState, loadCharacterModel, updateAnimations, getCurrentAnimation, materials, triggerPowerUpFlash, playWaveAnimation, playPowerUpAnimation } = useAnimations(sceneRefs, materialSettings)
@@ -577,6 +584,9 @@ const goalkeeperGroup = ref()
 const ballModelGroup = ref()
 const overlayColorHue = ref(218)
 const torusEmissionHue = ref(195)
+
+// Grass texture
+const grassTexture = ref(null)
 
 // Play goalkeeper animation based on shot direction
 const playGoalkeeperAnimation = async (animationFile: string) => {
@@ -1080,6 +1090,16 @@ const animationLoop = () => {
 // Component initialization
 onMounted(async () => {
   console.log('📱 3D Game component mounted')
+  
+  // Load grass texture
+  const textureLoader = new THREE.TextureLoader()
+  textureLoader.load('/textures/grass1-bl/grass1-albedo3.png', (texture) => {
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+    texture.repeat.set(10, 10)
+    texture.colorSpace = THREE.SRGBColorSpace
+    grassTexture.value = texture
+    console.log('🌱 Grass texture loaded')
+  })
   
   // Show goalkeeper in penalty mode
   if (hidePlayerSelection.value) {

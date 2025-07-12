@@ -93,7 +93,34 @@ const gameOver = ref(false)
 const gameStatus = ref('')
 
 // Sound system
-const { playKickSound, playGoalSound, playWhistleSound, setVolume } = useGameSound()
+const { soundEnabled: globalSoundEnabled, masterVolume } = useGameSound()
+
+// Audio cache for game sounds
+const audioCache = new Map()
+
+// Play audio file
+const playAudioFile = async (url) => {
+  if (!soundEnabled.value) return
+  
+  try {
+    let audio = audioCache.get(url)
+    if (!audio) {
+      audio = new Audio(url)
+      audio.volume = 0.5
+      audioCache.set(url, audio)
+    }
+    audio.currentTime = 0
+    audio.play()
+  } catch (error) {
+    console.error('Error playing audio:', error)
+  }
+}
+
+// Game-specific sound functions
+const playKickSound = () => playAudioFile('/audio/ball_kick_hit.mp3')
+const playGoalSound = () => playAudioFile('/audio/sim/end-game.mp3')
+const playWhistleSound = () => playAudioFile('/audio/sim/kick-off.mp3')
+const playFoulSound = () => playAudioFile('/audio/sim/foul.mp3')
 
 // Game engine
 let gameEngine = null
@@ -314,7 +341,11 @@ const resetGame = () => {
 
 const toggleSound = () => {
   soundEnabled.value = !soundEnabled.value
-  setVolume(soundEnabled.value ? 1 : 0)
+  
+  // Update volume for all cached audio
+  audioCache.forEach(audio => {
+    audio.volume = soundEnabled.value ? 0.5 : 0
+  })
   
   if (gameEngine) {
     gameEngine.setSoundEnabled(soundEnabled.value)
