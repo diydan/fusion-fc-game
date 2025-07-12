@@ -765,6 +765,26 @@
             
             <v-row>
               <v-col cols="12">
+                <h3 class="mb-4">Player Cards V3 - Exact Recruit View Style</h3>
+                <v-row>
+                  <v-col v-for="player in samplePlayers" :key="`v3-${player.id}`" cols="12" sm="6" md="4" lg="3">
+                    <PlayerCardV3 
+                      :player="player" 
+                      :is-selected="selectedPlayers.includes(player.id)"
+                      @click="handlePlayerClick"
+                      @compare="handleCompare"
+                      @recruit="handleRecruit"
+                      @select-bot="handleSelectBot"
+                    />
+                  </v-col>
+                </v-row>
+              </v-col>
+            </v-row>
+            
+            <v-divider class="my-6"></v-divider>
+            
+            <v-row>
+              <v-col cols="12">
                 <h3 class="mb-4">Player Comparison Cards</h3>
                 <v-row>
                   <v-col v-for="player in comparisonPlayers" :key="player.id" cols="12" md="4">
@@ -990,6 +1010,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import PlayerCard from '@/components/recruit/PlayerCard.vue'
 import PlayerCardV2 from '@/components/recruit/PlayerCardV2.vue'
+import PlayerCardV3 from '@/components/recruit/PlayerCardV3.vue'
 import PlayerComparisonCard from '@/components/recruit/PlayerComparisonCard.vue'
 import PlayerRadarChart from '@/components/recruit/PlayerRadarChart.vue'
 
@@ -1286,6 +1307,12 @@ const handleFavorite = (playerId) => {
     favoritePlayers.value.push(playerId)
     snackbar.text = 'Added to favorites'
   }
+  snackbar.color = 'info'
+  snackbar.show = true
+}
+
+const handleSelectBot = (player) => {
+  snackbar.text = `Select bot for ${player.name}`
   snackbar.color = 'info'
   snackbar.show = true
 }

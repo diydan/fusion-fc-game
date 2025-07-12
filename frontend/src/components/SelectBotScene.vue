@@ -22,7 +22,13 @@
 
     <!-- 3D Scene -->
     <SceneCanvas 
+      :POWER_PREFERENCE="'high-performance'"
+      :bloom-enabled="false"
+      :bloom-intensity="0.5"
       :dof-enabled="false"
+      :dof-focus="10"
+      :dof-aperture="0.002"
+      :dof-max-blur="0.01"
       :style="{ 
         filter: getMobileCombinedFilter(),
         transition: 'filter 0.2s ease-out'
@@ -701,7 +707,7 @@ const loadGoalkeeper = async () => {
   try {
     // Use FBXLoader directly for the goalkeeper
     const loader = new FBXLoader()
-    const goalkeeperModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture2.fbx')
+    const goalkeeperModel = await loader.loadAsync('/bot1/original-bot1.fbx')
     
     console.log('Goalkeeper model loaded:', goalkeeperModel)
     console.log('Goalkeeper model bounds:', new THREE.Box3().setFromObject(goalkeeperModel))

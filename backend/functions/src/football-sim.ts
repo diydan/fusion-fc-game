@@ -1,13 +1,12 @@
-import * as functions from 'firebase-functions';
-import * as cors from 'cors';
+import { onRequest } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 const footballEngine = require('footballsimulationengine');
-
-const corsHandler = cors({ origin: true });
 
 let gameSessions = new Map();
 
-export const initGame = functions.https.onRequest((request, response) => {
-  corsHandler(request, response, async () => {
+export const initGame = onRequest(
+  { cors: true },
+  async (request, response) => {
     try {
       if (request.method !== 'POST') {
         response.status(405).send({ error: 'Method not allowed' });
@@ -35,14 +34,15 @@ export const initGame = functions.https.onRequest((request, response) => {
         matchSetup
       });
     } catch (error) {
-      console.error('Error initiating game:', error);
+      logger.error('Error initiating game:', error);
       response.status(500).send({ error: 'Failed to initiate game' });
     }
-  });
-});
+  }
+);
 
-export const playIteration = functions.https.onRequest((request, response) => {
-  corsHandler(request, response, async () => {
+export const playIteration = onRequest(
+  { cors: true },
+  async (request, response) => {
     try {
       if (request.method !== 'POST') {
         response.status(405).send({ error: 'Method not allowed' });
@@ -67,18 +67,18 @@ export const playIteration = functions.https.onRequest((request, response) => {
       gameSessions.set(sessionId, updatedMatch);
 
       response.status(200).send({
-        sessionId,
         matchDetails: updatedMatch
       });
     } catch (error) {
-      console.error('Error playing iteration:', error);
+      logger.error('Error playing iteration:', error);
       response.status(500).send({ error: 'Failed to play iteration' });
     }
-  });
-});
+  }
+);
 
-export const startSecondHalf = functions.https.onRequest((request, response) => {
-  corsHandler(request, response, async () => {
+export const startSecondHalf = onRequest(
+  { cors: true },
+  async (request, response) => {
     try {
       if (request.method !== 'POST') {
         response.status(405).send({ error: 'Method not allowed' });
@@ -103,24 +103,19 @@ export const startSecondHalf = functions.https.onRequest((request, response) => 
       gameSessions.set(sessionId, secondHalfMatch);
 
       response.status(200).send({
-        sessionId,
         matchDetails: secondHalfMatch
       });
     } catch (error) {
-      console.error('Error starting second half:', error);
+      logger.error('Error starting second half:', error);
       response.status(500).send({ error: 'Failed to start second half' });
     }
-  });
-});
+  }
+);
 
-export const getGameState = functions.https.onRequest((request, response) => {
-  corsHandler(request, response, () => {
+export const getGameState = onRequest(
+  { cors: true },
+  async (request, response) => {
     try {
-      if (request.method !== 'GET') {
-        response.status(405).send({ error: 'Method not allowed' });
-        return;
-      }
-
       const sessionId = request.query.sessionId as string;
 
       if (!sessionId) {
@@ -136,12 +131,11 @@ export const getGameState = functions.https.onRequest((request, response) => {
       }
 
       response.status(200).send({
-        sessionId,
         matchDetails
       });
     } catch (error) {
-      console.error('Error getting game state:', error);
+      logger.error('Error getting game state:', error);
       response.status(500).send({ error: 'Failed to get game state' });
     }
-  });
-});
+  }
+);

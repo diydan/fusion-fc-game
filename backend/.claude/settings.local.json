@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run deploy:check:*)",
+      "Bash(firebase functions:list:*)",
+      "Bash(firebase projects:list:*)"
+    ],
+    "deny": []
+  }
+}

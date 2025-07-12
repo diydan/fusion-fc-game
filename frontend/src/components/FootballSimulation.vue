@@ -250,7 +250,12 @@ const loadingAny = computed(() => {
 loading.value.any = loadingAny
 
 // API configuration
-const API_BASE_URL = 'https://us-central1-fusion-fc-game.cloudfunctions.net'
+const API_ENDPOINTS = {
+  initGame: 'https://initgame-6unsift5pq-uc.a.run.app',
+  playIteration: 'https://playiteration-6unsift5pq-uc.a.run.app',
+  startSecondHalf: 'https://startsecondhalf-6unsift5pq-uc.a.run.app',
+  getGameState: 'https://getgamestate-6unsift5pq-uc.a.run.app'
+}
 
 // Sample teams data
 const sampleTeams = {
@@ -277,7 +282,20 @@ const sampleTeams = {
 // API call helper
 const apiCall = async (endpoint, options = {}) => {
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    // Parse endpoint and query params
+    const [endpointPath, queryString] = endpoint.split('?')
+    // Remove leading slash from endpoint name if present
+    const endpointName = endpointPath.replace(/^\//, '')
+    const baseUrl = API_ENDPOINTS[endpointName]
+    
+    if (!baseUrl) {
+      throw new Error(`Unknown endpoint: ${endpointName}`)
+    }
+    
+    // Construct full URL with query params if they exist
+    const url = queryString ? `${baseUrl}?${queryString}` : baseUrl
+    
+    const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers

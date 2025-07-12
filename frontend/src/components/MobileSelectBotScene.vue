@@ -400,7 +400,7 @@ const loadGoalkeeper = async () => {
   try {
     // Use FBXLoader directly for the goalkeeper
     const loader = new FBXLoader()
-    const goalkeeperModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture2.fbx')
+    const goalkeeperModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture1.fbx')
     
     console.log('Goalkeeper model loaded:', goalkeeperModel)
     console.log('Goalkeeper model bounds:', new THREE.Box3().setFromObject(goalkeeperModel))

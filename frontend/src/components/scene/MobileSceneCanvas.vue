@@ -423,13 +423,13 @@ const getModelPath = () => {
   // Choose model based on quality for performance
   switch (props.qualityLevel) {
     case 'low':
-      return '/bot1/bot1.fbx' // Simpler model
+      return '/bot1/original-bot1.fbx' // Simpler model
     case 'medium':
-      return '/bot1/soccer_player_humanoid__texture.fbx'
+      return '/bot1/original-bot1.fbx'
     case 'high':
-      return '/bot1/soccer_player_humanoid__texture2.fbx' // Detailed model
+      return '/bot1/original-bot1.fbx' // Detailed model
     default:
-      return '/bot1/soccer_player_humanoid__texture.fbx'
+      return '/bot1/original-bot1.fbx'
   }
 }
 

@@ -66,7 +66,7 @@ export function useSceneSetup() {
     roughness: 0.1,
     emissiveIntensity: 0.06,
     envMapIntensity: 1.2,
-    brightness: 2,
+    brightness: 1,
     clearcoat: 0.0,
     clearcoatRoughness: 0.0,
     transparent: true,
@@ -950,8 +950,15 @@ export function useSceneSetup() {
       console.error('❌ Error loading grass textures:', error)
       console.log('📝 Make sure grass texture files exist at /textures/grass1-bl/')
       
+      // Create fallback material
+      const fallbackMaterial = new THREE.MeshStandardMaterial({
+        color: 0x4a7c4e,
+        roughness: 0.9,
+        metalness: 0.0
+      })
       
-    
+      // Create fallback field geometry
+      const fieldGeometry = new THREE.PlaneGeometry(40, 50)
       const grassField = new THREE.Mesh(fieldGeometry, fallbackMaterial)
       grassField.rotation.x = -Math.PI / 2
       grassField.position.set(0, -0.005, 0)

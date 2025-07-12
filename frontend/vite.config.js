@@ -2,10 +2,13 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vuetify from 'vite-plugin-vuetify'
 import { fileURLToPath, URL } from 'node:url'
+import { templateCompilerOptions } from '@tresjs/core'
 
 export default defineConfig({
   plugins: [
-    vue(),
+    vue({
+      ...templateCompilerOptions,
+    }),
     vuetify({ autoImport: true })
   ],
   resolve: {

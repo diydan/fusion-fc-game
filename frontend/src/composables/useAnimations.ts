@@ -53,6 +53,11 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
     try {
       console.log('🤖 Loading character model...')
       
+      // Debug: Check if we're in the right environment
+      console.log('Current URL:', window.location.href)
+      console.log('Base URL:', import.meta.env.BASE_URL)
+      console.log('Material settings brightness:', materialSettings.brightness)
+      
       // Load both textures
       const textureLoader = new THREE.TextureLoader()
       const [baseTexture, overlayTexture] = await Promise.all([
@@ -80,6 +85,11 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
         })
       ])
       
+      console.log('✅ Textures loaded successfully:', {
+        baseTexture: baseTexture.image?.src,
+        overlayTexture: overlayTexture.image?.src
+      })
+      
       const loader = new FBXLoader()
       const characterModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture2.fbx')
       
@@ -89,8 +99,8 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
       // Log all mesh names
       console.log('🔍 Logging all mesh names in the model:')
       characterModel.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          console.log(`Found mesh: ${child.name} (ID: ${child.uuid})`)
+        if (child instanceof THREE.Mesh || child instanceof THREE.SkinnedMesh) {
+          console.log(`Found mesh: ${child.name} (ID: ${child.uuid}) Type: ${child.type}`)
         }
         if (child.isBone) { // THREE.Bone is a subclass of Object3D, .isBone is a type guard
           console.log(`🦴 Found bone: ${child.name} (ID: ${child.uuid})`)
@@ -100,8 +110,8 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
       // Convert materials to MeshStandardMaterial
       let overlayMaterialCreated = false
       characterModel.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          console.log(`🔍 Processing mesh: `);
+        if (child instanceof THREE.Mesh || child instanceof THREE.SkinnedMesh) {
+          console.log(`🔍 Processing mesh: ${child.name}, Material type: ${child.material ? child.material.type : 'No material'}`);
           if (child.name.toLowerCase().includes('arcreactor') && child.material) {
             arcreactorMeshRef.value = child;
             if (Array.isArray(child.material)) {
@@ -119,7 +129,9 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
               });
             }
           }
+          // Check if we have a PhongMaterial (which is what the FBX typically uses)
           if (child.material instanceof THREE.MeshPhongMaterial) {
+            console.log('✅ Found PhongMaterial on mesh:', child.name, 'Type:', child.material.type)
             // Create base material
             const baseMaterial = new THREE.MeshStandardMaterial({
               map: baseTexture,
@@ -199,6 +211,9 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
             // Replace the original mesh with the group
             child.parent?.add(group)
             child.parent?.remove(child)
+          } else if (child.material) {
+            // Log materials that aren't PhongMaterial for debugging
+            console.log('⚠️ Non-PhongMaterial found:', child.name, 'Type:', child.material.type)
           }
           child.castShadow = true
           child.receiveShadow = true

@@ -385,6 +385,12 @@ const updateGameState = () => {
   homeScore.value = state.homeScore
   awayScore.value = state.awayScore
   gameTime.value = state.gameTime
+  
+  // Debug auto-pause issue
+  if (isPlaying.value !== state.isPlaying) {
+    console.log('Playing state changed:', isPlaying.value, '->', state.isPlaying)
+  }
+  
   isPlaying.value = state.isPlaying
   gameOver.value = state.gameOver
   
@@ -470,6 +476,9 @@ const startGame = () => {
     console.log('Starting game with kickoff team:', kickoffTeam.value)
     console.log('Engine instance type:', gameEngine.constructor.name)
     console.log('Engine object:', gameEngine)
+    
+    // Actually start the game! (ball starts at center with zero velocity)
+    togglePlay()
   }
 }
 
@@ -697,7 +706,7 @@ const gameLoop = (currentTime: number) => {
   // Check for achievements
   checkAchievements()
   
-  if (gameState.value?.isPlaying) {
+  if (isPlaying.value) {
     animationId = requestAnimationFrame(gameLoop)
   }
 }
@@ -706,7 +715,7 @@ const gameLoop = (currentTime: number) => {
 const togglePlay = () => {
   if (!gameEngine) return
   
-  if (gameState.value?.isPlaying) {
+  if (isPlaying.value) {
     gameEngine.pause()
     if (animationId) {
       cancelAnimationFrame(animationId)

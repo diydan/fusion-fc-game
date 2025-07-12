@@ -140,6 +140,7 @@ export interface GameState {
   matchStats: MatchStats
   lastGoal?: Goal
   goalCelebration?: { active: boolean; startTime: number }
+  advantagesPlayed?: number
 }
 
 export interface FormationLayout {
@@ -215,7 +216,8 @@ export class FutsalGameEngine {
         passCompletionRate: { home: 0, away: 0 },
         freeKicksAttempted: { home: 0, away: 0 },
         freeKicksScored: { home: 0, away: 0 }
-      }
+      },
+      advantagesPlayed: 0
     }
     
     this.ball = {
@@ -232,7 +234,7 @@ export class FutsalGameEngine {
       touchCount: 0,
       bounceCount: 0,
       airTime: 0,
-      isStationary: true,
+      isStationary: false,
       lastMovementTime: 0,
       stuckCheckTimer: 0
     }
@@ -777,6 +779,11 @@ export class FutsalGameEngine {
   
   // Check if ball has been stationary
   private isBallStationary(): boolean {
+    // During the first 5 seconds of the game, never consider ball stationary (for kickoff)
+    if (this.gameState.gameTime > 1200000 - 5000) {
+      return false
+    }
+    
     const ballSpeed = Math.hypot(this.ball.vx, this.ball.vy)
     const ballMoved = Math.hypot(
       this.ball.x - this.lastBallPosition.x,
@@ -2444,26 +2451,7 @@ export class FutsalGameEngine {
 
   // Ball physics update
   private updateBallPhysics(deltaTime: number): void {
-    // Check if ball should no longer be stationary
-    if (this.ball.isStationary && !this.gameState.ballOut) {
-      const ballSpeed = Math.hypot(this.ball.vx, this.ball.vy)
-      if (ballSpeed > 0.1) { // Lower threshold to detect movement sooner
-        this.ball.isStationary = false
-        console.log('Ball is no longer stationary - speed:', ballSpeed)
-      }
-      
-      // Force ball to stop being stationary during kickoff after 2 seconds
-      const isKickoffTime = this.gameState.gameTime > 1200000 - 5000
-      if (isKickoffTime && this.ball.isStationary) {
-        const timeSinceStart = 1200000 - this.gameState.gameTime
-        if (timeSinceStart > 2000) {
-          console.log('Forcing ball to be non-stationary during kickoff')
-          this.ball.isStationary = false
-        }
-      }
-    }
-    
-    if (!this.ball.possessor && !this.gameState.ballOut && !this.ball.isStationary) {
+    if (!this.ball.possessor && !this.gameState.ballOut) {
       const dt = deltaTime * 60 * this.gameState.gameSpeed
       
       // Update air time
@@ -3591,18 +3579,10 @@ export class FutsalGameEngine {
     if (this.startTime === null) {
       this.startTime = currentTime
       this.lastUpdateTime = currentTime
-      console.log('Engine first frame initialization', { currentTime, startTime: this.startTime })
-      return // Skip first frame
+      console.log('Engine first update - startTime set to:', currentTime)
     }
     
-    const deltaTime = Math.min((currentTime - this.lastUpdateTime) / 1000, 0.1)
-    
-    // Debug check for NaN
-    if (isNaN(deltaTime)) {
-      console.error('deltaTime is NaN!', { currentTime, lastUpdateTime: this.lastUpdateTime })
-      return
-    }
-    
+    const deltaTime = Math.min((currentTime - (this.lastUpdateTime || currentTime)) / 1000, 0.1)
     this.lastUpdateTime = currentTime
     
     if (this.gameState.isPlaying && this.gameState.gameTime > 0) {
@@ -3733,6 +3713,21 @@ export class FutsalGameEngine {
     return { ...this.ball }
   }
 
+  getStatistics(): MatchStats & { 
+    foulsCommitted?: { home: number; away: number }
+    advantagesPlayed?: number 
+  } {
+    // Return match statistics with additional foul tracking
+    return {
+      ...this.gameState.matchStats,
+      foulsCommitted: { 
+        home: this.gameState.fouls.home, 
+        away: this.gameState.fouls.away 
+      },
+      advantagesPlayed: this.gameState.advantagesPlayed || 0
+    }
+  }
+
   // Public controls
   togglePlay(): void {
     this.gameState.isPlaying = !this.gameState.isPlaying
@@ -3794,14 +3789,8 @@ export class FutsalGameEngine {
   }
 
   play(): void {
+    console.log('Engine play() called')
     this.gameState.isPlaying = true
-    
-    // Handle kickoff if ball is at center and stationary
-    if (this.ball.isStationary && 
-        Math.abs(this.ball.x - this.config.fieldWidth / 2) < 10 &&
-        Math.abs(this.ball.y - this.config.fieldHeight / 2) < 10) {
-      this.performKickoff()
-    }
   }
   
   private performKickoff(): void {
