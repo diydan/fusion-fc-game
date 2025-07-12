@@ -217,3 +217,5 @@ STORAGE_REQUIREMENTS.md
 storage-rules-audit-report.md
 firestore-security-rules-helpers.pseudo
 storage.rules
+CORS_FIX_INSTRUCTIONS.md
+TEAM_CONTENT_SECURITY.md

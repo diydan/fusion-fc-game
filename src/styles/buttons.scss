@@ -39,36 +39,36 @@
 // Color variations with proper shadows
 .v-btn--elevated-3d {
   &.bg-primary {
-    background-color: #3B82F6 !important;
+    background-color: #003FED !important;
     color: white !important;
-    box-shadow: 
-      0 4px 0 0 #1E40AF,
-      0 5px 0 0 #1E40AF,
-      0 6px 0 0 #1E40AF,
-      0 7px 0 0 #1E40AF,
-      0 8px 0 0 #1E40AF,
-      0 8px 8px rgba(30, 64, 175, 0.3),
-      0 8px 16px rgba(30, 64, 175, 0.2) !important;
-    
+    box-shadow:
+      0 4px 0 0 #090979,
+      0 5px 0 0 #090979,
+      0 6px 0 0 #090979,
+      0 7px 0 0 #090979,
+      0 8px 0 0 #090979,
+      0 8px 8px rgba(9, 9, 121, 0.4),
+      0 8px 16px rgba(9, 9, 121, 0.3) !important;
+
     &:hover:not(:disabled) {
-      background-color: #60A5FA !important;
-      box-shadow: 
-        0 6px 0 0 #1E40AF,
-        0 7px 0 0 #1E40AF,
-        0 8px 0 0 #1E40AF,
-        0 9px 0 0 #1E40AF,
-        0 10px 0 0 #1E40AF,
-        0 10px 10px rgba(30, 64, 175, 0.3),
-        0 10px 20px rgba(30, 64, 175, 0.2) !important;
+      background-color: #3366FF !important;
+      box-shadow:
+        0 6px 0 0 #090979,
+        0 7px 0 0 #090979,
+        0 8px 0 0 #090979,
+        0 9px 0 0 #090979,
+        0 10px 0 0 #090979,
+        0 10px 10px rgba(9, 9, 121, 0.4),
+        0 10px 20px rgba(9, 9, 121, 0.3) !important;
     }
-    
+
     &:active:not(:disabled) {
-      box-shadow: 
-        0 2px 0 0 #1E40AF,
-        0 3px 0 0 #1E40AF,
-        0 4px 0 0 #1E40AF,
-        0 4px 4px rgba(30, 64, 175, 0.3),
-        0 4px 8px rgba(30, 64, 175, 0.2) !important;
+      box-shadow:
+        0 2px 0 0 #090979,
+        0 3px 0 0 #090979,
+        0 4px 0 0 #090979,
+        0 4px 4px rgba(9, 9, 121, 0.4),
+        0 4px 8px rgba(9, 9, 121, 0.3) !important;
     }
     
     &:disabled {

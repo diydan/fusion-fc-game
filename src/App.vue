@@ -1,7 +1,5 @@
 <template>
   <v-app>
-    <!-- Floating Orbs Background -->
-    <FloatingOrbs />
 
     <!-- Mobile Header (hidden on login page) -->
     <v-app-bar
@@ -175,7 +173,6 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import FloatingOrbs from '@/components/ui/FloatingOrbs.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -196,9 +193,9 @@ const logout = async () => {
 
 <style scoped>
 .v-navigation-drawer {
-  background: linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%) !important;
+  background: #090979 !important;
   backdrop-filter: blur(10px);
-  border-right: 1px solid rgba(59, 130, 246, 0.3) !important;
+  border-right: 1px solid rgba(0, 63, 237, 0.5) !important;
   position: relative;
 }
 
@@ -210,14 +207,14 @@ const logout = async () => {
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(circle at 30% 40%, rgba(59, 130, 246, 0.05) 0%, transparent 60%),
-    radial-gradient(circle at 70% 70%, rgba(124, 58, 237, 0.03) 0%, transparent 60%);
+    radial-gradient(circle at 30% 40%, rgba(0, 63, 237, 0.1) 0%, transparent 60%),
+    radial-gradient(circle at 70% 70%, rgba(51, 102, 255, 0.08) 0%, transparent 60%);
   pointer-events: none;
 }
 
 .mobile-header {
-  background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 100%) !important;
-  border-bottom: 1px solid rgba(59, 130, 246, 0.3) !important;
+  background: #003FED !important;
+  border-bottom: 1px solid rgba(0, 63, 237, 0.5) !important;
   backdrop-filter: blur(10px);
 }
 
@@ -233,8 +230,8 @@ const logout = async () => {
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(circle at 70% 30%, rgba(59, 130, 246, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 30% 70%, rgba(236, 72, 153, 0.02) 0%, transparent 50%);
+    radial-gradient(circle at 70% 30%, rgba(0, 63, 237, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 30% 70%, rgba(9, 9, 121, 0.05) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
 }
@@ -269,8 +266,8 @@ const logout = async () => {
 }
 
 .desktop-header {
-  background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 100%) !important;
-  border-bottom: 1px solid rgba(59, 130, 246, 0.3) !important;
+  background: #003FED !important;
+  border-bottom: 1px solid rgba(0, 63, 237, 0.5) !important;
   backdrop-filter: blur(10px);
   position: fixed !important;
   top: 0 !important;
@@ -290,6 +287,9 @@ const logout = async () => {
   z-index: 1000 !important;
   padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   margin: 0 !important;
+  background: #090979 !important;
+  border-top: 1px solid rgba(0, 63, 237, 0.5) !important;
+  backdrop-filter: blur(10px);
 }
 
 .v-bottom-navigation .v-btn {
@@ -324,8 +324,8 @@ const logout = async () => {
   }
 
   .v-navigation-drawer {
-    background: linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%) !important;
-    border-right: 1px solid rgba(59, 130, 246, 0.3) !important;
+    background: #090979 !important;
+    border-right: 1px solid rgba(0, 63, 237, 0.5) !important;
     backdrop-filter: blur(10px);
   }
 }

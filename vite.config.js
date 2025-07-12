@@ -14,7 +14,26 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3000
+    port: 3000,
+    proxy: {
+      // Proxy API requests to avoid CORS in development
+      '/api/logo-generator': {
+        target: 'https://us-central1-fusion-fc.cloudfunctions.net/logoGenerator',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/logo-generator/, ''),
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('Sending Request to:', req.method, options.target + req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('Received Response from:', proxyRes.statusCode, req.url);
+          });
+        },
+      },
+    },
   },
   css: {
     preprocessorOptions: {

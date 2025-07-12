@@ -1,9 +1,9 @@
 export default {
   dark: true,
   colors: {
-    primary: '#3B82F6',
-    'primary-darken-1': '#1E40AF',
-    'primary-lighten-1': '#60A5FA',
+    primary: '#003FED',
+    'primary-darken-1': '#090979',
+    'primary-lighten-1': '#3366FF',
     secondary: '#EC4899',
     'secondary-darken-1': '#BE185D',
     'secondary-lighten-1': '#F472B6',
@@ -19,12 +19,12 @@ export default {
     info: '#06B6D4',
     'info-darken-1': '#0891B2',
     'info-lighten-1': '#22D3EE',
-    background: '#0f1629',
-    surface: '#1e3a8a',
-    'surface-variant': '#1e40af',
-    'surface-bright': '#2563eb',
+    background: '#090979',
+    surface: '#003FED',
+    'surface-variant': '#1A2B8A',
+    'surface-bright': '#3366FF',
     'on-surface-variant': '#E2E8F0',
-    'primary-container': '#0f172a',
+    'primary-container': '#090979',
     'secondary-container': '#BE185D',
     'tertiary-container': '#7C3AED',
     'error-container': '#DC2626',
@@ -41,17 +41,17 @@ export default {
     'text-disabled': '#93C5FD'
   },
   variables: {
-    'border-color': 'rgba(147, 197, 253, 0.2)',
-    'border-opacity': 0.2,
+    'border-color': 'rgba(0, 63, 237, 0.4)',
+    'border-opacity': 0.4,
     'hover-opacity': 0.08,
     'focus-opacity': 0.12,
     'selected-opacity': 0.16,
     'activated-opacity': 0.12,
     'pressed-opacity': 0.12,
     'dragged-opacity': 0.08,
-    'theme-kbd': '#1e40af',
+    'theme-kbd': '#003FED',
     'theme-on-kbd': '#F1F5F9',
-    'theme-code': '#0f172a',
+    'theme-code': '#090979',
     'theme-on-code': '#F1F5F9'
   }
 }

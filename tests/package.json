@@ -1,14 +1,18 @@
 {
-  "name": "fusion-fc-storage-tests",
+  "name": "fusion-fc-rules-tests",
   "version": "1.0.0",
-  "description": "Tests for Firebase Storage security rules",
+  "description": "Comprehensive tests for Firebase Security Rules (Firestore and Storage)",
   "main": "index.js",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:firestore": "jest firestore-rules.test.js",
+    "test:storage": "jest storage-rules.test.js",
     "test:avatar": "jest storage-rules-avatar.test.js",
-    "test:emulator": "firebase emulators:exec --only storage 'npm run test'"
+    "test:game-assets": "jest storage-rules-game-assets.test.js",
+    "test:emulator": "firebase emulators:exec --only firestore,storage 'npm run test'",
+    "test:ci": "firebase emulators:exec --only firestore,storage 'npm run test:coverage'"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^3.0.1",

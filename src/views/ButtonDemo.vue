@@ -99,7 +99,7 @@
                 color="secondary"
                 append-icon="mdi-arrow-right"
                 label="Continue"
-                click-sound="whoosh"
+                click-sound="pop"
               />
               <GameButton
                 color="info"

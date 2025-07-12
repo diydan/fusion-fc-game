@@ -18,16 +18,19 @@ export const useUserStore = defineStore('user', () => {
   // Computed
   const isAuthenticated = computed(() => !!currentUser.value);
   const isEmailVerified = computed(() => currentUser.value?.emailVerified ?? false);
+  const isOnboardingComplete = computed(() => userProfile.value?.onboardingCompleted ?? false);
   const authMethod = computed(() => {
     if (!currentUser.value) return null;
     if (currentUser.value.providerData?.[0]?.providerId === 'google.com') return 'google';
     if (currentUser.value.providerData?.[0]?.providerId === 'password') return 'email';
     if (userProfile.value?.authMethod === 'metamask') return 'metamask';
     if (currentUser.value.isAnonymous && userProfile.value?.walletAddress) return 'metamask';
+    if (currentUser.value.isMetaMask) return 'metamask';
     return 'unknown';
   });
   const displayName = computed(() => {
-    return userProfile.value?.displayName || 
+    return userProfile.value?.managerProfile?.name ||
+           userProfile.value?.displayName || 
            currentUser.value?.displayName || 
            userProfile.value?.walletAddress?.slice(0, 6) + '...' + userProfile.value?.walletAddress?.slice(-4) ||
            'Anonymous';
@@ -198,6 +201,7 @@ export const useUserStore = defineStore('user', () => {
     // Computed
     isAuthenticated,
     isEmailVerified,
+    isOnboardingComplete,
     authMethod,
     displayName,
     

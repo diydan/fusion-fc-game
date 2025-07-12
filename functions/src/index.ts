@@ -14,95 +14,38 @@ import * as logger from "firebase-functions/logger";
 import {genkit} from "genkit";
 import {enableFirebaseTelemetry} from "@genkit-ai/firebase";
 import {vertexAI, imagen3} from "@genkit-ai/vertexai";
-import {openAI, dallE3} from "genkitx-openai";
-import {getStorage} from "firebase-admin/storage";
-import {initializeApp} from "firebase-admin/app";
+// Storage imports removed for now - can be added later if needed
+// import {getStorage} from "firebase-admin/storage";
+// import {initializeApp} from "firebase-admin/app";
 
 // Initialize Genkit with AI providers
 const ai = genkit({
   plugins: [
     vertexAI({projectId: process.env.GCLOUD_PROJECT, location: "us-central1"}),
-    openAI({apiKey: process.env.OPENAI_API_KEY}),
   ],
 });
-
-// Initialize Firebase Admin
-const app = initializeApp();
-const storage = getStorage(app);
 
 // Enable Firebase telemetry
 enableFirebaseTelemetry();
 
-// Helper function to save logo to Firebase Storage
-const saveLogoToStorage = async (userId: string, logoUrl: string, logoData: any) => {
-  try {
-    const response = await fetch(logoUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to download logo: ${response.statusText}`);
-    }
-    
-    const logoBuffer = await response.arrayBuffer();
-    const timestamp = Date.now();
-    const fileName = `logo_${timestamp}_${logoData.businessName.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
-    const filePath = `generated-logos/${userId}/${fileName}`;
-    
-    const bucket = storage.bucket();
-    const file = bucket.file(filePath);
-    
-    await file.save(Buffer.from(logoBuffer), {
-      metadata: {
-        contentType: 'image/png',
-        metadata: {
-          businessName: logoData.businessName,
-          businessType: logoData.businessType,
-          style: logoData.style || '',
-          colors: logoData.colors || '',
-          provider: logoData.provider,
-          prompt: logoData.prompt,
-          generatedAt: new Date().toISOString()
-        }
-      }
-    });
-    
-    const [url] = await file.getSignedUrl({
-      action: 'read',
-      expires: '03-09-2491' // Far future date
-    });
-    
-    return { storageUrl: url, storagePath: filePath, error: null };
-  } catch (error) {
-    logger.error('Error saving logo to storage:', error);
-    return { storageUrl: null, storagePath: null, error: error.message };
-  }
-};
+// Note: Storage functionality can be added later when needed
+// For now, we'll just return the direct AI provider URLs
 
 // Logo generation helper function
-const generateLogoImage = async (prompt: string, provider: string = "openai") => {
+const generateLogoImage = async (prompt: string) => {
   try {
-    if (provider === "vertexai") {
-      // Use Vertex AI Imagen
-      return await ai.generate({
-        model: imagen3,
-        prompt: prompt,
-        config: {
-          width: 1024,
-          height: 1024,
-          seed: Math.floor(Math.random() * 1000000),
-        },
-      });
-    } else {
-      // Use OpenAI DALL-E 3
-      return await ai.generate({
-        model: dallE3,
-        prompt: prompt,
-        config: {
-          size: "1024x1024",
-          quality: "standard",
-        },
-      });
-    }
+    // Use Vertex AI Imagen
+    return await ai.generate({
+      model: imagen3,
+      prompt: prompt,
+      config: {
+        width: 1024,
+        height: 1024,
+        seed: Math.floor(Math.random() * 1000000),
+      },
+    });
   } catch (error) {
-    logger.error(`Error generating logo with ${provider}:`, error);
+    logger.error(`Error generating logo with Vertex AI:`, error);
     throw error;
   }
 };
@@ -140,15 +83,10 @@ export const logoGenerator = onRequest(
         return;
       }
 
-      const {businessName, businessType, style, colors, provider = "openai", userId, saveToStorage = false} = request.body;
+      const {businessName, businessType, style, colors} = request.body;
 
       if (!businessName || !businessType) {
         response.status(400).send("Business name and type are required");
-        return;
-      }
-
-      if (saveToStorage && !userId) {
-        response.status(400).send("User ID is required when saving to storage");
         return;
       }
 
@@ -156,27 +94,8 @@ export const logoGenerator = onRequest(
       const logoPrompt = await generateLogoPrompt(businessName, businessType, style, colors);
       logger.info(`Generated logo prompt: ${logoPrompt}`);
 
-      let imageResult;
-      let providerUsed = provider;
-
-      try {
-        // Try to generate with the requested provider
-        imageResult = await generateLogoImage(logoPrompt, provider);
-      } catch (error) {
-        logger.error(`Error generating logo with ${provider}:`, error);
-        
-        // Fallback to the other provider
-        const fallbackProvider = provider === "openai" ? "vertexai" : "openai";
-        logger.info(`Falling back to ${fallbackProvider}`);
-        
-        try {
-          imageResult = await generateLogoImage(logoPrompt, fallbackProvider);
-          providerUsed = fallbackProvider;
-        } catch (fallbackError) {
-          logger.error(`Fallback provider also failed:`, fallbackError);
-          throw new Error(`Both AI providers failed to generate the logo`);
-        }
-      }
+      // Generate image with Vertex AI
+      const imageResult = await generateLogoImage(logoPrompt);
 
       // Extract image URL from the result
       const imageUrl = imageResult.media?.url || imageResult.output?.url || 
@@ -189,27 +108,10 @@ export const logoGenerator = onRequest(
       const result = {
         imageUrl,
         prompt: logoPrompt,
-        provider: providerUsed,
+        provider: "vertexai",
       };
 
-      // Optionally save to Firebase Storage
-      if (saveToStorage && userId) {
-        const storageResult = await saveLogoToStorage(userId, imageUrl, {
-          businessName,
-          businessType,
-          style,
-          colors,
-          provider: providerUsed,
-          prompt: logoPrompt
-        });
-        
-        if (storageResult.error) {
-          logger.warn('Failed to save logo to storage:', storageResult.error);
-        } else {
-          result.storageUrl = storageResult.storageUrl;
-          result.storagePath = storageResult.storagePath;
-        }
-      }
+      // Note: Storage functionality can be added later when needed
 
       response.json(result);
     } catch (error) {

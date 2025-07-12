@@ -8,13 +8,18 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
-    "test:storage": "cd tests && node run-tests.js"
+    "test:storage": "cd tests && node run-tests.js",
+    "test:rules": "cd tests && node run-all-tests.js",
+    "test:rules:coverage": "cd tests && node run-all-tests.js --coverage",
+    "test:firestore": "cd tests && node run-all-tests.js firestore-rules.test.js",
+    "test:rules:ci": "cd tests && npm run test:ci"
   },
   "dependencies": {
     "@firebasegen/default-connector": "file:dataconnect-generated/js/default-connector",
     "@genkit-ai/firebase": "^1.14.1",
     "@genkit-ai/googleai": "^1.14.1",
     "@mdi/font": "^7.4.47",
+    "canvas-confetti": "^1.9.3",
     "ethers": "^6.15.0",
     "firebase": "^11.10.0",
     "pinia": "^2.2.6",

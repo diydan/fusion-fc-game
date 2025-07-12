@@ -12,14 +12,54 @@ const requireAuth = (to, from, next) => {
       if (!state.loading) {
         unwatch()
         if (state.isAuthenticated) {
-          next()
+          // Check if onboarding is complete
+          if (!state.isOnboardingComplete && to.path !== '/onboarding') {
+            next('/onboarding')
+          } else {
+            next()
+          }
         } else {
           next('/login')
         }
       }
     })
   } else if (userStore.isAuthenticated) {
-    next()
+    // Check if onboarding is complete
+    if (!userStore.isOnboardingComplete && to.path !== '/onboarding') {
+      next('/onboarding')
+    } else {
+      next()
+    }
+  } else {
+    next('/login')
+  }
+}
+
+const requireOnboarding = (to, from, next) => {
+  const userStore = useUserStore()
+  
+  if (userStore.loading) {
+    // Wait for auth to initialize
+    const unwatch = userStore.$subscribe((mutation, state) => {
+      if (!state.loading) {
+        unwatch()
+        if (state.isAuthenticated) {
+          if (state.isOnboardingComplete) {
+            next('/')
+          } else {
+            next()
+          }
+        } else {
+          next('/login')
+        }
+      }
+    })
+  } else if (userStore.isAuthenticated) {
+    if (userStore.isOnboardingComplete) {
+      next('/')
+    } else {
+      next()
+    }
   } else {
     next('/login')
   }
@@ -55,6 +95,12 @@ const router = createRouter({
       name: 'login',
       component: () => import('@/views/Login.vue'),
       beforeEnter: requireGuest
+    },
+    {
+      path: '/onboarding',
+      name: 'onboarding',
+      component: () => import('@/views/Onboarding.vue'),
+      beforeEnter: requireOnboarding
     },
     {
       path: '/',
