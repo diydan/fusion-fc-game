@@ -205,62 +205,15 @@ export const getActiveH2HMatches = async (limitCount = 10) => {
   }
 };
 
-// Update match result
+// Import cloud function
+import { completeMatchViaFunction } from './functions';
+
+// Update match result (now uses cloud function)
 export const completeMatch = async (matchId, winnerId) => {
   try {
-    const matchRef = doc(db, 'matches', matchId);
-    const matchDoc = await getDoc(matchRef);
-    
-    if (!matchDoc.exists()) {
-      return { success: false, error: 'Match not found' };
-    }
-    
-    const match = matchDoc.data();
-    
-    // Calculate ELO changes
-    const winner = match.players.find(p => p.id === winnerId);
-    const loser = match.players.find(p => p.id !== winnerId);
-    
-    if (!winner || !loser) {
-      return { success: false, error: 'Invalid winner ID' };
-    }
-    
-    // Simple ELO calculation (K-factor = 32)
-    const K = 32;
-    const expectedWinner = 1 / (1 + Math.pow(10, (loser.rating - winner.rating) / 400));
-    const expectedLoser = 1 / (1 + Math.pow(10, (winner.rating - loser.rating) / 400));
-    
-    const newWinnerRating = Math.round(winner.rating + K * (1 - expectedWinner));
-    const newLoserRating = Math.round(loser.rating + K * (0 - expectedLoser));
-    
-    // Update match
-    await updateDoc(matchRef, {
-      status: 'completed',
-      winner: winnerId,
-      completedAt: serverTimestamp(),
-      finalRatings: {
-        [winner.id]: newWinnerRating,
-        [loser.id]: newLoserRating
-      }
-    });
-    
-    // Update user ratings
-    const batch = db.batch();
-    
-    batch.update(doc(db, 'users', winner.id), {
-      rating: newWinnerRating,
-      'stats.matchesPlayed': increment(1),
-      'stats.matchesWon': increment(1)
-    });
-    
-    batch.update(doc(db, 'users', loser.id), {
-      rating: newLoserRating,
-      'stats.matchesPlayed': increment(1)
-    });
-    
-    await batch.commit();
-    
-    return { success: true, error: null };
+    // Use cloud function for secure server-side processing
+    const result = await completeMatchViaFunction(matchId, winnerId);
+    return { success: result.success, error: null };
   } catch (error) {
     return { success: false, error: error.message };
   }

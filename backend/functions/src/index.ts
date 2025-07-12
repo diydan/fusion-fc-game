@@ -145,6 +145,14 @@ export const logoGenerator = onRequest(
 // Export football simulation functions
 export {initGame, playIteration, startSecondHalf, getGameState} from "./football-sim";
 
+// Export multiplayer functions
+export {
+  processMatchmaking,
+  completeMatch,
+  validateGameState,
+  handleDisconnect
+} from "./multiplayer";
+
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
 

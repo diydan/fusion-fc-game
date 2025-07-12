@@ -149,6 +149,14 @@ const initializeGame = () => {
   
   console.log('Game config:', gameConfig)
   
+  // Validate formations
+  if (!props.homeFormation || !props.awayFormation) {
+    console.error('Missing formation data!', {
+      homeFormation: props.homeFormation,
+      awayFormation: props.awayFormation
+    })
+  }
+  
   gameEngine = new FutsalGameEngine(gameConfig)
   
   // Check if engine was created
@@ -161,19 +169,20 @@ const initializeGame = () => {
   gameState.kickoffTeam = 'home'
   
   // The game will handle kickoff automatically when it starts
-  // Just make sure the ball is at center
+  // Get the ball state
   const ball = gameEngine.getBall()
-  if (ball) {
-    ball.x = 300 // fieldWidth / 2
-    ball.y = 200 // fieldHeight / 2
-    ball.vx = 0
-    ball.vy = 0
-    ball.isStationary = true
-  }
+  console.log('Initial ball from engine:', ball)
   
+  // The ball should already be at center from engine initialization
+  // Just log its state
   console.log('Game ready for kickoff')
   console.log('Players:', gameEngine.getPlayers().length)
-  console.log('Ball position:', ball)
+  console.log('Ball state:', {
+    x: ball?.x,
+    y: ball?.y,
+    radius: ball?.radius,
+    isValid: ball && isFinite(ball.x) && isFinite(ball.y) && isFinite(ball.radius)
+  })
   
   render()
 }
@@ -311,13 +320,20 @@ const drawField = (ctx) => {
 }
 
 const drawPlayer = (ctx, player) => {
+  // Validate player data
+  if (!player || !isFinite(player.x) || !isFinite(player.y)) {
+    console.error('Invalid player data:', player)
+    return
+  }
+  
   const x = player.x + 50
   const y = player.y + 50
+  const radius = player.radius || 10 // Default radius if missing
   
   // Player body
   ctx.fillStyle = player.team === 'home' ? '#3498db' : '#e74c3c'
   ctx.beginPath()
-  ctx.arc(x, y, player.radius, 0, Math.PI * 2)
+  ctx.arc(x, y, radius, 0, Math.PI * 2)
   ctx.fill()
   
   // Player number
@@ -325,10 +341,11 @@ const drawPlayer = (ctx, player) => {
   ctx.font = 'bold 12px Arial'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(player.number.toString(), x, y)
+  ctx.fillText((player.number || '?').toString(), x, y)
   
   // Direction indicator
-  if (player.targetX !== undefined && player.targetY !== undefined) {
+  if (player.targetX !== undefined && player.targetY !== undefined && 
+      isFinite(player.targetX) && isFinite(player.targetY)) {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
     ctx.lineWidth = 1
     ctx.beginPath()
@@ -340,25 +357,33 @@ const drawPlayer = (ctx, player) => {
 }
 
 const drawBall = (ctx, ball) => {
+  // Validate ball data
+  if (!ball || !isFinite(ball.x) || !isFinite(ball.y) || !isFinite(ball.radius)) {
+    console.error('Invalid ball data:', ball)
+    return
+  }
+  
   const x = ball.x + 50
   const y = ball.y + 50
+  const radius = ball.radius || 5 // Default radius if missing
+  const z = ball.z || 0
   
   // Ball shadow (based on height)
-  const shadowScale = 1 - (ball.z || 0) / 100
+  const shadowScale = 1 - z / 100
   ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
   ctx.beginPath()
-  ctx.ellipse(x, y + 5, ball.radius * shadowScale, ball.radius * shadowScale * 0.5, 0, 0, Math.PI * 2)
+  ctx.ellipse(x, y + 5, radius * shadowScale, radius * shadowScale * 0.5, 0, 0, Math.PI * 2)
   ctx.fill()
   
   // Ball
-  const gradient = ctx.createRadialGradient(x - 2, y - 2, 0, x, y, ball.radius)
+  const gradient = ctx.createRadialGradient(x - 2, y - 2, 0, x, y, radius)
   gradient.addColorStop(0, 'white')
   gradient.addColorStop(0.7, '#f0f0f0')
   gradient.addColorStop(1, '#cccccc')
   
   ctx.fillStyle = gradient
   ctx.beginPath()
-  ctx.arc(x, y - (ball.z || 0) * 0.5, ball.radius, 0, Math.PI * 2)
+  ctx.arc(x, y - z * 0.5, radius, 0, Math.PI * 2)
   ctx.fill()
   
   // Ball outline

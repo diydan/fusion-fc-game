@@ -1,4 +1,4 @@
-import { FutsalFlowAI } from './FutsalGameEngine-FlowAI'
+// FlowAI removed - using original AI only
 
 export interface PlayerAttributes {
   // Physical
@@ -176,8 +176,7 @@ export class FutsalGameEngine {
   private lastBallPosition: { x: number; y: number } = { x: 0, y: 0 }
   private possessionTimer: { home: number; away: number; neutral: number } = { home: 0, away: 0, neutral: 0 }
   private freeKickStartTime: number | null = null
-  private flowAI: FutsalFlowAI | null = null
-  public useFlowAI: boolean = true // Toggle for new AI
+  // FlowAI removed - using original AI only
   
   // Pass tracking
   private lastPassTarget: Player | null = null
@@ -240,8 +239,7 @@ export class FutsalGameEngine {
     
     this.initializePlayers()
     
-    // Initialize FlowAI
-    this.flowAI = new FutsalFlowAI(this.config, this.players, this.ball, this.gameState)
+    // FlowAI removed - using original AI only
   }
 
   // Generate random attributes based on position
@@ -342,6 +340,13 @@ export class FutsalGameEngine {
     const homeLayout = this.getFormationLayout(this.config.homeFormation)
     const awayLayout = this.getFormationLayout(this.config.awayFormation)
     
+    console.log('Initializing players with formations:', {
+      home: this.config.homeFormation,
+      away: this.config.awayFormation,
+      homeLayout,
+      awayLayout
+    })
+    
     this.players = []
     
     // Initialize home team
@@ -403,11 +408,7 @@ export class FutsalGameEngine {
   private updatePlayerAI(player: Player): void {
     if (player.isSentOff) return
     
-    // Use new FlowAI if enabled
-    if (this.useFlowAI && this.flowAI) {
-      this.flowAI.updatePlayerAI(player)
-      return
-    }
+    // FlowAI removed - using original AI only
     
     // Priority 1: Handle restart movement
     if (player.isMovingToRestart && player.restartTarget) {
@@ -3586,12 +3587,22 @@ export class FutsalGameEngine {
 
   // Main update function
   update(currentTime: number): void {
+    // Initialize on first frame
     if (this.startTime === null) {
       this.startTime = currentTime
       this.lastUpdateTime = currentTime
+      console.log('Engine first frame initialization', { currentTime, startTime: this.startTime })
+      return // Skip first frame
     }
     
-    const deltaTime = Math.min((currentTime - (this.lastUpdateTime || currentTime)) / 1000, 0.1)
+    const deltaTime = Math.min((currentTime - this.lastUpdateTime) / 1000, 0.1)
+    
+    // Debug check for NaN
+    if (isNaN(deltaTime)) {
+      console.error('deltaTime is NaN!', { currentTime, lastUpdateTime: this.lastUpdateTime })
+      return
+    }
+    
     this.lastUpdateTime = currentTime
     
     if (this.gameState.isPlaying && this.gameState.gameTime > 0) {
@@ -3617,18 +3628,32 @@ export class FutsalGameEngine {
     })
     
     // Update positions
-    this.players.forEach(player => {
+    for (const player of this.players) {
       if (!player.isSentOff) {
         // Update position
-        player.x += player.vx * deltaTime * 60 * this.gameState.gameSpeed
-        player.y += player.vy * deltaTime * 60 * this.gameState.gameSpeed
+        const dx = player.vx * deltaTime * 60 * this.gameState.gameSpeed
+        const dy = player.vy * deltaTime * 60 * this.gameState.gameSpeed
+        
+        // Debug check
+        if (isNaN(dx) || isNaN(dy) || isNaN(player.x) || isNaN(player.y)) {
+          console.error('Player position update NaN detected!', {
+            player: { x: player.x, y: player.y, vx: player.vx, vy: player.vy, name: player.name },
+            deltaTime,
+            gameSpeed: this.gameState.gameSpeed,
+            dx, dy
+          })
+          continue // Skip this player update
+        }
+        
+        player.x += dx
+        player.y += dy
 
         // Keep players in bounds (including buffer zone)
         const buffer = this.config.fieldBuffer || 0
         player.x = Math.max(player.radius - buffer, Math.min(this.config.fieldWidth + buffer - player.radius, player.x))
         player.y = Math.max(player.radius - buffer, Math.min(this.config.fieldHeight + buffer - player.radius, player.y))
       }
-    })
+    }
     
     // Update player collisions
     this.updatePlayerCollisions()
@@ -3752,10 +3777,7 @@ export class FutsalGameEngine {
     
     this.initializePlayers()
     
-    // Use FlowAI for kickoff if enabled
-    if (this.useFlowAI && this.flowAI) {
-      this.flowAI.handleKickoff()
-    }
+    // FlowAI removed - using original AI only
   }
 
   setGameSpeed(speed: number): void {

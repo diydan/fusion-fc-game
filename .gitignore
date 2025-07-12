@@ -223,7 +223,40 @@ test-multi-auth.md
 STORAGE_CORS_SETUP.md
 GAME_ASSET_RULES_IMPLEMENTATION.md
 AVATAR_RULES_IMPLEMENTATION.md
-TODO.md
 deploy-production.sh
 functions/demo-enhanced-onboarding.html
-TODO.md
+
+# Development and documentation files
+*.md.backup
+*.md.tmp
+
+# IDE and editor files
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+
+# Build and deployment scripts
+deploy-*.sh
+build-*.sh
+release-*.sh
+
+# Environment and config files
+.env.backup
+.env.example.local

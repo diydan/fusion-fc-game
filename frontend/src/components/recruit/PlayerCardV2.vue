@@ -10,27 +10,23 @@
   >
     <!-- Card Header -->
     <div class="card-header" @click="toggleExpanded">
-      <div class="header-left">
+      <div class="header-top">
+        <h3 class="player-name">{{ player.name }}</h3>
+        <v-icon :icon="isExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" size="20" />
+      </div>
+      <div class="header-bottom">
         <div class="overall-badge">
           <span class="overall-value">{{ player.overall }}</span>
           <span class="overall-label">OVR</span>
         </div>
-        <div class="player-info">
-          <h3 class="player-name">{{ player.name }}</h3>
-          <div class="player-meta">
-            <v-chip size="x-small" :color="positionColor" class="position-chip">
-              {{ player.position }}
-            </v-chip>
-            <span class="nationality">{{ player.nationality }}</span>
-            <span class="age">{{ player.age }}y</span>
+        <div class="player-meta">
+          <v-chip size="x-small" :color="positionColor" class="position-chip">
+            {{ player.position }}
+          </v-chip>
+          <div class="tier-indicator" :class="`tier-${player.tier}`">
+            {{ player.tier.toUpperCase() }}
           </div>
         </div>
-      </div>
-      <div class="header-right">
-        <div class="tier-indicator" :class="`tier-${player.tier}`">
-          {{ player.tier.toUpperCase() }}
-        </div>
-        <v-icon :icon="isExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
       </div>
     </div>
 
@@ -40,7 +36,7 @@
       <div class="radar-section-collapsed">
         <PlayerRadarChart 
           :stats="player.stats" 
-          :size="180"
+          :size="200"
           :backgroundColor="radarColors.bg"
           :borderColor="radarColors.border"
           gridColor="rgba(255, 255, 255, 0.1)"
@@ -48,18 +44,14 @@
         />
       </div>
       
-      <!-- Stats Bars -->
-      <div class="stats-bars">
-        <div class="stat-row" v-for="stat in mainStats" :key="stat.key">
-          <span class="stat-label">{{ stat.label }}</span>
-          <div class="stat-bar">
-            <div 
-              class="stat-fill" 
-              :style="`width: ${player.stats[stat.key]}%`"
-              :class="getStatClass(player.stats[stat.key])"
-            ></div>
+      <!-- Core Attributes -->
+      <div class="attributes-section-collapsed">
+        <div class="attribute-item" v-for="stat in mainStats" :key="stat.key">
+          <span class="attr-label">{{ stat.label }}</span>
+          <div class="attr-bar">
+            <div class="attr-fill" :style="`width: ${player.stats[stat.key]}%`"></div>
           </div>
-          <span class="stat-value">{{ player.stats[stat.key] }}</span>
+          <span class="attr-value">{{ player.stats[stat.key] }}</span>
         </div>
       </div>
       
@@ -69,30 +61,14 @@
           <v-icon size="small">mdi-currency-usd</v-icon>
           <span>{{ formattedPrice }}</span>
         </div>
-        <div class="action-buttons">
-          <v-btn
-            size="small"
-            icon="mdi-compare"
-            variant="text"
-            @click.stop="$emit('compare')"
-            :color="isSelected ? 'primary' : 'default'"
-          />
-          <v-btn
-            size="small"
-            :icon="isFavorite ? 'mdi-heart' : 'mdi-heart-outline'"
-            variant="text"
-            @click.stop="$emit('favorite')"
-            :color="isFavorite ? 'error' : 'default'"
-          />
-          <v-btn
-            size="small"
-            color="success"
-            variant="tonal"
-            @click.stop="$emit('recruit')"
-          >
-            Recruit
-          </v-btn>
-        </div>
+        <v-btn
+          size="small"
+          color="success"
+          @click.stop="$emit('recruit')"
+        >
+          <v-icon start size="small">mdi-account-plus</v-icon>
+          Recruit
+        </v-btn>
       </div>
     </div>
 
@@ -437,18 +413,31 @@ const getStatClass = (value) => {
 
 /* Card Header */
 .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   padding: 16px;
   background: rgba(255, 255, 255, 0.05);
   cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.header-left {
+.header-top {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.player-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  flex: 1;
+}
+
+.header-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .overall-badge {
@@ -456,17 +445,18 @@ const getStatClass = (value) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
 }
 
 .overall-value {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: #1a1f2e;
+  line-height: 1;
 }
 
 .overall-label {
@@ -475,38 +465,20 @@ const getStatClass = (value) => {
   color: #1a1f2e;
 }
 
-.player-info {
-  flex: 1;
-}
-
-.player-name {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-
 .player-meta {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.8rem;
-  color: #94a3b8;
 }
 
 .position-chip {
   font-weight: 600;
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 .tier-indicator {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.7rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -540,101 +512,48 @@ const getStatClass = (value) => {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 12px;
-  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
-  border-radius: 16px;
-  position: relative;
+  padding: 8px 0;
+  margin: -8px 0;
 }
 
-.radar-section-collapsed::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 16px;
-  padding: 1px;
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.1) 0%, 
-    transparent 50%, 
-    rgba(255, 255, 255, 0.05) 100%
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-}
-
-/* Stats Bars Section */
-.stats-bars {
+/* Attributes Section in Collapsed View */
+.attributes-section-collapsed {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-3, 0.75rem);
 }
 
-.stat-row {
+.attributes-section-collapsed .attribute-item {
   display: grid;
-  grid-template-columns: 35px 1fr 35px;
+  grid-template-columns: 120px 1fr 40px;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-3, 0.75rem);
 }
 
-.stat-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #94a3b8;
-  text-align: left;
-}
-
-.stat-bar {
-  width: 100%;
-  height: 8px;
-  background: rgba(100, 116, 139, 0.2);
-  border-radius: 4px;
-  overflow: hidden;
-  position: relative;
-}
-
-.stat-fill {
-  height: 100%;
-  transition: width 0.3s ease;
-  position: relative;
-}
-
-.stat-fill.stat-elite {
-  background: linear-gradient(90deg, #10b981, #059669);
-}
-
-.stat-fill.stat-good {
-  background: linear-gradient(90deg, #3b82f6, #2563eb);
-}
-
-.stat-fill.stat-average {
-  background: linear-gradient(90deg, #f59e0b, #d97706);
-}
-
-.stat-fill.stat-poor {
-  background: linear-gradient(90deg, #ef4444, #dc2626);
-}
-
-.stat-fill::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
-  animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-.stat-value {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #e2e8f0;
+.attributes-section-collapsed .attr-label {
+  font-size: var(--font-sm, 0.875rem);
+  color: var(--text-secondary, #94a3b8);
   text-align: right;
+}
+
+.attributes-section-collapsed .attr-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.attributes-section-collapsed .attr-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%);
+  transition: width 0.3s ease;
+}
+
+.attributes-section-collapsed .attr-value {
+  font-size: var(--font-sm, 0.875rem);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-primary, white);
 }
 
 /* Actions Row */
@@ -642,7 +561,8 @@ const getStatClass = (value) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 8px;
+  padding-top: 12px;
+  margin-top: 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -653,13 +573,6 @@ const getStatClass = (value) => {
   font-size: 1.1rem;
   font-weight: 700;
   color: #10b981;
-  text-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
-}
-
-.action-buttons {
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
 /* Expanded Content */
@@ -786,33 +699,24 @@ const getStatClass = (value) => {
     max-width: 400px;
     margin: 0 auto;
   }
-  
-  .radar-section-collapsed {
-    padding: 16px;
-  }
-  
-  /* Increase radar size on tablets */
-  .radar-section-collapsed canvas {
-    transform: scale(1.1);
-  }
 }
 
 @media (max-width: 600px) {
   .overall-badge {
-    width: 50px;
-    height: 50px;
+    width: 45px;
+    height: 45px;
   }
   
   .overall-value {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
   }
   
   .player-name {
-    font-size: 1rem;
+    font-size: 1.1rem;
   }
   
-  .stat-row {
-    grid-template-columns: 30px 1fr 30px;
+  .attributes-section-collapsed .attribute-item {
+    grid-template-columns: 100px 1fr 35px;
     gap: 8px;
   }
   
@@ -824,10 +728,6 @@ const getStatClass = (value) => {
   .expanded-actions {
     flex-wrap: wrap;
     gap: 8px;
-  }
-  
-  .action-buttons {
-    gap: 2px;
   }
 }
 
@@ -842,24 +742,15 @@ const getStatClass = (value) => {
   }
   
   .radar-section-collapsed {
-    padding: 20px 16px;
     min-height: 220px;
   }
   
-  .stats-bars {
+  .attributes-section-collapsed {
     gap: 10px;
   }
   
-  .stat-bar {
-    height: 10px;
-  }
-  
-  .stat-label {
-    font-size: 0.8rem;
-  }
-  
-  .stat-value {
-    font-size: 0.9rem;
+  .attributes-section-collapsed .attr-bar {
+    height: 8px;
   }
 }
 </style>
