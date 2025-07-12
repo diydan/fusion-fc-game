@@ -219,3 +219,9 @@ firestore-security-rules-helpers.pseudo
 storage.rules
 CORS_FIX_INSTRUCTIONS.md
 TEAM_CONTENT_SECURITY.md
+TODO.md
+test-multi-auth.md
+STORAGE_CORS_SETUP.md
+GAME_ASSET_RULES_IMPLEMENTATION.md
+AVATAR_RULES_IMPLEMENTATION.md
+TODO.md

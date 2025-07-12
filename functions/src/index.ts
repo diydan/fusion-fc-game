@@ -21,7 +21,7 @@ import {vertexAI, imagen3} from "@genkit-ai/vertexai";
 // Initialize Genkit with AI providers
 const ai = genkit({
   plugins: [
-    vertexAI({projectId: process.env.GCLOUD_PROJECT, location: "us-central1"}),
+    vertexAI({projectId: "fusion-fc", location: "us-central1"}),
   ],
 });
 
@@ -41,25 +41,33 @@ const generateLogoImage = async (prompt: string) => {
       config: {
         width: 1024,
         height: 1024,
-        seed: Math.floor(Math.random() * 1000000),
       },
     });
   } catch (error) {
-    logger.error(`Error generating logo with Vertex AI:`, error);
+    logger.error("Error generating logo with Vertex AI:", error);
     throw error;
   }
 };
 
 // Generate logo prompt using Gemini
-const generateLogoPrompt = async (businessName: string, businessType: string, style?: string, colors?: string) => {
-  const promptText = `Create a detailed logo design prompt for a business with the following details:
-  - Business Name: ${businessName}
-  - Business Type: ${businessType}
-  - Style: ${style || "modern and professional"}
-  - Colors: ${colors || "use appropriate colors for the business type"}
-  
-  Generate a concise but detailed prompt that would create a professional logo. Include specific visual elements, typography suggestions, and design principles. The prompt should be suitable for AI image generation.`;
-  
+const generateLogoPrompt = async (
+  businessName: string,
+  businessType: string,
+  style?: string,
+  colors?: string
+) => {
+  const promptText = [
+    "Create a detailed logo design prompt for a business with the following details:",
+    `- Business Name: ${businessName}`,
+    `- Business Type: ${businessType}`,
+    `- Style: ${style || "modern and professional"}`,
+    `- Colors: ${colors || "use appropriate colors for the business type"}`,
+    "",
+    "Generate a concise but detailed prompt that would create a professional logo.",
+    "Include specific visual elements, typography suggestions, and design principles.",
+    "The prompt should be suitable for AI image generation.",
+  ].join("\n");
+
   try {
     const result = await ai.generate({
       model: "gemini-1.5-flash",
@@ -69,7 +77,11 @@ const generateLogoPrompt = async (businessName: string, businessType: string, st
   } catch (error) {
     logger.error("Error generating logo prompt:", error);
     // Fallback to a basic prompt
-    return `Professional logo design for ${businessName}, a ${businessType} business. ${style ? `Style: ${style}.` : "Modern and clean design."} ${colors ? `Colors: ${colors}.` : "Use appropriate brand colors."} High quality, vector-style, suitable for business use.`;
+    return `Professional logo design for ${businessName}, ` +
+      `a ${businessType} business. ` +
+      `${style ? `Style: ${style}.` : "Modern and clean design."} ` +
+      `${colors ? `Colors: ${colors}.` : "Use appropriate brand colors."} ` +
+      "High quality, vector-style, suitable for business use.";
   }
 };
 
@@ -91,16 +103,22 @@ export const logoGenerator = onRequest(
       }
 
       // Generate the logo prompt
-      const logoPrompt = await generateLogoPrompt(businessName, businessType, style, colors);
+      const logoPrompt = await generateLogoPrompt(
+        businessName,
+        businessType,
+        style,
+        colors
+      );
       logger.info(`Generated logo prompt: ${logoPrompt}`);
 
       // Generate image with Vertex AI
       const imageResult = await generateLogoImage(logoPrompt);
 
       // Extract image URL from the result
-      const imageUrl = imageResult.media?.url || imageResult.output?.url || 
-                      (imageResult.media && Array.isArray(imageResult.media) && imageResult.media[0]?.url);
-      
+      const imageUrl = imageResult.media?.url || imageResult.output?.url ||
+                      (imageResult.media && Array.isArray(imageResult.media) &&
+                       imageResult.media[0]?.url);
+
       if (!imageUrl) {
         throw new Error("No image URL returned from AI provider");
       }

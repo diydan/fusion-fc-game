@@ -18,7 +18,7 @@ export default defineConfig({
     proxy: {
       // Proxy API requests to avoid CORS in development
       '/api/logo-generator': {
-        target: 'https://us-central1-fusion-fc.cloudfunctions.net/logoGenerator',
+        target: 'https://logogenerator-6unsift5pq-uc.a.run.app',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/logo-generator/, ''),
         configure: (proxy, options) => {

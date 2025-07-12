@@ -2,7 +2,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/config/firebase';
 import { generateTeamLogoWithProxy } from './logo-generator-proxy';
 
-const LOGO_API_URL = 'https://us-central1-fusion-fc.cloudfunctions.net/logoGenerator';
+const LOGO_API_URL = 'https://logogenerator-6unsift5pq-uc.a.run.app/';
 
 export async function generateTeamLogo(teamName, colors, customPrompt = null) {
   // Use proxy function to handle CORS issues

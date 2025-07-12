@@ -235,7 +235,7 @@ GCLOUD_PROJECT=fusion-fc
 
 #### Usage Example
 ```javascript
-const response = await fetch('https://us-central1-fusion-fc.cloudfunctions.net/logoGenerator', {
+const response = await fetch('https://logogenerator-6unsift5pq-uc.a.run.app/', {
   method: 'POST',
   headers: {'Content-Type': 'application/json'},
   body: JSON.stringify({

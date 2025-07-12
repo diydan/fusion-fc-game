@@ -1,7 +1,7 @@
 // Development proxy for logo generation to avoid CORS issues
 // In production, the Firebase Function should have proper CORS headers
 
-const LOGO_API_URL = 'https://us-central1-fusion-fc.cloudfunctions.net/logoGenerator';
+const LOGO_API_URL = 'https://logogenerator-6unsift5pq-uc.a.run.app/';
 const PROXY_API_URL = '/api/logo-generator';
 
 // For development, we'll use a local proxy or direct fetch with no-cors mode
@@ -18,7 +18,37 @@ export async function generateTeamLogoWithProxy(teamName, colors, customPrompt =
     
     console.log('Generating logo for:', teamName, 'with colors:', colorDescription);
     
-    // For development, try the proxy endpoint first
+    // Try direct endpoint first (in case CORS is fixed)
+    try {
+      console.log('Trying direct endpoint...');
+      const response = await fetch(LOGO_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: teamName,
+          businessType: 'Gaming/Sports Team',
+          style: style,
+          colors: colorDescription
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.imageUrl) {
+          console.log('Logo generated successfully via direct endpoint!');
+          return {
+            tempLogoUrl: result.imageUrl,
+            prompt: `${teamName} - ${style} - Colors: ${colorDescription}`,
+            metadata: result.metadata || {},
+            error: null
+          };
+        }
+      }
+    } catch (directError) {
+      console.warn('Direct endpoint failed:', directError.message);
+    }
+    
+    // For development, try the proxy endpoint as fallback
     if (import.meta.env.DEV) {
       try {
         console.log('Trying local proxy endpoint...');
