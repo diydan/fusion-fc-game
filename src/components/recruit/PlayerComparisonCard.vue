@@ -1,60 +1,107 @@
 <template>
-  <v-card class="comparison-card" elevation="2">
-    <v-card-title class="comparison-header">
-      <v-avatar size="40">
+  <v-card class="comparison-card" elevation="3">
+    <!-- Player Header -->
+    <div class="player-header">
+      <v-avatar size="60">
         <v-img :src="player.avatar || '/default-player.png'" />
       </v-avatar>
-      <div class="player-info">
+      <div class="player-basic-info">
         <h4 class="player-name">{{ player.name }}</h4>
-        <span class="player-position">{{ player.position }} - {{ player.tier.toUpperCase() }}</span>
-      </div>
-      <v-btn
-        icon
-        size="small"
-        @click="$emit('remove', player.id)"
-      >
-        <v-icon>mdi-close</v-icon>
-      </v-btn>
-    </v-card-title>
-    
-    <v-card-text>
-      <!-- Overall Rating -->
-      <div class="overall-section">
-        <div class="overall-rating">{{ player.overall }}</div>
-        <span class="overall-label">Overall</span>
-      </div>
-
-      <!-- Key Stats -->
-      <div class="stats-grid">
-        <div v-for="(stat, key) in mainStats" :key="key" class="stat-item">
-          <span class="stat-label">{{ key.toUpperCase() }}</span>
-          <div class="stat-bar">
-            <div 
-              class="stat-fill" 
-              :style="{ width: `${stat}%` }"
-              :class="getStatClass(stat)"
-            ></div>
-          </div>
-          <span class="stat-value">{{ stat }}</span>
+        <div class="player-details">
+          <v-chip size="small" :color="getPositionColor(player.position)">
+            {{ player.position }}
+          </v-chip>
+          <v-chip size="small" :color="getTierColor(player.tier)" class="ml-2">
+            {{ player.tier.toUpperCase() }}
+          </v-chip>
+        </div>
+        <div class="player-meta mt-2">
+          <span class="nationality">{{ player.nationality }}</span>
+          <span class="mx-2">•</span>
+          <span class="age">{{ player.age }}y</span>
         </div>
       </div>
+      <v-btn
+        icon="mdi-close"
+        size="small"
+        variant="text"
+        @click="$emit('remove', player.id)"
+        class="remove-btn"
+      />
+    </div>
 
-      <!-- Radar Chart -->
-      <div class="radar-section">
-        <PlayerRadarChart :stats="player.stats" :size="120" />
-      </div>
+    <!-- Overall Rating -->
+    <div class="overall-section">
+      <div class="overall-rating">{{ player.overall }}</div>
+      <div class="overall-label">Overall</div>
+    </div>
 
-      <!-- Price -->
-      <div class="price-section">
-        <span class="price">{{ formattedPrice }}</span>
+    <!-- Core Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-label">PAC</div>
+        <div class="stat-value">{{ player.stats.pace }}</div>
       </div>
-    </v-card-text>
+      <div class="stat-item">
+        <div class="stat-label">SHO</div>
+        <div class="stat-value">{{ player.stats.shooting }}</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">PAS</div>
+        <div class="stat-value">{{ player.stats.passing }}</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">DEF</div>
+        <div class="stat-value">{{ player.stats.defense }}</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">PHY</div>
+        <div class="stat-value">{{ player.stats.physical }}</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">DRI</div>
+        <div class="stat-value">{{ player.stats.dribbling || 75 }}</div>
+      </div>
+    </div>
+
+    <!-- Additional Stats -->
+    <v-divider class="my-3" />
+    <div class="additional-stats">
+      <div class="stat-row">
+        <span class="stat-label">Mental</span>
+        <span class="stat-value">{{ player.stats.mental || 70 }}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Technical</span>
+        <span class="stat-value">{{ player.stats.technical || 72 }}</span>
+      </div>
+    </div>
+
+    <!-- Price Section -->
+    <v-divider class="my-3" />
+    <div class="price-section">
+      <div class="price-label">Transfer Value</div>
+      <div class="price-value">{{ formattedPrice }}</div>
+    </div>
+
+    <!-- Action Button -->
+    <div class="action-section">
+      <v-btn
+        color="success"
+        variant="outlined"
+        size="small"
+        block
+        @click="$emit('recruit', player)"
+      >
+        <v-icon start>mdi-account-plus</v-icon>
+        Recruit Player
+      </v-btn>
+    </div>
   </v-card>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import PlayerRadarChart from './PlayerRadarChart.vue'
 
 const props = defineProps({
   player: {
@@ -62,14 +109,6 @@ const props = defineProps({
     required: true
   }
 })
-
-const mainStats = computed(() => ({
-  pace: props.player.stats.pace,
-  shooting: props.player.stats.shooting,
-  passing: props.player.stats.passing,
-  defense: props.player.stats.defense,
-  physical: props.player.stats.physical
-}))
 
 const formattedPrice = computed(() => {
   const price = props.player.price
@@ -81,146 +120,200 @@ const formattedPrice = computed(() => {
   return `$${price}`
 })
 
-const getStatClass = (value) => {
-  if (value >= 90) return 'excellent'
-  if (value >= 80) return 'very-good'
-  if (value >= 70) return 'good'
-  if (value >= 60) return 'average'
-  return 'poor'
+const getPositionColor = (position) => {
+  const colors = {
+    GK: 'yellow',
+    CB: 'red',
+    LB: 'blue',
+    RB: 'blue',
+    CDM: 'green',
+    CM: 'green',
+    CAM: 'orange',
+    LW: 'purple',
+    RW: 'purple',
+    ST: 'pink'
+  }
+  return colors[position] || 'grey'
 }
 
-defineEmits(['remove'])
+const getTierColor = (tier) => {
+  const colors = {
+    amateur: 'grey',
+    'semi-pro': 'green',
+    pro: 'blue',
+    elite: 'purple'
+  }
+  return colors[tier] || 'grey'
+}
+
+defineEmits(['remove', 'recruit'])
 </script>
 
 <style scoped>
 .comparison-card {
-  background: var(--v-theme-surface);
-  border: 1px solid var(--v-theme-outline);
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  border-radius: 16px;
+  border: 2px solid #e2e8f0;
+  overflow: hidden;
   transition: all 0.3s ease;
+  min-height: 400px;
 }
 
 .comparison-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #3b82f6;
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
 }
 
-.comparison-header {
+.player-header {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-start;
   padding: 16px;
-  background: var(--v-theme-surface-variant);
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  position: relative;
 }
 
-.player-info {
+.player-basic-info {
   flex: 1;
+  margin-left: 12px;
 }
 
 .player-name {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 6px;
 }
 
-.player-position {
-  font-size: 0.85rem;
-  color: var(--v-theme-on-surface-variant);
+.player-details {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.player-meta {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
 }
 
 .overall-section {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-  gap: 8px;
+  text-align: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #1e293b, #334155);
+  color: white;
 }
 
 .overall-rating {
-  font-size: 2rem;
-  font-weight: bold;
-  color: var(--v-theme-primary);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .overall-label {
-  font-size: 0.9rem;
-  color: var(--v-theme-on-surface-variant);
+  font-size: 0.875rem;
+  font-weight: 500;
+  opacity: 0.9;
+  margin-top: 4px;
 }
 
 .stats-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 16px;
+  background: #f8fafc;
 }
 
 .stat-item {
-  display: grid;
-  grid-template-columns: 40px 1fr 30px;
-  align-items: center;
-  gap: 8px;
+  text-align: center;
+  background: white;
+  padding: 12px 8px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.stat-item:hover {
+  border-color: #3b82f6;
+  transform: translateY(-1px);
 }
 
 .stat-label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--v-theme-on-surface-variant);
-}
-
-.stat-bar {
-  height: 6px;
-  background: var(--v-theme-outline);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.stat-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.stat-fill.excellent {
-  background: linear-gradient(90deg, #8b5cf6, #a855f7);
-}
-
-.stat-fill.very-good {
-  background: linear-gradient(90deg, #3b82f6, #2563eb);
-}
-
-.stat-fill.good {
-  background: linear-gradient(90deg, #10b981, #059669);
-}
-
-.stat-fill.average {
-  background: linear-gradient(90deg, #f59e0b, #d97706);
-}
-
-.stat-fill.poor {
-  background: linear-gradient(90deg, #ef4444, #dc2626);
+  color: #64748b;
+  margin-bottom: 4px;
 }
 
 .stat-value {
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-align: right;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
 }
 
-.radar-section {
+.additional-stats {
+  padding: 0 16px;
+}
+
+.stat-row {
   display: flex;
-  justify-content: center;
-  margin-bottom: 16px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 0.875rem;
+}
+
+.stat-row .stat-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.stat-row .stat-value {
+  color: #1e293b;
+  font-weight: 600;
 }
 
 .price-section {
+  padding: 12px 16px;
   text-align: center;
+  background: #f8fafc;
 }
 
-.price {
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: var(--v-theme-primary);
-  background: rgba(var(--v-theme-primary-rgb), 0.1);
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(var(--v-theme-primary-rgb), 0.3);
+.price-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.price-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #059669;
+}
+
+.action-section {
+  padding: 12px 16px 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .overall-rating {
+    font-size: 2rem;
+  }
+  
+  .player-name {
+    font-size: 1rem;
+  }
 }
 </style>

@@ -219,33 +219,41 @@ export class ChilizWalletService {
 
     console.log(`Fetching token balances for ${walletAddress} on ${this.network}`)
 
-    // First try to get tokens from explorer API
+    // First try to get tokens from explorer API (this gives us token contracts)
     try {
       const explorerTokens = await this.getTokensFromExplorer(walletAddress)
       if (explorerTokens && explorerTokens.length > 0) {
         console.log('Found tokens from explorer:', explorerTokens)
-        // Process explorer tokens and add to balances
+        // Get actual balances for discovered tokens
         for (const token of explorerTokens) {
-          balances.push({
-            address: token.contractAddress || token.address,
-            symbol: token.symbol || token.name?.substring(0, 3) || 'UNKNOWN',
-            name: token.name || token.symbol || 'Unknown Token',
-            balance: token.balance || token.value || '0',
-            decimals: token.decimals || 18,
-            formattedBalance: token.formattedBalance || '0'
-          })
+          try {
+            const balance = await this.getTokenBalance(token.address, walletAddress)
+            if (balance && parseFloat(balance.formattedBalance) > 0) {
+              console.log(`Found balance for ${token.symbol}:`, balance.formattedBalance)
+              balances.push(balance)
+            }
+          } catch (error) {
+            console.warn(`Failed to get balance for discovered token ${token.symbol}:`, error)
+          }
         }
       }
     } catch (error) {
       console.warn('Failed to fetch from explorer:', error)
     }
 
-    // Try to get balances for known tokens
+    // Try to get balances for known tokens (skip if already found from explorer)
     for (const token of tokens) {
       try {
-        console.log(`Checking token: ${token.symbol} at ${token.address}`)
+        // Skip if we already have this token from explorer
+        const alreadyFound = balances.some(b => b.address.toLowerCase() === token.address.toLowerCase())
+        if (alreadyFound) {
+          console.log(`Skipping ${token.symbol} - already found from explorer`)
+          continue
+        }
+        
+        console.log(`Checking known token: ${token.symbol} at ${token.address}`)
         const balance = await this.getTokenBalance(token.address, walletAddress)
-        if (balance) {
+        if (balance && parseFloat(balance.formattedBalance) > 0) {
           console.log(`Found balance for ${token.symbol}:`, balance.formattedBalance)
           balances.push({
             ...balance,
@@ -265,8 +273,10 @@ export class ChilizWalletService {
       // Try to get balances for discovered tokens
       for (const tokenAddress of discoveredTokens) {
         try {
-          // Skip if we already checked this token
-          if (tokens.some(t => t.address.toLowerCase() === tokenAddress.toLowerCase())) {
+          // Skip if we already checked this token (from known tokens or explorer)
+          const alreadyChecked = tokens.some(t => t.address.toLowerCase() === tokenAddress.toLowerCase()) ||
+                                balances.some(b => b.address.toLowerCase() === tokenAddress.toLowerCase())
+          if (alreadyChecked) {
             continue
           }
           
@@ -317,6 +327,7 @@ export class ChilizWalletService {
             }
           })
           
+          console.log('Found tokens from explorer transactions:', Array.from(uniqueTokens.values()))
           return Array.from(uniqueTokens.values())
         }
         return []

@@ -61,7 +61,7 @@
             <v-list-item-title>Settings</v-list-item-title>
           </v-list-item>
           <v-list-item to="/theme">
-            <v-list-item-title>Theme Showcase</v-list-item-title>
+            <v-list-item-title>theme </v-list-item-title>
           </v-list-item>
           <v-divider></v-divider>
           <v-list-item @click="logout">
@@ -118,7 +118,7 @@
 
         <v-list-item
           prepend-icon="mdi-palette"
-          title="Theme Showcase"
+          title="theme "
           to="/theme"
           rounded="xl"
         ></v-list-item>
@@ -223,7 +223,7 @@ const logout = async () => {
 }
 
 .mobile-header {
-  background: #003FED !important;
+  background: #1048ac !important;
   border-bottom: 1px solid rgba(0, 63, 237, 0.5) !important;
   backdrop-filter: blur(10px);
 }
@@ -276,7 +276,7 @@ const logout = async () => {
 }
 
 .desktop-header {
-  background: #003FED !important;
+  background: #1048ac !important;
   border-bottom: 1px solid rgba(0, 63, 237, 0.5) !important;
   backdrop-filter: blur(10px);
   position: fixed !important;

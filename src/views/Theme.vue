@@ -2,7 +2,7 @@
   <v-container fluid class="pa-6">
     <v-row>
       <v-col cols="12">
-        <h1 class="text-h3 mb-6 text-center">Theme Showcase</h1>
+        <h1 class="text-h3 mb-6 text-center">theme </h1>
         <p class="text-h6 text-center text-medium-emphasis mb-8">
           Explore the beautiful dark blue gradient theme with vibrant accents
         </p>

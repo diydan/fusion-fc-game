@@ -1,229 +1,222 @@
 <template>
-  <div class="radar-chart">
-    <svg :width="size" :height="size" class="radar-svg">
-      <!-- Background grid -->
-      <g class="grid">
-        <!-- Concentric circles -->
-        <circle
-          v-for="level in 5"
-          :key="level"
-          :cx="centerX"
-          :cy="centerY"
-          :r="(level * radius) / 5"
-          fill="none"
-          :stroke="gridColor"
-          stroke-width="1"
-          opacity="0.3"
-        />
-        
-        <!-- Axis lines -->
-        <line
-          v-for="(stat, index) in statKeys"
-          :key="stat"
-          :x1="centerX"
-          :y1="centerY"
-          :x2="getAxisPoint(index).x"
-          :y2="getAxisPoint(index).y"
-          :stroke="gridColor"
-          stroke-width="1"
-          opacity="0.5"
-        />
-      </g>
-
-      <!-- Stat area -->
-      <polygon
-        :points="statPolygonPoints"
-        :fill="fillColor"
-        :stroke="strokeColor"
-        stroke-width="2"
-        fill-opacity="0.3"
-      />
-
-      <!-- Stat points -->
-      <circle
-        v-for="(point, index) in statPoints"
-        :key="index"
-        :cx="point.x"
-        :cy="point.y"
-        r="3"
-        :fill="strokeColor"
-      />
-
-      <!-- Stat labels -->
-      <text
-        v-for="(stat, index) in statKeys"
-        :key="stat"
-        :x="getLabelPoint(index).x"
-        :y="getLabelPoint(index).y"
-        :text-anchor="getLabelAnchor(index)"
-        :class="labelClass"
-        font-size="10"
-        font-weight="bold"
-      >
-        {{ getStatLabel(stat) }}
-      </text>
-
-      <!-- Stat values -->
-      <text
-        v-for="(point, index) in statPoints"
-        :key="`value-${index}`"
-        :x="point.x"
-        :y="point.y - 8"
-        text-anchor="middle"
-        :class="valueClass"
-        font-size="9"
-        font-weight="600"
-      >
-        {{ Object.values(normalizedStats)[index] }}
-      </text>
-    </svg>
+  <div class="radar-chart-container">
+    <canvas 
+      ref="canvasRef" 
+      :width="size" 
+      :height="size"
+      class="radar-canvas"
+    ></canvas>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 
 const props = defineProps({
   stats: {
     type: Object,
-    required: true,
-    default: () => ({
-      pace: 70,
-      shooting: 70,
-      passing: 70,
-      defense: 70,
-      physical: 70,
-      dribbling: 70
-    })
+    required: true
   },
   size: {
     type: Number,
-    default: 160
+    default: 200
   },
-  fillColor: {
+  backgroundColor: {
     type: String,
-    default: 'rgba(59, 130, 246, 0.5)'
+    default: 'rgba(59, 130, 246, 0.1)'
   },
-  strokeColor: {
+  borderColor: {
     type: String,
-    default: '#3b82f6'
+    default: 'rgba(59, 130, 246, 0.8)'
   },
   gridColor: {
     type: String,
-    default: '#6b7280'
+    default: 'rgba(255, 255, 255, 0.3)'
   },
-  labelClass: {
+  textColor: {
     type: String,
-    default: 'stat-label'
-  },
-  valueClass: {
-    type: String,
-    default: 'stat-value'
+    default: 'rgba(255, 255, 255, 0.9)'
   }
 })
 
-const centerX = computed(() => props.size / 2)
-const centerY = computed(() => props.size / 2)
-const radius = computed(() => (props.size / 2) - 30)
+const canvasRef = ref(null)
 
-const statKeys = computed(() => {
-  const primaryStats = ['pace', 'shooting', 'passing', 'defense', 'physical', 'dribbling']
-  return primaryStats.filter(stat => props.stats.hasOwnProperty(stat))
-})
+const statLabels = [
+  { key: 'pace', label: 'PAC', short: 'P' },
+  { key: 'shooting', label: 'SHO', short: 'S' },
+  { key: 'passing', label: 'PAS', short: 'Pa' },
+  { key: 'defense', label: 'DEF', short: 'D' },
+  { key: 'physical', label: 'PHY', short: 'Ph' },
+  { key: 'dribbling', label: 'DRI', short: 'Dr' }
+]
 
-const normalizedStats = computed(() => {
-  const normalized = {}
-  statKeys.value.forEach(stat => {
-    normalized[stat] = Math.min(100, Math.max(0, props.stats[stat] || 0))
-  })
-  return normalized
-})
+const drawRadarChart = () => {
+  const canvas = canvasRef.value
+  if (!canvas) return
 
-const getAngle = (index) => {
-  return (index * 2 * Math.PI) / statKeys.value.length - Math.PI / 2
-}
+  const ctx = canvas.getContext('2d')
+  const centerX = props.size / 2
+  const centerY = props.size / 2
+  const radius = Math.min(centerX, centerY) - 40
 
-const getAxisPoint = (index) => {
-  const angle = getAngle(index)
-  return {
-    x: centerX.value + radius.value * Math.cos(angle),
-    y: centerY.value + radius.value * Math.sin(angle)
-  }
-}
+  // Clear canvas
+  ctx.clearRect(0, 0, props.size, props.size)
 
-const getLabelPoint = (index) => {
-  const angle = getAngle(index)
-  const labelRadius = radius.value + 15
-  return {
-    x: centerX.value + labelRadius * Math.cos(angle),
-    y: centerY.value + labelRadius * Math.sin(angle) + 3
-  }
-}
+  // Number of stats (sides of polygon)
+  const numSides = statLabels.length
+  const angleStep = (2 * Math.PI) / numSides
 
-const getLabelAnchor = (index) => {
-  const angle = getAngle(index)
-  const x = Math.cos(angle)
-  if (x > 0.1) return 'start'
-  if (x < -0.1) return 'end'
-  return 'middle'
-}
-
-const getStatLabel = (stat) => {
-  const labels = {
-    pace: 'PAC',
-    shooting: 'SHO',
-    passing: 'PAS',
-    defense: 'DEF',
-    physical: 'PHY',
-    dribbling: 'DRI',
-    mental: 'MEN',
-    technical: 'TEC'
-  }
-  return labels[stat] || stat.toUpperCase().slice(0, 3)
-}
-
-const statPoints = computed(() => {
-  return statKeys.value.map((stat, index) => {
-    const angle = getAngle(index)
-    const value = normalizedStats.value[stat]
-    const pointRadius = (value / 100) * radius.value
-    return {
-      x: centerX.value + pointRadius * Math.cos(angle),
-      y: centerY.value + pointRadius * Math.sin(angle)
+  // Draw grid lines (concentric polygons)
+  ctx.strokeStyle = props.gridColor
+  ctx.lineWidth = 1
+  
+  for (let level = 1; level <= 5; level++) {
+    const levelRadius = (radius * level) / 5
+    ctx.beginPath()
+    
+    for (let i = 0; i < numSides; i++) {
+      const angle = i * angleStep - Math.PI / 2
+      const x = centerX + levelRadius * Math.cos(angle)
+      const y = centerY + levelRadius * Math.sin(angle)
+      
+      if (i === 0) {
+        ctx.moveTo(x, y)
+      } else {
+        ctx.lineTo(x, y)
+      }
     }
-  })
+    
+    ctx.closePath()
+    ctx.stroke()
+  }
+
+  // Draw axis lines
+  ctx.strokeStyle = props.gridColor
+  ctx.lineWidth = 1
+  
+  for (let i = 0; i < numSides; i++) {
+    const angle = i * angleStep - Math.PI / 2
+    const x = centerX + radius * Math.cos(angle)
+    const y = centerY + radius * Math.sin(angle)
+    
+    ctx.beginPath()
+    ctx.moveTo(centerX, centerY)
+    ctx.lineTo(x, y)
+    ctx.stroke()
+  }
+
+  // Draw labels
+  ctx.fillStyle = props.textColor
+  ctx.font = `${Math.max(10, props.size / 20)}px Arial`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  
+  for (let i = 0; i < numSides; i++) {
+    const angle = i * angleStep - Math.PI / 2
+    const labelRadius = radius + 20
+    const x = centerX + labelRadius * Math.cos(angle)
+    const y = centerY + labelRadius * Math.sin(angle)
+    
+    const statInfo = statLabels[i]
+    const label = props.size < 150 ? statInfo.short : statInfo.label
+    ctx.fillText(label, x, y)
+  }
+
+  // Draw data polygon
+  ctx.fillStyle = props.backgroundColor
+  ctx.strokeStyle = props.borderColor
+  ctx.lineWidth = 2
+  ctx.beginPath()
+
+  for (let i = 0; i < numSides; i++) {
+    const statKey = statLabels[i].key
+    const statValue = props.stats[statKey] || 0
+    const normalizedValue = Math.max(0, Math.min(100, statValue)) / 100
+    const statRadius = radius * normalizedValue
+    
+    const angle = i * angleStep - Math.PI / 2
+    const x = centerX + statRadius * Math.cos(angle)
+    const y = centerY + statRadius * Math.sin(angle)
+    
+    if (i === 0) {
+      ctx.moveTo(x, y)
+    } else {
+      ctx.lineTo(x, y)
+    }
+  }
+
+  ctx.closePath()
+  ctx.fill()
+  ctx.stroke()
+
+  // Draw data points
+  ctx.fillStyle = props.borderColor
+  for (let i = 0; i < numSides; i++) {
+    const statKey = statLabels[i].key
+    const statValue = props.stats[statKey] || 0
+    const normalizedValue = Math.max(0, Math.min(100, statValue)) / 100
+    const statRadius = radius * normalizedValue
+    
+    const angle = i * angleStep - Math.PI / 2
+    const x = centerX + statRadius * Math.cos(angle)
+    const y = centerY + statRadius * Math.sin(angle)
+    
+    ctx.beginPath()
+    ctx.arc(x, y, 3, 0, 2 * Math.PI)
+    ctx.fill()
+  }
+
+  // Draw stat values near data points
+  ctx.fillStyle = props.textColor
+  ctx.font = `${Math.max(8, props.size / 25)}px Arial`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  for (let i = 0; i < numSides; i++) {
+    const statKey = statLabels[i].key
+    const statValue = props.stats[statKey] || 0
+    const normalizedValue = Math.max(0, Math.min(100, statValue)) / 100
+    const statRadius = radius * normalizedValue
+    
+    const angle = i * angleStep - Math.PI / 2
+    const x = centerX + statRadius * Math.cos(angle)
+    const y = centerY + statRadius * Math.sin(angle)
+    
+    // Offset text slightly towards center for better readability
+    const textOffsetRadius = Math.max(15, statRadius - 15)
+    const textX = centerX + textOffsetRadius * Math.cos(angle)
+    const textY = centerY + textOffsetRadius * Math.sin(angle)
+    
+    if (statValue > 10) { // Only show values if they're significant
+      ctx.fillText(statValue.toString(), textX, textY)
+    }
+  }
+}
+
+onMounted(() => {
+  drawRadarChart()
 })
 
-const statPolygonPoints = computed(() => {
-  return statPoints.value.map(point => `${point.x},${point.y}`).join(' ')
+watch(() => props.stats, () => {
+  drawRadarChart()
+}, { deep: true })
+
+watch(() => props.size, () => {
+  drawRadarChart()
 })
 </script>
 
 <style scoped>
-.radar-chart {
+.radar-chart-container {
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 100%;
+  height: 100%;
 }
 
-.radar-svg {
-  overflow: visible;
-}
-
-.stat-label {
-  fill: var(--v-theme-on-surface);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-.stat-value {
-  fill: var(--v-theme-primary);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-/* Dark theme adjustments */
-@media (prefers-color-scheme: dark) {
-  .stat-label {
-    fill: #e5e7eb;
-  }
+.radar-canvas {
+  max-width: 100%;
+  max-height: 100%;
 }
 </style>

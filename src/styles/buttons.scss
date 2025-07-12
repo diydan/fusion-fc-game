@@ -39,34 +39,34 @@
 // Color variations with proper shadows
 .v-btn--elevated-3d {
   &.bg-primary {
-    background-color: #003FED !important;
+    background-color: #0078ed !important;
     color: white !important;
     box-shadow:
-      0 4px 0 0 #090979,
-      0 5px 0 0 #090979,
-      0 6px 0 0 #090979,
-      0 7px 0 0 #090979,
-      0 8px 0 0 #090979,
+      0 4px 0 0 #1048ac,
+      0 5px 0 0 #1048ac,
+      0 6px 0 0 #1048ac,
+      0 7px 0 0 #1048ac,
+      0 8px 0 0 #1048ac,
       0 8px 8px rgba(9, 9, 121, 0.4),
       0 8px 16px rgba(9, 9, 121, 0.3) !important;
 
     &:hover:not(:disabled) {
       background-color: #3366FF !important;
       box-shadow:
-        0 6px 0 0 #090979,
-        0 7px 0 0 #090979,
-        0 8px 0 0 #090979,
-        0 9px 0 0 #090979,
-        0 10px 0 0 #090979,
+        0 6px 0 0 #1048ac,
+        0 7px 0 0 #1048ac,
+        0 8px 0 0 #1048ac,
+        0 9px 0 0 #1048ac,
+        0 10px 0 0 #1048ac,
         0 10px 10px rgba(9, 9, 121, 0.4),
         0 10px 20px rgba(9, 9, 121, 0.3) !important;
     }
 
     &:active:not(:disabled) {
       box-shadow:
-        0 2px 0 0 #090979,
-        0 3px 0 0 #090979,
-        0 4px 0 0 #090979,
+        0 2px 0 0 #1048ac,
+        0 3px 0 0 #1048ac,
+        0 4px 0 0 #1048ac,
         0 4px 4px rgba(9, 9, 121, 0.4),
         0 4px 8px rgba(9, 9, 121, 0.3) !important;
     }

@@ -546,24 +546,23 @@ const generateMorePlayers = async () => {
 // Generate random players
 const generateRandomPlayers = (count = 50) => {
   const names = [
-    'Alex Thunder', 'Marco Silva', 'Diego Santos', 'James Rodriguez', 'Kevin De Bruyne',
-    'Luka Modric', 'Mason Mount', 'Phil Foden', 'Jadon Sancho', 'Marcus Rashford',
-    'Vinicius Jr', 'Pedri Gonzalez', 'Gavi Paez', 'Jude Bellingham', 'Eduardo Camavinga',
-    'Federico Chiesa', 'Lorenzo Pellegrini', 'Nicolo Barella', 'Alessandro Bastoni',
-    'Rafael Leao', 'Victor Osimhen', 'Erling Haaland', 'Kylian Mbappe', 'Florian Wirtz',
-    'Ryan Gravenberch', 'Cody Gakpo', 'Darwin Nunez', 'Luis Diaz', 'Gabriel Jesus',
-    'Bukayo Saka', 'Martin Odegaard', 'Declan Rice', 'Mason Mount', 'Reece James',
-    'Trent Alexander-Arnold', 'Virgil van Dijk', 'Sadio Mane', 'Mohamed Salah',
-    'Robert Lewandowski', 'Thomas Muller', 'Joshua Kimmich', 'Leon Goretzka',
-    'Alphonso Davies', 'Dayot Upamecano', 'Kingsley Coman', 'Serge Gnabry',
-    'Timo Werner', 'Kai Havertz', 'Christopher Nkunku', 'Dani Olmo'
+    'Axel Striker-7', 'Volt Titan', 'Neon Blitz', 'Cypher Prime', 'Quantum Dash',
+    'Turbo Magnus', 'Blaze Vector', 'Circuit Runner', 'Pixel Storm', 'Chrome Lightning',
+    'Nova Surge', 'Dynamo X-99', 'Fusion Core', 'Binary Bolt', 'Nexus Phantom',
+    'Plasma Viper', 'Sonic Razor', 'Matrix Guardian', 'Digital Striker', 'Photon Arrow',
+    'Cyber Hawk', 'Titanium Rex', 'Pulse Driver', 'Quantum Ghost', 'Neon Phantom',
+    'Vector Prime', 'Circuit Breaker', 'Pixel Warrior', 'Chrome Sentinel', 'Nova Runner',
+    'Dynamo Blaze', 'Fusion Strike', 'Binary Ghost', 'Nexus Storm', 'Plasma Runner',
+    'Sonic Wing', 'Matrix Blade', 'Digital Thunder', 'Photon Striker', 'Cyber Phoenix',
+    'Titanium Wolf', 'Pulse Shadow', 'Quantum Bolt', 'Neon Dragon', 'Vector Storm',
+    'Circuit Master', 'Pixel Knight', 'Chrome Falcon', 'Nova Blaster', 'Dynamo Surge'
   ]
 
   const nationalities = [
-    'England', 'Spain', 'France', 'Germany', 'Italy', 'Brazil', 'Argentina', 
-    'Portugal', 'Netherlands', 'Belgium', 'Croatia', 'Poland', 'Denmark',
-    'Sweden', 'Norway', 'Austria', 'Switzerland', 'Czech Republic', 'Mexico',
-    'Colombia', 'Uruguay', 'Chile', 'Ecuador', 'Peru', 'Japan', 'South Korea'
+    'Neo Tokyo', 'Cyber City', 'Circuit Bay', 'Quantum Springs', 'Digital Harbor',
+    'Neon Heights', 'Binary Falls', 'Pixel Park', 'Chrome Valley', 'Fusion Town',
+    'Nexus City', 'Photon Beach', 'Plasma Ridge', 'Sonic Hills', 'Matrix Metropolis',
+    'Vector Valley', 'Titanium Territory', 'Nova Nation', 'Dynamo District', 'Pulse Province'
   ]
 
   const positions = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST']

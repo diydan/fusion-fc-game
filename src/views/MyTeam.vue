@@ -161,18 +161,16 @@
           <v-card-title class="d-flex align-center justify-space-between">
             <div class="d-flex align-center">
               <v-icon class="me-2">mdi-account-group</v-icon>
-              Current Squad
+              Squad
             </div>
             <v-btn
-              v-if="selectedTeam"
               color="primary"
               variant="outlined"
-              prepend-icon="mdi-account-search"
-              @click="scoutPlayers"
-              :loading="scouting"
+              prepend-icon="mdi-account-plus"
+              @click="goToRecruitPage"
               size="small"
             >
-              Scout Players
+              Recruit
             </v-btn>
           </v-card-title>
           <v-card-text>
@@ -274,8 +272,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
+const router = useRouter()
 const userStore = useUserStore()
 
 // State
@@ -487,6 +487,10 @@ const sendToJunkYard = (player) => {
       // TODO: Add to junk yard tracking/statistics
     }
   }
+}
+
+const goToRecruitPage = () => {
+  router.push('/recruit')
 }
 
 // Lifecycle

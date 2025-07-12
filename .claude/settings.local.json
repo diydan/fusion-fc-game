@@ -22,7 +22,8 @@
       "Bash(true)",
       "Bash(open /Users/Dan/Code/fusion-fc-game/test-logo-endpoint.html)",
       "Bash(curl:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(touch:*)"
     ],
     "deny": []
   }

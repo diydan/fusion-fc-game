@@ -1,23 +1,18 @@
 <template>
-  <div>
-    <v-row>
-      <v-col cols="12">
-        <h1 class="text-h4 text-md-h3 font-weight-bold mb-6">Tokens & PowerUps</h1>
-        <p class="text-body-1 text-medium-emphasis mb-8">
-          View your Chiliz wallet tokens and available game PowerUps
-        </p>
-      </v-col>
-    </v-row>
+  <div class="page-background">
+    <v-container fluid class="pa-4">
+    <div class="page-header mb-8">
+      <h1 class="page-title">Tokens & PowerUps</h1>
+      <p class="page-subtitle">View your Chiliz wallet tokens and available game PowerUps</p>
+    </div>
 
     <!-- Wallet Connection Status -->
-    <v-row>
-      <v-col cols="12">
-        <v-card class="mb-6">
-          <v-card-title>
-            <v-icon start>mdi-ethereum</v-icon>
-            Wallet Status
-          </v-card-title>
-          <v-card-text>
+    <v-card class="unified-card mb-6">
+      <v-card-title class="card-title">
+        <v-icon start>mdi-wallet</v-icon>
+        Wallet Status
+      </v-card-title>
+      <v-card-text>
             <div v-if="walletConnected" class="d-flex align-center">
               <v-chip color="success" variant="tonal" class="me-3">
                 <v-icon start size="small">mdi-check-circle</v-icon>
@@ -32,40 +27,41 @@
                 class="ml-2"
               />
               <v-spacer />
-              <GameButton
+              <v-btn
                 color="primary"
                 size="small"
-                label="Refresh"
                 prepend-icon="mdi-refresh"
                 @click="refreshTokens"
                 :loading="loading"
-                click-sound="pop"
-              />
+              >
+                Refresh
+              </v-btn>
             </div>
             <div v-else class="d-flex align-center">
               <v-chip color="warning" variant="tonal" class="me-3">
                 <v-icon start size="small">mdi-alert-circle</v-icon>
                 Not Connected
               </v-chip>
-              <GameButton
+              <v-btn
                 color="primary"
-                label="Connect Wallet"
                 prepend-icon="mdi-wallet-plus"
                 @click="connectWallet"
                 :loading="connecting"
-                click-sound="coin"
-              />
+              >
+                Connect Wallet
+              </v-btn>
             </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+      </v-card-text>
+    </v-card>
 
     <!-- Network Info -->
-    <v-row v-if="walletConnected">
+    <v-row v-if="walletConnected" class="mb-6">
       <v-col cols="12" md="6">
-        <v-card class="mb-6">
-          <v-card-title>Network Information</v-card-title>
+        <v-card class="unified-card">
+          <v-card-title class="card-title">
+            <v-icon start>mdi-web</v-icon>
+            Network Information
+          </v-card-title>
           <v-card-text>
             <v-list density="compact">
               <v-list-item>
@@ -87,8 +83,11 @@
         </v-card>
       </v-col>
       <v-col cols="12" md="6">
-        <v-card class="mb-6">
-          <v-card-title>Quick Stats</v-card-title>
+        <v-card class="unified-card">
+          <v-card-title class="card-title">
+            <v-icon start>mdi-chart-line</v-icon>
+            Quick Stats
+          </v-card-title>
           <v-card-text>
             <v-list density="compact">
               <v-list-item>
@@ -112,18 +111,16 @@
     </v-row>
 
     <!-- Tokens Table -->
-    <v-row v-if="walletConnected">
-      <v-col cols="12">
-        <v-card>
-          <v-card-title class="d-flex align-center">
-            <v-icon start>mdi-coins</v-icon>
-            Token Holdings
-            <v-spacer />
-            <v-chip v-if="loading" color="info" variant="tonal" size="small">
-              <v-icon start size="x-small">mdi-loading</v-icon>
-              Loading...
-            </v-chip>
-          </v-card-title>
+    <v-card v-if="walletConnected" class="unified-card mb-6">
+      <v-card-title class="card-title">
+        <v-icon start>mdi-coins</v-icon>
+        Token Holdings
+        <v-spacer />
+        <v-chip v-if="loading" color="info" variant="tonal" size="small">
+          <v-icon start size="x-small">mdi-loading</v-icon>
+          Loading...
+        </v-chip>
+      </v-card-title>
           <v-card-text>
             <v-data-table
               :headers="tokenHeaders"
@@ -177,19 +174,15 @@
                 </div>
               </template>
             </v-data-table>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+      </v-card-text>
+    </v-card>
 
     <!-- PowerUps Table -->
-    <v-row v-if="walletConnected" class="mt-6">
-      <v-col cols="12">
-        <v-card>
-          <v-card-title class="d-flex align-center">
-            <v-icon start>mdi-lightning-bolt</v-icon>
-            Game PowerUps
-          </v-card-title>
+    <v-card v-if="walletConnected" class="unified-card mb-6">
+      <v-card-title class="card-title">
+        <v-icon start>mdi-lightning-bolt</v-icon>
+        Game PowerUps
+      </v-card-title>
           <v-card-text>
             <v-data-table
               :headers="powerUpHeaders"
@@ -228,14 +221,14 @@
               </template>
 
               <template v-slot:item.actions="{ item }">
-                <GameButton
+                <v-btn
                   v-if="item.status === 'available'"
                   color="primary"
                   size="small"
-                  label="Activate"
                   @click="activatePowerUp(item)"
-                  click-sound="success"
-                />
+                >
+                  Activate
+                </v-btn>
                 <v-btn
                   v-else
                   icon
@@ -257,42 +250,204 @@
                 </div>
               </template>
             </v-data-table>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+      </v-card-text>
+    </v-card>
 
     <!-- Teams Matrix Section -->
-    <v-row class="mt-6">
-      <v-col cols="12">
-        <v-card class="glass-card">
-          <v-card-title>
-            <h2 class="text-h5 mb-0">⚽ Teams Matrix</h2>
-          </v-card-title>
+    <v-card class="unified-card mb-6">
+      <v-card-title class="card-title">
+        <v-icon start>mdi-soccer</v-icon>
+        Teams Matrix
+      </v-card-title>
           <v-card-text>
-            <!-- Simple teams matrix table - placeholder for full implementation -->
-            <v-alert type="info" variant="tonal" class="mb-4">
-              <template v-slot:prepend>
-                <v-icon>mdi-information</v-icon>
-              </template>
-              Teams Matrix showing stats and bonus tokens coming soon! View your current tokens above.
-            </v-alert>
-            
-            <!-- Sample teams display -->
-            <v-row>
-              <v-col cols="12" md="6" lg="3" v-for="team in sampleTeams" :key="team.token">
-                <v-card variant="outlined" class="text-center pa-4">
-                  <v-avatar size="48" class="mb-2">
-                    <v-img :src="team.logo" :alt="team.name"></v-img>
-                  </v-avatar>
-                  <h4 class="text-subtitle-1 mb-1">{{ team.name }}</h4>
-                  <v-chip size="small" color="primary" variant="outlined" class="mb-2">
-                    {{ team.token }}
-                  </v-chip>
-                  <p class="text-caption text-medium-emphasis">Overall: {{ team.overall }}</p>
-                </v-card>
-              </v-col>
-            </v-row>
+            <v-tabs v-model="matrixView" centered grow class="mb-6 view-toggle">
+              <v-tab value="table" class="view-btn">📊 Table View</v-tab>
+              <v-tab value="chart" class="view-btn">📈 Chart View</v-tab>
+            </v-tabs>
+
+            <v-window v-model="matrixView">
+              <!-- Table View -->
+              <v-window-item value="table">
+                <v-row class="controls mb-4">
+                  <v-col cols="12" md="4">
+                    <v-text-field
+                      v-model="teamFilter"
+                      label="Filter by Team"
+                      placeholder="Type team name..."
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      clearable
+                    ></v-text-field>
+                  </v-col>
+                  <v-col cols="12" md="4">
+                    <v-select
+                      v-model="countryFilter"
+                      :items="countryOptions"
+                      label="Filter by Country"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      clearable
+                    ></v-select>
+                  </v-col>
+                  <v-col cols="12" md="4">
+                    <v-select
+                      v-model="attributeSort"
+                      :items="sortOptions"
+                      item-title="title"
+                      item-value="value"
+                      label="Sort by Attribute"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      clearable
+                    ></v-select>
+                  </v-col>
+                </v-row>
+
+                <div class="legend mb-4">
+                  <div v-for="legend in ratingLegend" :key="legend.label" class="legend-item">
+                    <div class="legend-color" :class="legend.class"></div>
+                    <span>{{ legend.label }}</span>
+                  </div>
+                </div>
+
+                <div class="table-container">
+                  <v-table fixed-header class="teams-table">
+                    <thead>
+                      <tr>
+                        <th class="team-header sortable" @click="handleSort('team')">
+                          Team
+                          <span class="sort-indicator">
+                            <v-icon v-if="sortColumn === 'team' && sortDirection === 'asc'" size="x-small">mdi-chevron-up</v-icon>
+                            <v-icon v-else-if="sortColumn === 'team' && sortDirection === 'desc'" size="x-small">mdi-chevron-down</v-icon>
+                          </span>
+                        </th>
+                        <th class="country-header sortable" @click="handleSort('country')">
+                          Country
+                          <span class="sort-indicator">
+                            <v-icon v-if="sortColumn === 'country' && sortDirection === 'asc'" size="x-small">mdi-chevron-up</v-icon>
+                            <v-icon v-else-if="sortColumn === 'country' && sortDirection === 'desc'" size="x-small">mdi-chevron-down</v-icon>
+                          </span>
+                        </th>
+                        <th class="sortable" @click="handleSort('overall')">
+                          Overall
+                          <span class="sort-indicator">
+                            <v-icon v-if="sortColumn === 'overall' && sortDirection === 'asc'" size="x-small">mdi-chevron-up</v-icon>
+                            <v-icon v-else-if="sortColumn === 'overall' && sortDirection === 'desc'" size="x-small">mdi-chevron-down</v-icon>
+                          </span>
+                        </th>
+                        <th class="category-header"><span>Core Attributes</span></th>
+                        <th class="sortable" @click="handleSort('attack')">
+                          Attack
+                          <span class="sort-indicator">
+                            <v-icon v-if="sortColumn === 'attack' && sortDirection === 'asc'" size="x-small">mdi-chevron-up</v-icon>
+                            <v-icon v-else-if="sortColumn === 'attack' && sortDirection === 'desc'" size="x-small">mdi-chevron-down</v-icon>
+                          </span>
+                        </th>
+                        <th class="sortable" @click="handleSort('speed')">
+                          Speed
+                          <span class="sort-indicator">
+                            <v-icon v-if="sortColumn === 'speed' && sortDirection === 'asc'" size="x-small">mdi-chevron-up</v-icon>
+                            <v-icon v-else-if="sortColumn === 'speed' && sortDirection === 'desc'" size="x-small">mdi-chevron-down</v-icon>
+                          </span>
+                        </th>
+                        <th class="sortable" @click="handleSort('skill')">
+                          Skill
+                          <span class="sort-indicator">
+                            <v-icon v-if="sortColumn === 'skill' && sortDirection === 'asc'" size="x-small">mdi-chevron-up</v-icon>
+                            <v-icon v-else-if="sortColumn === 'skill' && sortDirection === 'desc'" size="x-small">mdi-chevron-down</v-icon>
+                          </span>
+                        </th>
+                        <th class="sortable" @click="handleSort('defense')">
+                          Defense
+                          <span class="sort-indicator">
+                            <v-icon v-if="sortColumn === 'defense' && sortDirection === 'asc'" size="x-small">mdi-chevron-up</v-icon>
+                            <v-icon v-else-if="sortColumn === 'defense' && sortDirection === 'desc'" size="x-small">mdi-chevron-down</v-icon>
+                          </span>
+                        </th>
+                        <th class="sortable" @click="handleSort('physical')">
+                          Physical
+                          <span class="sort-indicator">
+                            <v-icon v-if="sortColumn === 'physical' && sortDirection === 'asc'" size="x-small">mdi-chevron-up</v-icon>
+                            <v-icon v-else-if="sortColumn === 'physical' && sortDirection === 'desc'" size="x-small">mdi-chevron-down</v-icon>
+                          </span>
+                        </th>
+                        <th class="sortable" @click="handleSort('mental')">
+                          Mental
+                          <span class="sort-indicator">
+                            <v-icon v-if="sortColumn === 'mental' && sortDirection === 'asc'" size="x-small">mdi-chevron-up</v-icon>
+                            <v-icon v-else-if="sortColumn === 'mental' && sortDirection === 'desc'" size="x-small">mdi-chevron-down</v-icon>
+                          </span>
+                        </th>
+                        <th class="sortable" @click="handleSort('aggression')">
+                          Aggression
+                          <span class="sort-indicator">
+                            <v-icon v-if="sortColumn === 'aggression' && sortDirection === 'asc'" size="x-small">mdi-chevron-up</v-icon>
+                            <v-icon v-else-if="sortColumn === 'aggression' && sortDirection === 'desc'" size="x-small">mdi-chevron-down</v-icon>
+                          </span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="team in filteredAndSortedTeams" :key="team.token">
+                        <td class="team-cell" @click="showTeamDetails(team)">
+                          <div class="team-info">
+                            <v-avatar size="32">
+                              <v-img :src="team.logo" :alt="team.team"></v-img>
+                            </v-avatar>
+                            <div class="team-details">
+                              <div class="team-name">{{ team.team }}</div>
+                              <div class="team-meta">
+                                <span>{{ team.token }}</span>
+                                <span class="mx-1">•</span>
+                                <span>{{ team.league }}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td class="country-cell">
+                          <v-img :src="team.flag" :alt="team.country" class="country-flag-large"></v-img>
+                        </td>
+                        <td><span class="rating" :class="getRatingClass(team.overall)">{{ team.overall }}</span></td>
+                        <td class="category-separator"></td>
+                        <td><span class="rating" :class="getRatingClass(team.attack)">{{ team.attack }}</span></td>
+                        <td><span class="rating" :class="getRatingClass(team.speed)">{{ team.speed }}</span></td>
+                        <td><span class="rating" :class="getRatingClass(team.skill)">{{ team.skill }}</span></td>
+                        <td><span class="rating" :class="getRatingClass(team.defense)">{{ team.defense }}</span></td>
+                        <td><span class="rating" :class="getRatingClass(team.physical)">{{ team.physical }}</span></td>
+                        <td><span class="rating" :class="getRatingClass(team.mental)">{{ team.mental }}</span></td>
+                        <td><span class="rating" :class="getRatingClass(team.aggression)">{{ team.aggression }}</span></td>
+                      </tr>
+                    </tbody>
+                  </v-table>
+                </div>
+              </v-window-item>
+
+              <!-- Chart View -->
+              <v-window-item value="chart">
+                <v-row class="chart-controls mb-4">
+                  <v-col cols="12" md="6">
+                    <v-select
+                      v-model="chartTeamFilter"
+                      :items="chartFilterOptions"
+                      item-title="title"
+                      item-value="value"
+                      label="Show Teams"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                    ></v-select>
+                  </v-col>
+                </v-row>
+                <div class="chart-container">
+                  <h3 class="chart-title">Team Comparison - 6 Core Dimensions</h3>
+                  <canvas ref="teamsRadarChartCanvas" width="800" height="600"></canvas>
+                  <div ref="chartLegendContainer" class="chart-legend"></div>
+                </div>
+              </v-window-item>
+            </v-window>
             
             <!-- Bonus Tokens Section -->
             <v-card class="mt-6" variant="outlined">
@@ -350,9 +505,7 @@
               </v-card-text>
             </v-card>
           </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+    </v-card>
 
     <!-- Token Details Dialog -->
     <v-dialog v-model="tokenDialog" max-width="500">
@@ -384,12 +537,12 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <GameButton
+          <v-btn
             variant="text"
-            label="Close"
             @click="tokenDialog = false"
-            click-sound="pop"
-          />
+          >
+            Close
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -411,6 +564,7 @@
         </v-btn>
       </template>
     </v-snackbar>
+    </v-container>
   </div>
 </template>
 
@@ -446,33 +600,157 @@ const snackbar = ref({
   color: 'success'
 })
 
+// Teams Matrix state
+const matrixView = ref('table')
+const teamFilter = ref('')
+const countryFilter = ref(null)
+const attributeSort = ref(null)
+const sortColumn = ref(null)
+const sortDirection = ref('desc')
+const chartTeamFilter = ref('top10')
+const teamsRadarChartCanvas = ref(null)
+const chartLegendContainer = ref(null)
+const selectedTeam = ref(null)
+const isModalVisible = ref(false)
+
 // Sample teams data for preview
 const sampleTeams = ref([
   {
-    name: 'Paris Saint-Germain',
+    team: 'Paris Saint-Germain',
     token: '$PSG',
+    country: 'France',
+    league: 'Ligue 1',
     logo: 'https://www.socios.com/wp-content/uploads/2024/01/Token-PSG.svg',
-    overall: 90
+    flag: 'https://flagicons.lipis.dev/flags/4x3/fr.svg',
+    overall: 90,
+    attack: 89,
+    speed: 87,
+    skill: 89,
+    defense: 68,
+    physical: 81,
+    mental: 89,
+    aggression: 84
   },
   {
-    name: 'FC Barcelona',
+    team: 'FC Barcelona',
     token: '$BAR',
+    country: 'Spain',
+    league: 'La Liga',
     logo: 'https://www.socios.com/wp-content/uploads/2024/01/Token-FCB.svg',
-    overall: 89
+    flag: 'https://flagicons.lipis.dev/flags/4x3/es.svg',
+    overall: 89,
+    attack: 87,
+    speed: 87,
+    skill: 90,
+    defense: 73,
+    physical: 82,
+    mental: 90,
+    aggression: 75
   },
   {
-    name: 'Manchester City',
+    team: 'Manchester City',
     token: '$CITY',
+    country: 'England',
+    league: 'Premier League',
     logo: 'https://www.socios.com/wp-content/uploads/2024/01/Token-CITY.svg',
-    overall: 88
+    flag: 'https://flagicons.lipis.dev/flags/4x3/gb-eng.svg',
+    overall: 88,
+    attack: 89,
+    speed: 86,
+    skill: 91,
+    defense: 85,
+    physical: 84,
+    mental: 90,
+    aggression: 80
   },
   {
-    name: 'Juventus',
+    team: 'Juventus',
     token: '$JUV',
+    country: 'Italy',
+    league: 'Serie A',
     logo: 'https://www.socios.com/wp-content/uploads/2024/01/Token-JUV.svg',
-    overall: 83
+    flag: 'https://flagicons.lipis.dev/flags/4x3/it.svg',
+    overall: 83,
+    attack: 81,
+    speed: 75,
+    skill: 81,
+    defense: 87,
+    physical: 82,
+    mental: 84,
+    aggression: 84
   }
 ])
+
+// Teams Matrix computed and options
+const filteredAndSortedTeams = computed(() => {
+  let data = sampleTeams.value
+
+  if (teamFilter.value) {
+    const filter = teamFilter.value.toLowerCase()
+    data = data.filter(team => 
+      team.team.toLowerCase().includes(filter) || 
+      team.token.toLowerCase().includes(filter)
+    )
+  }
+
+  if (countryFilter.value) {
+    data = data.filter(team => team.country === countryFilter.value)
+  }
+
+  if (sortColumn.value) {
+    data = [...data].sort((a, b) => {
+      const aVal = a[sortColumn.value]
+      const bVal = b[sortColumn.value]
+      
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return sortDirection.value === 'asc' 
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal)
+      }
+      
+      return sortDirection.value === 'asc' 
+        ? aVal - bVal
+        : bVal - aVal
+    })
+  } else if (attributeSort.value) {
+    data = [...data].sort((a, b) => b[attributeSort.value] - a[attributeSort.value])
+  }
+
+  return data
+})
+
+const countryOptions = computed(() => {
+  const countries = [...new Set(sampleTeams.value.map(t => t.country))]
+  return countries.sort()
+})
+
+const sortOptions = [
+  { title: 'Overall Rating', value: 'overall' },
+  { title: 'Attack', value: 'attack' },
+  { title: 'Speed', value: 'speed' },
+  { title: 'Skill', value: 'skill' },
+  { title: 'Defense', value: 'defense' },
+  { title: 'Physical', value: 'physical' },
+  { title: 'Mental', value: 'mental' },
+  { title: 'Aggression', value: 'aggression' }
+]
+
+const chartFilterOptions = [
+  { title: 'All Teams', value: 'all' },
+  { title: 'Top 10 Teams', value: 'top10' },
+  { title: 'Elite Teams (85+)', value: 'elite' },
+  { title: 'English Teams', value: 'england' },
+  { title: 'Spanish Teams', value: 'spain' },
+  { title: 'Italian Teams', value: 'italy' }
+]
+
+const ratingLegend = [
+  { label: '90-100 (Elite)', class: 'rating-90-100' },
+  { label: '80-89 (Very Good)', class: 'rating-80-89' },
+  { label: '70-79 (Good)', class: 'rating-70-79' },
+  { label: '60-69 (Average)', class: 'rating-60-69' },
+  { label: '50-59 (Below Average)', class: 'rating-50-59' }
+]
 
 // Computed
 const walletConnected = computed(() => {
@@ -655,6 +933,29 @@ const showSnackbar = (text, color = 'success') => {
   snackbar.value = { show: true, text, color }
 }
 
+// Teams Matrix methods
+const getRatingClass = (rating) => {
+  if (rating >= 90) return 'rating-90-100'
+  if (rating >= 80) return 'rating-80-89'
+  if (rating >= 70) return 'rating-70-79'
+  if (rating >= 60) return 'rating-60-69'
+  return 'rating-50-59'
+}
+
+const handleSort = (column) => {
+  if (sortColumn.value === column) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortColumn.value = column
+    sortDirection.value = 'desc'
+  }
+}
+
+const showTeamDetails = (team) => {
+  selectedTeam.value = team
+  isModalVisible.value = true
+}
+
 // Lifecycle
 onMounted(async () => {
   // Set up wallet event listeners
@@ -724,50 +1025,241 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.font-mono {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 0.8em;
-}
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border-radius: 15px !important;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
-  backdrop-filter: blur(10px);
-}
-
-/* Bonus Tokens Section */
-.bonus-card {
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-  padding: 24px;
+.page-header {
   text-align: center;
-  border-radius: 15px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  padding: 2rem 0;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+  font-size: 1.125rem;
+  color: #ffffff;
+  margin: 0;
+}
+
+/* Unified Card Design */
+.unified-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: box-shadow 0.2s ease;
+}
+
+.unified-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #ffffff;
+  padding: 1.5rem 1.5rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* Simplified Buttons */
+.v-btn {
+  text-transform: none;
+  font-weight: 500;
+  border-radius: 8px;
+}
+
+/* Status Chips */
+.v-chip {
+  border-radius: 6px;
+}
+
+/* Data Tables */
+.v-data-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.v-data-table tbody tr td {
+  color: #ffffff;
+}
+
+.v-data-table .v-data-table__tr:hover {
+  background-color: #f9fafb !important;
+}
+
+/* List Items */
+.v-list-item-title {
+  color: #ffffff !important;
+}
+
+.v-list-item-subtitle {
+  color: #ffffff !important;
+}
+
+/* Bonus Cards */
+.bonus-card {
+  background: white;
+  padding: 1.5rem;
+  text-align: center;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .bonus-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-.bonus-icon {
-  font-size: 3em;
-  margin-bottom: 12px;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .bonus-card h4 {
-  color: #2c3e50;
-  font-size: 1.3em;
-  margin-bottom: 8px;
+  color: #ffffff;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
 }
 
 .bonus-value {
-  font-size: 1.1em;
+  font-size: 1rem;
   font-weight: 600;
-  color: #27ae60;
-  padding: 8px;
-  background: rgba(39, 174, 96, 0.1);
+  color: #059669;
+  padding: 0.5rem 1rem;
+  background: #ecfdf5;
+  border-radius: 6px;
+  border: 1px solid #d1fae5;
+}
+
+.font-mono {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 0.875rem;
+}
+
+/* Teams Matrix Styles */
+.view-toggle .v-tab {
+  text-transform: none;
+  font-weight: 500;
   border-radius: 8px;
+  margin: 0 4px;
+}
+
+.table-container {
+  overflow-x: auto;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.teams-table {
+  min-width: 1000px;
+}
+
+.teams-table th {
+  background: #f9fafb;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-bottom: 2px solid #e5e7eb;
+  padding: 1rem 0.75rem;
+}
+
+.teams-table th.sortable {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.teams-table th.sortable:hover {
+  background: #f3f4f6;
+}
+
+.teams-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.teams-table tr:hover td {
+  background-color: #f9fafb;
+}
+
+.team-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.team-details {
+  flex: 1;
+}
+
+.team-name {
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 0.25rem;
+}
+
+.team-meta {
+  font-size: 0.875rem;
+  color: #ffffff;
+}
+
+.country-flag-large {
+  width: 24px;
+  height: 18px;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.rating {
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: white;
+}
+
+.rating-90-100 { background: #059669; }
+.rating-80-89 { background: #d97706; }
+.rating-70-79 { background: #dc6803; }
+.rating-60-69 { background: #dc2626; }
+.rating-50-59 { background: #6b7280; }
+
+.legend {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #ffffff;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+}
+
+.chart-container {
+  background: #f9fafb;
+  padding: 2rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  border: 1px solid #e5e7eb;
+}
+
+.chart-title {
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-align: center;
 }
 </style>
