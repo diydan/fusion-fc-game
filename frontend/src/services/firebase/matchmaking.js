@@ -13,6 +13,7 @@ import {
   getDoc,
   getDocs,
   runTransaction,
+  increment,
   Timestamp
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';

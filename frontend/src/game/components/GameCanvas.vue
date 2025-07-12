@@ -125,6 +125,7 @@ const playFoulSound = () => playAudioFile('/audio/sim/foul.mp3')
 // Game engine
 let gameEngine = null
 let animationId = null
+let lastTime = 0
 
 // Computed
 const formattedTime = computed(() => {
@@ -179,17 +180,26 @@ const initializeGame = () => {
 
 // Game loop
 let frameCount = 0
-const gameLoop = () => {
-  if (!isPlaying.value || !gameEngine) return
+const gameLoop = (currentTime) => {
+  if (!gameEngine) return
   
   frameCount++
+  
+  // Initialize lastTime on first frame
+  if (lastTime === 0) {
+    lastTime = currentTime
+  }
+  
+  const deltaTime = currentTime - lastTime
+  lastTime = currentTime
   
   // Debug: Check if update is being called (only first few frames)
   if (frameCount < 5) {
     console.log(`Game loop frame ${frameCount}, isPlaying:`, isPlaying.value)
   }
   
-  gameEngine.update(1/60 * gameSpeed.value)
+  // Pass the current timestamp to the engine (original uses absolute time)
+  gameEngine.update(currentTime)
   
   // Update UI state
   const state = gameEngine.getGameState()
@@ -218,7 +228,10 @@ const gameLoop = () => {
   }
   
   render()
-  animationId = requestAnimationFrame(gameLoop)
+  
+  if (state.isPlaying) {
+    animationId = requestAnimationFrame(gameLoop)
+  }
 }
 
 // Render
@@ -361,27 +374,30 @@ const togglePlayPause = () => {
     gameStarted.value = true
   }
   
-  isPlaying.value = !isPlaying.value
+  if (!gameEngine) return
   
-  if (isPlaying.value && gameEngine) {
+  if (isPlaying.value) {
+    console.log('Pausing game...')
+    gameEngine.pause()
+    isPlaying.value = false
+    if (animationId) {
+      cancelAnimationFrame(animationId)
+      animationId = null
+    }
+  } else {
     console.log('Starting game...')
     // Reset frame counter
     frameCount = 0
     
-    // Make sure the game engine is set to playing
-    const state = gameEngine.getGameState()
-    state.isPlaying = true
+    // Call the engine's play method
+    gameEngine.play()
+    isPlaying.value = true
     
     // Start the game loop
-    gameLoop()
+    lastTime = performance.now()
+    animationId = requestAnimationFrame(gameLoop)
     
     if (soundEnabled.value) playWhistleSound()
-  } else {
-    console.log('Pausing game...')
-    if (gameEngine) {
-      const state = gameEngine.getGameState()
-      state.isPlaying = false
-    }
   }
 }
 
@@ -395,15 +411,20 @@ const resetGame = () => {
   }
   
   isPlaying.value = false
-  gameStarted.value = false
   homeScore.value = 0
   awayScore.value = 0
   gameTime.value = 0
   gameOver.value = false
   gameStatus.value = ''
-  gameEngine = null
+  frameCount = 0
+  lastTime = 0
   
-  // Re-render the empty field
+  // Reset the game engine instead of destroying it
+  if (gameEngine) {
+    gameEngine.reset()
+  }
+  
+  // Re-render the reset field
   render()
 }
 
@@ -449,7 +470,10 @@ watch(gameSpeed, (newSpeed) => {
 // Lifecycle
 onMounted(() => {
   console.log('GameCanvas mounted')
-  // Just render the empty field
+  // Initialize the game engine on mount so it's ready
+  initializeGame()
+  gameStarted.value = true
+  // Render the initial state
   render()
 })
 

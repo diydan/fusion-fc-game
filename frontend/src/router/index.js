@@ -173,6 +173,24 @@ const router = createRouter({
       beforeEnter: requireAuth
     },
     {
+      path: '/matchmaking',
+      name: 'matchmaking',
+      component: () => import('@/components/multiplayer/WaitingRoom.vue'),
+      beforeEnter: requireAuth
+    },
+    {
+      path: '/game/h2h/:matchId',
+      name: 'h2h-game',
+      component: () => import('@/views/H2HGameView.vue'),
+      beforeEnter: requireAuth
+    },
+    {
+      path: '/game/spectate/:matchId',
+      name: 'spectate-game',
+      component: () => import('@/views/SpectateView.vue'),
+      beforeEnter: requireAuth
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('@/views/Profile.vue'),

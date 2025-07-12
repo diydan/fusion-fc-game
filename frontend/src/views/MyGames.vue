@@ -6,13 +6,13 @@
       </v-col>
     </v-row>
 
-    <!-- Quick Play Section -->
+    <!-- Game Mode Section -->
     <v-row>
-      <v-col cols="12" md="6">
+      <v-col cols="12" md="4">
         <v-card>
           <v-card-title>
             <v-icon class="mr-2">mdi-soccer</v-icon>
-            Quick Play
+            Quick Play vs AI
           </v-card-title>
           <v-card-text>
             <p class="text-body-2 mb-4">
@@ -25,13 +25,36 @@
               @click="startQuickMatch"
             >
               <v-icon start>mdi-play</v-icon>
-              Play Now
+              Play vs AI
             </v-btn>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <v-col cols="12" md="6">
+      <v-col cols="12" md="4">
+        <v-card>
+          <v-card-title>
+            <v-icon class="mr-2">mdi-sword-cross</v-icon>
+            H2H Multiplayer
+          </v-card-title>
+          <v-card-text>
+            <p class="text-body-2 mb-4">
+              Challenge real players in head-to-head matches and climb the rankings.
+            </p>
+            <v-btn
+              color="success"
+              block
+              size="large"
+              @click="$router.push('/matchmaking')"
+            >
+              <v-icon start>mdi-account-multiple</v-icon>
+              Find Match
+            </v-btn>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" md="4">
         <v-card>
           <v-card-title>
             <v-icon class="mr-2">mdi-trophy</v-icon>

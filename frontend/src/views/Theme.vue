@@ -746,7 +746,7 @@
               <v-col cols="12">
                 <h3 class="mb-4">Player Cards V2 - Enhanced with Detailed Stats</h3>
                 <v-row>
-                  <v-col v-for="player in samplePlayers" :key="`v2-${player.id}`" cols="12" md="6">
+                  <v-col v-for="player in samplePlayers" :key="`v2-${player.id}`" cols="12" sm="6" md="4" lg="4">
                     <PlayerCardV2 
                       :player="player" 
                       :is-selected="selectedPlayers.includes(player.id)"
