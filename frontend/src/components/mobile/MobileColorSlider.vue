@@ -124,6 +124,7 @@ const colorPresets = computed(() => [
 ])
 
 const updateColor = () => {
+  // Pass hue, saturation, and lightness values for easier handling
   emit('update:color', currentColor.value)
 }
 

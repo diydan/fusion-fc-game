@@ -1,159 +1,6 @@
 <template>
   <v-app>
-    <!-- Mobile Navigation Drawer -->
-    <v-navigation-drawer
-      v-model="drawer"
-      location="right"
-      temporary
-      width="320"
-      class="mobile-drawer">
-      <template v-slot:prepend>
-        <v-list-item class="px-2">
-          <v-list-item-title class="text-h6 font-weight-bold">
-            <v-icon start>mdi-cog</v-icon>
-            Scene Controls
-          </v-list-item-title>
-          <template v-slot:append>
-            <v-btn icon variant="text" @click="drawer = false">
-              <v-icon>mdi-close</v-icon>
-            </v-btn>
-          </template>
-        </v-list-item>
-      </template>
-
-      <v-divider></v-divider>
-
-      <!-- Scene Controls Sections -->
-      <v-expansion-panels v-model="activePanel" variant="accordion" multiple>
-        <!-- Performance Section -->
-        <v-expansion-panel value="performance">
-          <v-expansion-panel-title>
-            <v-icon start color="warning">mdi-speedometer</v-icon>
-            Performance
-          </v-expansion-panel-title>
-          <v-expansion-panel-text>
-            <v-list density="compact">
-              <v-list-item>
-                <v-list-item-title class="text-caption">Frame Rate</v-list-item-title>
-                <v-chip :color="fpsColor" size="small">{{ fps }} FPS</v-chip>
-              </v-list-item>
-              
-              <v-list-item>
-                <v-list-item-title class="text-caption">Quality Level</v-list-item-title>
-                <v-select
-                  v-model="qualityLevel"
-                  :items="qualityOptions"
-                  variant="outlined"
-                  density="compact">
-                </v-select>
-              </v-list-item>
-            </v-list>
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-
-        <!-- Color Controls Section -->
-        <v-expansion-panel value="colors">
-          <v-expansion-panel-title>
-            <v-icon start color="pink">mdi-palette</v-icon>
-            Colors
-          </v-expansion-panel-title>
-          <v-expansion-panel-text>
-            <v-list density="compact">
-              <v-list-item>
-                <v-list-item-title class="text-caption mb-3">Short Color</v-list-item-title>
-                <div class="mobile-color-slider">
-                  <v-slider
-                    v-model="shortColorHue"
-                    :min="0"
-                    :max="360"
-                    step="1"
-                    color="primary"
-                    track-color="grey-lighten-1"
-                    thumb-label="always"
-                    @update:model-value="updateShortColor">
-                    <template v-slot:thumb-label="{ modelValue }">
-                      <div class="color-thumb" :style="{ backgroundColor: `hsl(${modelValue}, 100%, 50%)` }"></div>
-                    </template>
-                  </v-slider>
-                  <div class="color-preview" :style="{ backgroundColor: `hsl(${shortColorHue}, 100%, 50%)` }"></div>
-                </div>
-              </v-list-item>
-              
-              <v-list-item>
-                <v-list-item-title class="text-caption mb-3">Torus Emission</v-list-item-title>
-                <div class="mobile-color-slider">
-                  <v-slider
-                    v-model="torusColorHue"
-                    :min="0"
-                    :max="360"
-                    step="1"
-                    color="primary"
-                    track-color="grey-lighten-1"
-                    thumb-label="always"
-                    @update:model-value="updateTorusColor">
-                    <template v-slot:thumb-label="{ modelValue }">
-                      <div class="color-thumb" :style="{ backgroundColor: `hsl(${modelValue}, 100%, 50%)` }"></div>
-                    </template>
-                  </v-slider>
-                  <div class="color-preview" :style="{ backgroundColor: `hsl(${torusColorHue}, 100%, 50%)` }"></div>
-                </div>
-              </v-list-item>
-            </v-list>
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-
-        <!-- Music Section -->
-        <v-expansion-panel value="music">
-          <v-expansion-panel-title>
-            <v-icon start color="blue">mdi-music</v-icon>
-            Music
-          </v-expansion-panel-title>
-          <v-expansion-panel-text>
-            <v-list density="compact">
-              <v-list-item>
-                <v-list-item-title class="text-caption">Current Track</v-list-item-title>
-                <v-chip size="small" color="primary">{{ audioState.trackName || 'No Track' }}</v-chip>
-              </v-list-item>
-              
-
-              
-              <v-list-item v-if="audioState.isMusicPlaying">
-                <v-progress-linear
-                  :model-value="audioState.progress || 0"
-                  color="primary"
-                  height="4"
-                  rounded>
-                </v-progress-linear>
-              </v-list-item>
-            </v-list>
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-      </v-expansion-panels>
-
-      <!-- Action Buttons -->
-      <template v-slot:append>
-        <div class="pa-4">
-          <v-btn
-            block
-            color="primary"
-            variant="elevated"
-            class="mb-2"
-            @click="triggerAction">
-            <v-icon start>mdi-play</v-icon>
-            Trigger Action
-          </v-btn>
-          
-          <v-btn
-            block
-            color="secondary"
-            variant="outlined"
-            @click="resetScene">
-            <v-icon start>mdi-restore</v-icon>
-            Reset Scene
-          </v-btn>
-        </div>
-      </template>
-    </v-navigation-drawer>
+    <!-- Navigation drawer removed - color controls now in scene -->
 
     <v-main>
       <!-- 3D Scene Container -->
@@ -219,8 +66,6 @@
         </div>
       </div>
     </v-main>
-
-
 
   </v-app>
 </template>
@@ -329,44 +174,19 @@ const updateFps = (newFps: number) => {
   fps.value = Math.round(newFps)
 }
 
-// Color control methods
-const updateShortColor = (hue: number) => {
-  const color = `hsl(${hue}, 100%, 50%)`
-  console.log('🎨 Short color updated:', color)
-  
-  // Find and call the original scene's color update method
-  if (sceneCanvas.value && sceneCanvas.value.updateOverlayColor) {
-    sceneCanvas.value.updateOverlayColor(color)
-  } else if (sceneCanvas.value && sceneCanvas.value.$refs) {
-    // Try to access through $refs if needed
-    console.log('🔍 Looking for color update method in scene...')
-  }
-}
-
-const updateTorusColor = (hue: number) => {
-  const color = `hsl(${hue}, 100%, 50%)`
-  console.log('🎨 Torus color updated:', color)
-  
-  // Find and call the original scene's torus color update method
-  if (sceneCanvas.value && sceneCanvas.value.updateTorusEmission) {
-    sceneCanvas.value.updateTorusEmission(color)
-  }
-}
+// Color control methods removed - now handled in scene component
 
 // Music control - simple toggle to start/pause music, global footer handles full controls
 const toggleMusic = () => {
-  console.log('🎵 Toggle music from SelectBotMobile')
   toggleBackgroundMusic()
 }
 
 // Simple scene interactions
 const triggerAction = () => {
-  console.log('🎬 Triggering action sequence')
   // The original scene handles its own interactions
 }
 
 const resetScene = () => {
-  console.log('🔄 Resetting scene')
   // The original scene handles its own reset
 }
 
@@ -378,8 +198,7 @@ const triggerScreenShake = () => {
 }
 
 const onSceneReady = () => {
-  console.log('✅ Scene ready with shared audio system')
-}
+  }
 
 // Background style for mobile optimization
 const getBackgroundStyle = () => {
@@ -401,8 +220,7 @@ onMounted(() => {
     showTouchHints.value = false
   }
   
-  console.log('🎵 Mobile view initialized with shared audio system')
-})
+  })
 </script>
 
 <style scoped>

@@ -51,12 +51,12 @@ export function useSceneSetup() {
 
   // Lighting settings
   const lightingSettings = reactive<LightingSettings>({
-    keyLightIntensity: 2,
-    fillLightIntensity: 3,
-    fillLight2Intensity: 3,
-    frontLightIntensity: 0.8,
-    rimLightIntensity: 4,
-    ambientIntensity: 2,
+    keyLightIntensity: 3,      // Increased from 2
+    fillLightIntensity: 4,     // Increased from 3
+    fillLight2Intensity: 4,    // Increased from 3
+    frontLightIntensity: 1.2,  // Increased from 0.8
+    rimLightIntensity: 5,      // Increased from 4
+    ambientIntensity: 3,       // Increased from 2
     shadowEnabled: true
   })
 
@@ -66,7 +66,7 @@ export function useSceneSetup() {
     roughness: 0.1,
     emissiveIntensity: 0.06,
     envMapIntensity: 1.2,
-    brightness: 1,
+    brightness: 1.5,  // Increased from 1 to make robot body brighter
     clearcoat: 0.0,
     clearcoatRoughness: 0.0,
     transparent: true,
@@ -151,11 +151,9 @@ export function useSceneSetup() {
 
   // Scene creation handler
   const onSceneCreated = (event: any) => {
-    console.log('🎬 Scene created:', event)
     sceneRefs.scene = event.scene
     sceneRefs.camera = event.camera
     sceneRefs.renderer = event.renderer
-
 
     // Start animation loop
     animate()
@@ -163,20 +161,17 @@ export function useSceneSetup() {
 
   // Scene ready handler
   const onSceneReady = (event: any) => {
-    console.log('🎬 Scene ready:', event)
     loadingStatus.value = 'Ready'
 
     // Find character in scene
     const character = event.scene.children.find((child: any) => child.name === 'Character')
     if (character) {
-      console.log('✅ Character found:', character)
       sceneRefs.character = character
       
       // Create default torus after character is loaded
       createTorus()
     } else {
-      console.log('⚠️ Character not found in scene')
-    }
+      }
   }
 
   // Update materials
@@ -191,16 +186,8 @@ export function useSceneSetup() {
         const material = child.material as THREE.MeshStandardMaterial
         if (material.isMeshStandardMaterial) {
           // Log material properties before update
-          console.log('Material before update:', {
-            name: child.name,
-            metalness: material.metalness,
-            roughness: material.roughness,
-            transparent: material.transparent
-          })
-          
           // Skip overlay material (identified by being transparent and having no metalness/roughness)
           if (material.transparent && material.metalness === 0 && material.roughness === 0) {
-            console.log('Skipping overlay material update')
             return
           }
           
@@ -220,27 +207,17 @@ export function useSceneSetup() {
           material.color.setScalar(brightness)
           
           // Log material properties after update
-          console.log('Material after update:', {
-            name: child.name,
-            metalness: material.metalness,
-            roughness: material.roughness,
-            transparent: material.transparent
-          })
-          
           materialCount++
         }
       }
     })
     
-    console.log(`✨ Updated ${materialCount} materials`)
-  }
+    }
 
   // Export settings
   const exportSettings = () => {
     const settings = allSettings.value
-    console.log('🎮 Scene Settings Export:')
-    console.log(JSON.stringify(settings, null, 2))
-    console.log('📋 Copy this JSON to save your current configuration!')
+    // Export functionality removed
   }
 
   // Screen shake
@@ -256,8 +233,6 @@ export function useSceneSetup() {
   // Load Pitch.FBX model with Saha.png texture
   const loadPitchModel = async () => {
     try {
-      console.log('🏟️ Loading Pitch.FBX model...')
-      
       // Load texture first
       const textureLoader = new TextureLoader()
       const pitchTexture = await new Promise<THREE.Texture>((resolve, reject) => {
@@ -266,7 +241,6 @@ export function useSceneSetup() {
           (texture) => {
             texture.colorSpace = THREE.SRGBColorSpace
 
-            console.log('✅ Pitch texture loaded with default settings')
             resolve(texture)
           },
           undefined,
@@ -303,8 +277,7 @@ export function useSceneSetup() {
               metalness: 0.1
             })
             child.material = material
-            console.log('🎨 Applied Saha.png texture to pitch mesh:', child.name)
-          }
+            }
           
           child.castShadow = true
           child.receiveShadow = true
@@ -315,19 +288,15 @@ export function useSceneSetup() {
       if (sceneRefs.scene) {
         sceneRefs.scene.add(pitchModel)
         sceneRefs.pitch = pitchModel
-        console.log('✅ Pitch model loaded with texture and added to scene')
-      }
+        }
       
     } catch (error) {
-      console.error('❌ Error loading pitch model:', error)
-    }
+      }
   }
 
   // Load Goalpost.FBX models (both ends of the field)
   const loadGoalpostModel = async () => {
     try {
-      console.log('🥅 Loading Goalpost.FBX models...')
-      
       const loader = new FBXLoader()
       
       // GOALPOST SETTINGS - Easy to adjust
@@ -379,19 +348,15 @@ export function useSceneSetup() {
       if (sceneRefs.scene) {
         sceneRefs.scene.add(goalpostGroup)
         sceneRefs.goalpost = goalpostGroup
-        console.log('✅ Both goalpost models loaded and added to scene')
-      }
+        }
       
     } catch (error) {
-      console.error('❌ Error loading goalpost models:', error)
-    }
+      }
   }
 
   // Load Corner Flag.FBX models (4 corners of the field)
   const loadCornerFlags = async () => {
     try {
-      console.log('🚩 Loading Corner Flag.FBX models...')
-      
       const loader = new FBXLoader()
       
       // CORNER FLAG SETTINGS - Easy to adjust
@@ -417,17 +382,12 @@ export function useSceneSetup() {
       // Load and position each corner flag
       for (let i = 0; i < cornerPositions.length; i++) {
         const position = cornerPositions[i]
-        console.log(`🚩 Loading corner flag ${i + 1} at position (${position.x}, ${FLAG_POSITION_Y}, ${position.z})...`)
         
         const flagModel = await loader.loadAsync('/props/Flag.fbx')
-        console.log(`🚩 Flag model ${i + 1} loaded successfully, original scale:`, flagModel.scale)
-        
         // Apply settings
         flagModel.scale.setScalar(FLAG_SCALE)
         flagModel.position.set(position.x, FLAG_POSITION_Y, position.z)
         flagModel.rotation.set(FLAG_ROTATION_X, FLAG_ROTATION_Y, FLAG_ROTATION_Z)
-        
-        console.log(`🚩 Flag ${i + 1} settings applied - Scale: ${FLAG_SCALE}, Position: (${position.x}, ${FLAG_POSITION_Y}, ${position.z})`)
         
         // Enable shadows and log mesh info
         let meshCount = 0
@@ -438,23 +398,19 @@ export function useSceneSetup() {
             meshCount++
           }
         })
-        console.log(`🚩 Flag ${i + 1} has ${meshCount} mesh(es)`)
         
         // Add to the group
         cornerFlagsGroup.add(flagModel)
-        console.log(`✅ Corner flag ${i + 1} added to group at position (${position.x}, ${FLAG_POSITION_Y}, ${position.z})`)
       }
       
       // Add group to scene
       if (sceneRefs.scene) {
         sceneRefs.scene.add(cornerFlagsGroup)
         sceneRefs.cornerFlags = cornerFlagsGroup
-        console.log('✅ All 4 corner flags loaded and added to scene')
-      }
+        }
       
     } catch (error) {
-      console.error('❌ Error loading corner flag models:', error)
-    }
+      }
   }
 
   // Add torus settings state
@@ -470,20 +426,12 @@ export function useSceneSetup() {
 
   // Add torus to character
   const addTorusToCharacter = () => {
-    console.log('🎯 Attempting to add torus...')
-    console.log('Current sceneRefs:', {
-      model: !!sceneRefs.model,
-      torus: !!sceneRefs.torus
-    })
-
     if (!sceneRefs.model) {
-      console.log('⚠️ Cannot add torus: character model not ready')
       return
     }
 
     // Remove existing torus if any
     if (sceneRefs.torus) {
-      console.log('🗑️ Removing existing torus')
       // Remove from parent
       if (sceneRefs.torus.parent) {
         sceneRefs.torus.parent.remove(sceneRefs.torus)
@@ -509,28 +457,23 @@ export function useSceneSetup() {
         // For safety, if we directly manipulated innerTorusMesh's geometry/material outside group, dispose here.
         // Assuming innerTorusMesh is part of sceneRefs.torus (the group), its resources are disposed above.
         sceneRefs.innerTorusMesh = null; 
-        console.log('🗑️ Cleared innerTorusMesh reference');
-      }
+        }
     }
 
     // Find the spine2 bone
     let spine1Bone: THREE.Bone | null = null
-    console.log('🔍 Searching for spine1 bone...')
     sceneRefs.model.traverse((child) => {
       if (child instanceof THREE.Bone) {
         if (child.name.toLowerCase().includes('spine1')) {
           spine1Bone = child
-          console.log('✅ Found spine1 bone:', child.name)
-        }
+          }
       }
     })
 
     if (!spine1Bone) {
-      console.log('⚠️ Cannot add torus: spine1 bone not found')
       return
     }
 
-    console.log('🎨 Creating new torus...')
     // Create torus with current settings
     const torusGeometry = new THREE.TorusGeometry(
       torusSettings.value.radius,
@@ -573,7 +516,6 @@ export function useSceneSetup() {
     torusGroup.add(axesHelper);
 
     // Create Inner Torus
-    console.log('🎨 Creating inner torus...');
     const mainTorusInitialColor = new THREE.Color(0x00FF00); // Matching main torus initial color
     const innerTorusRadius = torusSettings.value.radius * 0.5; // Made smaller: 50% of main radius
     const innerTorusTube = torusSettings.value.tube * 0.5;   // Made smaller: 50% of main tube
@@ -591,8 +533,6 @@ export function useSceneSetup() {
     innerTorusMesh.position.z = torusSettings.value.tube * 0.5; // Optional: slight offset for visibility
     torusGroup.add(innerTorusMesh);
     sceneRefs.innerTorusMesh = innerTorusMesh;
-    console.log('✅ Inner torus added to torusGroup with radius:', innerTorusRadius, 'tube:', innerTorusTube);
-
     // Ensure the previously added inner torus creation logic is removed if it was separate
     // This replaces the block that was previously inserted using this same old_str anchor.
 
@@ -600,7 +540,6 @@ export function useSceneSetup() {
     const pointLight = new THREE.PointLight(torusSettings.value.color, torusSettings.value.brightness, 20)
     pointLight.position.set(0, 0, 0)
     torusGroup.add(pointLight)
-    
 
     // Store the default scale of the main torus mesh
     const mainTorusMeshForScale = torusGroup.children[0] as THREE.Mesh;
@@ -610,16 +549,10 @@ export function useSceneSetup() {
       const mat = mainTorusMeshForScale.material as THREE.MeshStandardMaterial;
       mainTorusMeshForScale.userData.defaultEmissive = mat.emissive.clone();
       mainTorusMeshForScale.userData.defaultEmissiveIntensity = mat.emissiveIntensity;
-      console.log('✅ Stored default torus emissive:', { color: mat.emissive.getHexString(), intensity: mat.emissiveIntensity });
-    } else {
-      console.warn('⚠️ Could not store default torus emissive: main torus mesh or material not suitable.');
     }
 
     if (mainTorusMeshForScale && mainTorusMeshForScale.isMesh) {
       sceneRefs.torusDefaultScale = mainTorusMeshForScale.scale.clone();
-      console.log('✅ Stored default torus scale:', sceneRefs.torusDefaultScale);
-    } else {
-      console.warn('⚠️ Could not store default torus scale: main torus mesh not found in group or not a mesh.');
     }
 
     // Add the torus group as a child of the spine2 bone
@@ -629,16 +562,7 @@ export function useSceneSetup() {
     // Log the torus's world position
     const worldPos = new THREE.Vector3()
     torusGroup.getWorldPosition(worldPos)
-    console.log('✅ Torus added to spine2 bone:', {
-      position: torusGroup.position,
-      rotation: torusGroup.rotation,
-      worldPosition: worldPos,
-      geometry: {
-        radius: torusGeometry.parameters.radius,
-        tube: torusGeometry.parameters.tube
-      }
-    })
-  }
+    }
 
   // Update torus
   const updateTorus = (settings: {
@@ -650,9 +574,7 @@ export function useSceneSetup() {
     emissionColor: { r: number; g: number; b: number }
     brightness: number
   }) => {
-    console.log('🔄 Updating torus with settings:', settings)
     if (!sceneRefs.torus) {
-      console.log('⚠️ Cannot update torus: torus not found')
       return
     }
 
@@ -660,7 +582,6 @@ export function useSceneSetup() {
       // Find the torus mesh in the group (first child should be the torus mesh)
       const torusMesh = sceneRefs.torus.children[0] as THREE.Mesh
       if (!torusMesh || !(torusMesh instanceof THREE.Mesh)) {
-        console.log('⚠️ Cannot update torus: torus mesh not found in group')
         return
       }
 
@@ -676,15 +597,13 @@ export function useSceneSetup() {
 
       // Update Inner Torus Geometry
       if (sceneRefs.innerTorusMesh) {
-        console.log('🔄 Updating inner torus geometry...');
         const mainTorusNewParams = newGeometry.parameters;
         const innerTorusNewRadius = mainTorusNewParams.radius * 0.5; // Consistent 50% ratio
         const innerTorusNewTube = mainTorusNewParams.tube * 0.5;   // Consistent 50% ratio
         const newInnerTorusGeometry = new THREE.TorusGeometry(innerTorusNewRadius, innerTorusNewTube, 20, 40);
         sceneRefs.innerTorusMesh.geometry.dispose();
         sceneRefs.innerTorusMesh.geometry = newInnerTorusGeometry;
-        console.log('✅ Inner torus geometry updated');
-      }
+        }
 
       // Update position
       sceneRefs.torus.position.set(
@@ -723,13 +642,11 @@ export function useSceneSetup() {
       if (sceneRefs.innerTorusMesh) {
         const innerMaterial = sceneRefs.innerTorusMesh.material as THREE.MeshStandardMaterial;
         if (innerMaterial) {
-          console.log('🔄 Updating inner torus material...');
           innerMaterial.color = baseColor; // Use the same baseColor as main torus
           innerMaterial.emissive = emissionColor; // Use the same emissionColor
           innerMaterial.emissiveIntensity = 0.2; // Match brightness
           innerMaterial.opacity = 1;
-          console.log('✅ Inner torus material updated');
-        }
+          }
       }
 
       // Update point light if it exists
@@ -738,29 +655,13 @@ export function useSceneSetup() {
         pointLight.color = emissionColor
         pointLight.intensity = settings.brightness * 2
       }
-
-      console.log('✅ Torus updated:', {
-        position: sceneRefs.torus.position,
-        rotation: sceneRefs.torus.rotation,
-        geometry: {
-          radius: settings.radius * 5,
-          tube: settings.tube * 5
-        },
-        color: `rgb(${settings.color.r}, ${settings.color.g}, ${settings.color.b})`,
-        emissionColor: `rgb(${settings.emissionColor.r}, ${settings.emissionColor.g}, ${settings.emissionColor.b})`,
-        brightness: settings.brightness
-      })
     } catch (error) {
-      console.error('❌ Error updating torus:', error)
-    }
+      }
   }
 
   // Update torus color
   const updateTorusColor = (newColor: THREE.Color) => {
-    console.log(`[useSceneSetup] updateTorusColor called with: ${newColor.getHexString()}`);
-
     if (!sceneRefs.torus) {
-      console.warn('[useSceneSetup] Main torus (group) not found, cannot update color.');
       return;
     }
 
@@ -772,9 +673,8 @@ export function useSceneSetup() {
       mainMaterial.emissive.copy(newColor);
       // Emissive intensity is preserved from its current state (e.g., initial 0.7)
       mainMaterial.needsUpdate = true;
-      console.log(`[useSceneSetup] Main torus material updated - Color: ${mainMaterial.color.getHexString()}, Emissive: ${mainMaterial.emissive.getHexString()}, Intensity: ${mainMaterial.emissiveIntensity}`);
     } else {
-      console.warn('[useSceneSetup] Main torus mesh or material not found/valid.');
+      // Main material not found
     }
 
     // Update Inner Torus
@@ -785,9 +685,6 @@ export function useSceneSetup() {
       innerMaterial.emissiveIntensity = 0.2;
       // Emissive intensity is preserved from its current state (e.g., initial 0.7)
       innerMaterial.needsUpdate = true;
-      console.log(`[useSceneSetup] Inner torus material updated - Color: ${innerMaterial.color.getHexString()}, Emissive: ${innerMaterial.emissive.getHexString()}, Intensity: ${innerMaterial.emissiveIntensity}`);
-    } else {
-      console.warn('[useSceneSetup] Inner torus mesh or material not found/valid.');
     }
 
     // Update point light color on the main torus group
@@ -795,9 +692,6 @@ export function useSceneSetup() {
     if (pointLight) {
       pointLight.color.copy(newColor);
       // pointLight.intensity could also be preserved or adjusted if needed (e.g., match material.emissiveIntensity)
-      console.log(`[useSceneSetup] Torus point light color updated to: ${pointLight.color.getHexString()}`);
-    } else {
-      console.warn('[useSceneSetup] Point light for torus not found.');
     }
   }
 
@@ -842,22 +736,19 @@ export function useSceneSetup() {
   // Toggle animation
   const toggleAnimation = () => {
     isAnimationPaused.value = !isAnimationPaused.value
-    console.log('🔄 Animation state:', isAnimationPaused.value ? 'paused' : 'playing')
-  }
+    }
 
   // Toggle character animation
   const toggleCharacterAnimation = () => {
     isCharacterAnimationPaused.value = !isCharacterAnimationPaused.value
-    console.log('🔄 Character animation state:', isCharacterAnimationPaused.value ? 'paused' : 'playing')
-  }
+    }
 
   // Toggle grass texture visibility
   const toggleGrassTexture = (visible: boolean) => {
     showGrassTexture.value = visible
     if (sceneRefs.grassField) {
       sceneRefs.grassField.visible = visible
-      console.log('🌱 Grass texture visibility:', visible ? 'shown' : 'hidden')
-    }
+      }
   }
 
   // Toggle center circle visibility
@@ -865,8 +756,7 @@ export function useSceneSetup() {
     showCenterCircle.value = visible
     if (sceneRefs.centerCircle) {
       sceneRefs.centerCircle.visible = visible
-      console.log('⚪ Center circle visibility:', visible ? 'shown' : 'hidden')
-    }
+      }
   }
 
   // Toggle all field lines visibility
@@ -874,16 +764,13 @@ export function useSceneSetup() {
     showFieldLines.value = visible
     if (sceneRefs.fieldLines) {
       sceneRefs.fieldLines.visible = visible
-      console.log('⚽ Field lines visibility:', visible ? 'shown' : 'hidden')
-    }
+      }
   }
 
   // Create grass field with PBR texture
   const createGrassField = async () => {
     if (!sceneRefs.scene) return
 
-    console.log('🌱 Creating grass field with PBR texture...')
-    
     try {
       const textureLoader = new TextureLoader()
       
@@ -942,14 +829,9 @@ export function useSceneSetup() {
       grassField.name = 'GrassField'
       sceneRefs.scene.add(grassField)
       sceneRefs.grassField = grassField
-      console.log('✅ Grass field with PBR texture created and added to scene')
-      
       return grassField
       
     } catch (error) {
-      console.error('❌ Error loading grass textures:', error)
-      console.log('📝 Make sure grass texture files exist at /textures/grass1-bl/')
-      
       // Create fallback material
       const fallbackMaterial = new THREE.MeshStandardMaterial({
         color: 0x4a7c4e,
@@ -968,8 +850,6 @@ export function useSceneSetup() {
       
       sceneRefs.scene.add(grassField)
       sceneRefs.grassField = grassField
-      console.log('✅ Fallback grass field created')
-      
       return grassField
     }
   }
@@ -978,8 +858,6 @@ export function useSceneSetup() {
   const createCenterCircle = () => {
     if (!sceneRefs.scene) return
 
-    console.log('⚪ Creating center circle...')
-    
     const centerGroup = new THREE.Group()
     centerGroup.name = 'CenterCircle'
     
@@ -1007,7 +885,7 @@ export function useSceneSetup() {
     // Add to scene and store reference
     sceneRefs.scene.add(centerGroup)
     sceneRefs.centerCircle = centerGroup
-    console.log('✅ Center circle (outer ring) created and added to scene')
+    // Center circle created and added to scene
     
     return centerGroup
   }
@@ -1016,8 +894,6 @@ export function useSceneSetup() {
   const createFootballFieldLines = () => {
     if (!sceneRefs.scene) return
 
-    console.log('⚽ Creating football field lines...')
-    
     const fieldGroup = new THREE.Group()
     fieldGroup.name = 'FootballField'
     
@@ -1137,14 +1013,11 @@ export function useSceneSetup() {
     // Add field to scene and store reference
     sceneRefs.scene.add(fieldGroup)
     sceneRefs.fieldLines = fieldGroup
-    console.log('✅ Football field lines created and added to scene')
-    
     return fieldGroup
   }
 
   // Create torus
   const createTorus = () => {
-    console.log('🎨 Creating torus...')
     try {
       // Create torus group
       const torusGroup = new THREE.Group()
@@ -1179,28 +1052,14 @@ export function useSceneSetup() {
       // Add torus to character if available
       if (sceneRefs.character) {
         sceneRefs.character.add(torusGroup)
-        console.log('✅ Torus added to character')
-      } else {
+        } else {
         sceneRefs.scene?.add(torusGroup)
-        console.log('✅ Torus added to scene')
-      }
+        }
 
       sceneRefs.torus = torusGroup
 
-      console.log('✅ Torus created with default settings:', {
-        position: torusGroup.position,
-        rotation: torusGroup.rotation,
-        geometry: {
-          radius: 2.5,
-          tube: 0.5
-        },
-        color: '57d5ff',
-        emissionColor: '57d5ff',
-        brightness: 0.2
-      })
-    } catch (error) {
-      console.error('❌ Error creating torus:', error)
-    }
+      } catch (error) {
+      }
   }
 
   return {

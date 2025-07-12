@@ -37,12 +37,12 @@ export class UtilityAI {
     PASS_TEAMMATE_POSITION: 0.15,
     PASS_SKILL: 0.1,
     
-    // Dribbling weights
-    DRIBBLE_SPACE: 0.3,
-    DRIBBLE_SKILL: 0.25,
-    DRIBBLE_PRESSURE: 0.2,
-    DRIBBLE_ADVANCE: 0.15,
-    DRIBBLE_STAMINA: 0.1,
+    // Dribbling weights (reduced to encourage passing)
+    DRIBBLE_SPACE: 0.2,
+    DRIBBLE_SKILL: 0.15,
+    DRIBBLE_PRESSURE: 0.15,
+    DRIBBLE_ADVANCE: 0.1,
+    DRIBBLE_STAMINA: 0.05,
     
     // General weights
     COMPOSURE_EFFECT: 0.8,
@@ -181,8 +181,9 @@ export class UtilityAI {
         player.attributes.technique / 99 * 0.2
       )
       
-      // Calculate weighted utility
-      const utility = (
+      // Calculate weighted utility with passing bonus
+      const passBonus = 0.2 // Encourage passing for better soccer gameplay
+      const utility = passBonus + (
         successProb * this.WEIGHTS.PASS_SUCCESS +
         dangerScore * this.WEIGHTS.PASS_DANGER +
         advanceScore * this.WEIGHTS.PASS_ADVANCE +
@@ -191,7 +192,7 @@ export class UtilityAI {
         skillScore * this.WEIGHTS.PASS_SKILL
       )
       
-      if (utility > 0.1) { // Minimum threshold
+      if (utility > 0.05) { // Lower threshold to encourage more passing
         passActions.push({
           type: 'pass',
           utility,
@@ -237,7 +238,10 @@ export class UtilityAI {
     const staminaRatio = player.stamina / player.maxStamina
     const staminaScore = staminaRatio
     
-    return (
+    // Reduce dribble utility to encourage passing
+    const dribblePenalty = 0.7 // Multiply final score by 0.7
+    
+    return dribblePenalty * (
       spaceScore * this.WEIGHTS.DRIBBLE_SPACE +
       skillScore * this.WEIGHTS.DRIBBLE_SKILL +
       pressureScore * this.WEIGHTS.DRIBBLE_PRESSURE +

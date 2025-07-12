@@ -31,8 +31,6 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
   // Load ball model - using OBJ model with PBR textures from /props/Ball/
   const loadBallModel = async () => {
     try {
-      console.log('⚽ Loading OBJ ball model with PBR textures...')
-      
       // Load textures first
       const textureLoader = new THREE.TextureLoader()
       
@@ -95,8 +93,6 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
       // Override materials with our PBR materials
       // The MTL file will tell us which material names to use
       const materialNames = Object.keys(materials.materials)
-      console.log('Available materials:', materialNames)
-      
       // Replace materials with our PBR versions
       materialNames.forEach(name => {
         if (name.toLowerCase().includes('black')) {
@@ -149,14 +145,11 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
         sceneRefs.ballModelGroup.matrixAutoUpdate = true
         sceneRefs.ballModelGroup.updateMatrix()
         
-        console.log('⚽ OBJ ball model with PBR textures loaded successfully')
-      }
+        }
       
     } catch (error) {
-      console.error('❌ Error loading OBJ ball model:', error)
-    }
+      }
   }
-
 
   // Update ball physics - realistic soccer ball physics
   const updateBallPhysics = (deltaTime: number) => {
@@ -293,8 +286,6 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
 
   // Animate ball to position - pure realistic physics simulation
   const animateBallToPosition = (targetPosition: [number, number, number], duration: number) => {
-    console.log('⚽ Starting pure physics simulation to:', targetPosition)
-    
     ballState.scriptedAnimationActive = true
     const startPos = [...ballState.position]
     const targetPos = [targetPosition[0], BALL_RADIUS, targetPosition[2]]
@@ -302,8 +293,7 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
     // Give ball a slight initial height for natural physics
     if (ballState.position[1] <= BALL_RADIUS + 0.01) {
       ballState.position[1] = BALL_RADIUS + 0.05 // Start slightly above ground
-      console.log('⚽ Ball lifted slightly above ground for natural physics')
-    }
+      }
     
     // Calculate distance and direction
     const dx = targetPos[0] - startPos[0]
@@ -311,7 +301,6 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
     const distance = Math.sqrt(dx * dx + dz * dz)
     
     if (distance < 0.05) {
-      console.log('⚽ Already at target')
       ballState.scriptedAnimationActive = false
       return
     }
@@ -337,12 +326,6 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
     // Adjust initial Y velocity based on height difference
     ballState.velocity.y = heightDiff > 0 ? 0.15 : 0.05 // Adaptive initial lift
     
-    console.log('⚽ Simple velocity calculation:')
-    console.log(`   Distance: ${distance.toFixed(2)}m | Time: ${timeToTarget.toFixed(2)}s`)
-    console.log(`   Base speed: ${baseSpeedNeeded.toFixed(2)} m/s`)
-    console.log(`   Initial speed (with losses): ${initialSpeedNeeded.toFixed(2)} m/s`)
-    console.log(`   Initial velocity: [${ballState.velocity.x.toFixed(2)}, ${ballState.velocity.z.toFixed(2)}]`)
-    
     // Realistic physics constants
     const gravity = -9.81 // m/s²
     const airDensity = 1.225 // kg/m³
@@ -363,9 +346,6 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
     let secondBounceTriggered = false
     const firstBounceTime = startTime + (duration * 0.25) // 25% of duration
     const secondBounceTime = startTime + (duration * 0.6) // 60% of duration
-    
-    console.log('⚽ Initial velocity:', ballState.velocity, 'Speed:', initialSpeedNeeded.toFixed(2), 'm/s')
-    console.log('⚽ Planned bounces at:', new Date(firstBounceTime).toLocaleTimeString(), 'and', new Date(secondBounceTime).toLocaleTimeString())
     
     const simulate = () => {
       if (!isAnimating) return
@@ -413,13 +393,11 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
         // Realistic bounce with energy loss
         if (ballState.velocity.y < -0.1) { // Only bounce if falling with some speed
           ballState.velocity.y = -ballState.velocity.y * bounceDamping
-          console.log('🏀 Natural ground bounce! Velocity:', ballState.velocity.y.toFixed(2), 'm/s')
           
           // Stop very small bounces
           if (Math.abs(ballState.velocity.y) < 0.2) {
             ballState.velocity.y = 0
-            console.log('🛑 Small bounce stopped')
-          }
+            }
         } else if (ballState.velocity.y < 0) {
           // Just stop downward motion for very small velocities
           ballState.velocity.y = 0
@@ -468,9 +446,7 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
               ballState.velocity.z += directionToTarget.z * correctionStrength * realDeltaTime
               
               // Debug: Log when significant correction is applied
-              if (elapsed % 800 < 16 && correctionStrength > 0.05) {
-                console.log(`🌬️ Environmental assistance: ${correctionStrength.toFixed(3)}m/s² | Speed: ${horizontalSpeed.toFixed(2)} | Dist: ${distanceToTarget.toFixed(2)}`)
-              }
+              // Correction debug logging removed
             }
             
             // SIMPLE DYNAMIC ADJUSTMENT - Just gentle guidance when slow
@@ -481,9 +457,7 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
               ballState.velocity.x += directionToTarget.x * gentleBoost * realDeltaTime
               ballState.velocity.z += directionToTarget.z * gentleBoost * realDeltaTime
               
-              if (elapsed % 800 < 16) {
-                console.log(`🔋 Gentle speed boost applied | Speed: ${horizontalSpeed.toFixed(2)} | Dist: ${distanceToTarget.toFixed(2)}`)
-              }
+              // Gentle boost debugging removed
             }
           }
         } else {
@@ -539,9 +513,7 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
       
       // PLANNED BOUNCES - Time-based triggers with debugging
       // Debug: Check bounce conditions every frame
-      if (!firstBounceTriggered && elapsedMs % 200 < 16) {
-        console.log(`⚽ Bounce check 1: Time=${elapsedMs}ms (need ${duration * 0.25}ms) | Speed=${currentHorizontalSpeed.toFixed(2)} (need >0.1)`)
-      }
+      // Bounce condition debugging removed
       
       // First bounce with speed-based height
       if (!firstBounceTriggered && currentTime >= firstBounceTime && currentHorizontalSpeed > 0.1) {
@@ -549,7 +521,6 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
         const bounceHeight = Math.min(0.4 + (currentHorizontalSpeed * 0.1), 0.8)
         ballState.velocity.y += bounceHeight + (Math.random() * 0.2)
         firstBounceTriggered = true
-        console.log('🚀 FIRST BOUNCE TRIGGERED! Speed:', currentHorizontalSpeed.toFixed(2), 'm/s', 'Height:', bounceHeight.toFixed(2), 'Time:', elapsedMs, 'ms')
       }
       
       // Second bounce with reduced height
@@ -558,16 +529,10 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
         const bounceHeight = Math.min(0.2 + (currentHorizontalSpeed * 0.05), 0.4)
         ballState.velocity.y += bounceHeight + (Math.random() * 0.1)
         secondBounceTriggered = true
-        console.log('🚀 SECOND BOUNCE TRIGGERED! Speed:', currentHorizontalSpeed.toFixed(2), 'm/s', 'Height:', bounceHeight.toFixed(2), 'Time:', elapsedMs, 'ms')
       }
       
       // Debug: Always log when bounce times are reached
-      if (!firstBounceTriggered && currentTime >= firstBounceTime && elapsedMs % 100 < 16) {
-        console.log('⚠️ First bounce time reached but speed too low:', currentHorizontalSpeed.toFixed(2), 'm/s')
-      }
-      if (!secondBounceTriggered && currentTime >= secondBounceTime && elapsedMs % 100 < 16) {
-        console.log('⚠️ Second bounce time reached but speed too low:', currentHorizontalSpeed.toFixed(2), 'm/s')
-      }
+      // Bounce debug logging removed
       
       // Enhanced stopping conditions to prevent overshooting
       const distanceToTarget = Math.sqrt(
@@ -590,28 +555,16 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
           Math.pow(ballState.position[2] - targetPos[2], 2)
         )
         
-        console.log('⚽ Physics simulation ended naturally')
-        console.log(`   Final position: [${ballState.position[0].toFixed(3)}, ${ballState.position[1].toFixed(3)}, ${ballState.position[2].toFixed(3)}]`)
-        console.log(`   Distance from target: ${finalDistance.toFixed(3)}m`)
-        console.log(`   Final speed: ${currentHorizontalSpeed.toFixed(3)}m/s`)
-        
         // Brief pause before releasing physics control
         setTimeout(() => {
           ballState.scriptedAnimationActive = false
-          console.log('⚽ Ball released to normal physics')
-        }, 200)
+          }, 200)
       } else {
         requestAnimationFrame(simulate)
       }
       
       // Debug logging every 400ms
-      if (elapsedMs % 400 < 16) {
-        const distanceToTarget = Math.sqrt(
-          Math.pow(ballState.position[0] - targetPos[0], 2) + 
-          Math.pow(ballState.position[2] - targetPos[2], 2)
-        )
-        console.log(`⚽ Physics: Speed=${currentHorizontalSpeed.toFixed(2)}m/s | DistToTarget=${distanceToTarget.toFixed(2)}m | Y=${ballState.position[1].toFixed(3)}m`)
-      }
+      // Physics debug logging removed
     }
     
     // Start pure physics simulation
@@ -675,7 +628,6 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
         requestAnimationFrame(animate)
       } else {
         ballState.position = [targetPos[0], targetPos[1], targetPos[2]]
-        console.log('⚽ Ball reached target position:', targetPos)
         // Stop all ball movement when animation completes
         ballState.velocity.x = 0
         ballState.velocity.y = 0

@@ -136,9 +136,9 @@
           rounded="xl"
         ></v-list-item>
         <v-list-item
-          prepend-icon="mdi-robot"
-          title="Bot Selection"
-          to="/select-bot"
+          prepend-icon="mdi-account-edit"
+          title="Character Creator"
+          to="/character-creator"
           rounded="xl"
         ></v-list-item>
 

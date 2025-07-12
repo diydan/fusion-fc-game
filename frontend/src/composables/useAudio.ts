@@ -196,10 +196,8 @@ export function useAudio() {
       audioState.currentTrackIndex = trackIndex
       audioState.trackName = tracks[trackIndex].name
 
-      console.log(`🎵 Loaded track: ${tracks[trackIndex].name}`)
-    } catch (error) {
-      console.error('❌ Error loading track:', error)
-    }
+      } catch (error) {
+      }
   }
 
   // Switch to next track
@@ -271,11 +269,9 @@ export function useAudio() {
       
       await currentAudio?.play()
       audioState.isMusicPlaying = true
-      console.log('🎵 Music playing')
       updateEqualizer()
     } catch (error) {
-      console.error('❌ Error starting music:', error)
-    }
+      }
   }
 
   // Toggle background music
@@ -288,13 +284,11 @@ export function useAudio() {
       if (audioState.isMusicPlaying) {
         currentAudio?.pause()
         audioState.isMusicPlaying = false
-        console.log('🎵 Music paused')
-      } else {
+        } else {
         await startMusic()
       }
     } catch (error) {
-      console.error('❌ Error toggling music:', error)
-    }
+      }
   }
 
   const stopMusic = () => {
@@ -304,8 +298,7 @@ export function useAudio() {
       audioState.progress = 0
       audioState.isMusicPlaying = false
       onMusicStop.value++
-      console.log('🎵 Music stopped')
-    }
+      }
   }
 
   // Update lyrics with word-level karaoke highlighting
@@ -399,22 +392,22 @@ export function useAudio() {
   // Play sound effects
   const playBallBounce = () => {
     ballBounceAudio.currentTime = 0
-    ballBounceAudio.play().catch(e => console.log('Audio play failed:', e))
+    ballBounceAudio.play().catch(e => {})
   }
 
   const playBallKick = () => {
     ballKickAudio.currentTime = 0
-    ballKickAudio.play().catch(e => console.log('Audio play failed:', e))
+    ballKickAudio.play().catch(e => {})
   }
 
   const playCoinSpin = () => {
     coinSpinAudio.currentTime = 2.1;
-    coinSpinAudio.play().catch(e => console.error('Coin spin audio play failed:', e));
+    coinSpinAudio.play().catch(e => {});
   }
 
   const playCoinHitTorusSound = () => {
     coinHitTorusAudio.currentTime = 0.4;
-    coinHitTorusAudio.play().catch(e => console.error('Coin hit torus audio play failed:', e));
+    coinHitTorusAudio.play().catch(e => {});
   }
 
   // Cleanup

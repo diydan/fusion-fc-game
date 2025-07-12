@@ -14,9 +14,13 @@ const glowLight = new THREE.PointLight(0x00ffff, 2, 5)
 
 export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, triggerPowerUpFlash?: (target: 'character' | 'torus') => void, playCoinSpin?: () => void, playCoinHitTorusSound?: () => void, playPowerUpAnimation?: () => void) {
   const shootCoin = () => {
-    console.log('🎯 Shooting coin...');
     if (playCoinSpin) {
       playCoinSpin();
+    }
+    
+    // Play power-up animation when coin is shot
+    if (playPowerUpAnimation) {
+      playPowerUpAnimation();
     }
 
     // Get character's position
@@ -26,16 +30,12 @@ export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, tri
       // Adjust Y position to target torso
       characterPosition.y += 1.0 // Adjust this value to target the torso
     } else {
-      console.warn('⚠️ Could not find character model')
       return
     }
-
-    console.log('🎯 Target position:', characterPosition)
 
     // Get camera and calculate screen center in world space
     const camera = sceneRefs.camera
     if (!camera) {
-      console.warn('⚠️ Could not find camera')
       return
     }
 
@@ -49,17 +49,11 @@ export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, tri
     camera.getWorldDirection(cameraDirection)
     const deadCenterPosition = screenCenter.clone().add(cameraDirection.multiplyScalar(0.5))
 
-    console.log('🎯 Dead center position:', deadCenterPosition)
-
     // Calculate direction from dead center to target
     const direction = new THREE.Vector3()
     direction.subVectors(characterPosition, deadCenterPosition).normalize()
-    console.log('🎯 Direction to target:', direction)
-
     // Calculate distance to target
     const distanceToTarget = deadCenterPosition.distanceTo(characterPosition)
-    console.log('🎯 Distance to target:', distanceToTarget)
-    
     // Create coin geometry and material
     const coinGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.005, 32)
     const coinMaterial = new THREE.MeshStandardMaterial({
@@ -79,8 +73,6 @@ export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, tri
     
     // Add coin to scene
     sceneRefs.scene?.add(coin)
-    console.log('🎯 Coin added to scene')
-    
     // Calculate initial velocity based on distance and direction
     const baseSpeed = 12 // Base speed for the coin
     const distanceFactor = Math.min(distanceToTarget * 0.5, 15) // Scale speed with distance, but cap it
@@ -148,13 +140,7 @@ export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, tri
       
       // Debug: Log collision detection details
       if (distanceToCharacter < 3.0) { // Log when coin is getting close
-        console.log('🎯 Coin approaching character:', {
-          coinPosition: coinPosition,
-          characterPosition: characterPosition,
-          distance: distanceToCharacter.toFixed(3),
-          hitThreshold: 1.0,
-          willHit: hitCharacter
-        })
+        // Collision check debugging removed
       }
 
       // Check for collision with torus
@@ -179,27 +165,20 @@ export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, tri
       } else if (hitCharacter) {
         shouldRemoveCoin = true
         hitTargetType = 'character'
-        console.log('💥 Coin hit character! Triggering PowerUp animation')
-        console.log('💥 playPowerUpAnimation function available:', !!playPowerUpAnimation)
         if (triggerPowerUpFlash) {
-          console.log('💥 Calling triggerPowerUpFlash for character')
           triggerPowerUpFlash('character');
         }
         if (playPowerUpAnimation) {
-          console.log('💥 Calling playPowerUpAnimation function')
           playPowerUpAnimation();
         } else {
-          console.warn('💥 playPowerUpAnimation function not available!')
-        }
+          }
       } else if (elapsedLifetime > coinMaxLifetime) {
         shouldRemoveCoin = true
         hitTargetType = 'lifetime_exceeded'
-        console.log('🎯 Coin lifetime exceeded')
-      } else if (coin.position.y < -10) { // Remove if it falls too far
+        } else if (coin.position.y < -10) { // Remove if it falls too far
         shouldRemoveCoin = true;
         hitTargetType = 'out_of_bounds';
-        console.log('🎯 Coin out of bounds');
-      }
+        }
 
       if (shouldRemoveCoin) {
         sceneRefs.scene?.remove(coin)
@@ -209,7 +188,6 @@ export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, tri
         } else {
           (coin.material as THREE.Material).dispose();
         }
-        console.log('🎯 Coin removed. Reason:', hitTargetType)
         return // Stop animation for this coin
       }
 
@@ -221,7 +199,6 @@ export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, tri
     // Fallback timeout for combo flash
     setTimeout(() => {
       if (!comboFlashTriggeredByHit && triggerPowerUpFlash && sceneRefs.torus) {
-        console.log('🎯 Triggering combo flash due to timeout');
         triggerPowerUpFlash('character');
         triggerPowerUpFlash('torus');
       }

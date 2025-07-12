@@ -71,39 +71,6 @@
         <TresGroup ref="goalkeeperGroup" :scale="[characterScale * 1.1, characterScale * 1.1, characterScale]" />
       </TresGroup>
 
-      <!-- Goal Box Visualization - shows target area -->
-      <TresGroup :position="[0, 0, -18.5]" :visible="true">
-        <!-- Goal frame outline - bright green wireframe -->
-        <TresLineSegments>
-          <TresEdgesGeometry :args="[new THREE.BoxGeometry(8, 2.4, 0.1)]" />
-          <TresLineBasicMaterial :color="0x00ff00" :linewidth="3" />
-        </TresLineSegments>
-        
-        <!-- Corner markers for better visibility -->
-        <TresMesh :position="[-4, 0, 0.1]">
-          <TresSphereGeometry :args="[0.1, 8, 6]" />
-          <TresMeshBasicMaterial :color="0xff0000" />
-        </TresMesh>
-        <TresMesh :position="[4, 0, 0.1]">
-          <TresSphereGeometry :args="[0.1, 8, 6]" />
-          <TresMeshBasicMaterial :color="0xff0000" />
-        </TresMesh>
-        <TresMesh :position="[-4, 2.4, 0.1]">
-          <TresSphereGeometry :args="[0.1, 8, 6]" />
-          <TresMeshBasicMaterial :color="0xff0000" />
-        </TresMesh>
-        <TresMesh :position="[4, 2.4, 0.1]">
-          <TresSphereGeometry :args="[0.1, 8, 6]" />
-          <TresMeshBasicMaterial :color="0xff0000" />
-        </TresMesh>
-        
-        <!-- Semi-transparent goal area -->
-        <TresMesh :position="[0, 1.2, 0]">
-          <TresBoxGeometry :args="[8, 2.4, 0.1]" />
-          <TresMeshBasicMaterial :color="0x00ff00" :transparent="true" :opacity="0.15" />
-        </TresMesh>
-      </TresGroup>
-
       <!-- Ball Group -->
       <TresGroup
         ref="ballModelGroup"
@@ -125,91 +92,19 @@
       @toggle-music="toggleBackgroundMusic"
       @trigger-dance="playWaveAnimation"
       @reset-character="resetCharacterPosition"
-      @toggle-settings="showMobileSettings = !showMobileSettings"
       @rotate-and-drop="rotateAndDropBall"
       @trigger-strike2="triggerStrike2"
     />
 
-    <!-- Mobile Settings Panel (Collapsible) -->
-    <div 
-      v-if="showMobileSettings" 
-      class="mobile-settings-panel"
-      @click.self="showMobileSettings = false"
-    >
-      <div class="mobile-settings-content">
-        <div class="mobile-settings-header">
-          <h3>Settings</h3>
-          <button @click="showMobileSettings = false" class="close-btn">×</button>
-        </div>
-        
-        <div class="mobile-settings-grid">
-          <!-- Character Scale -->
-          <div class="setting-item">
-            <label>Size</label>
-            <input 
-              type="range" 
-              v-model="characterScale" 
-              min="0.5" 
-              max="2" 
-              step="0.1"
-              class="mobile-slider"
-            />
-          </div>
-          
-          <!-- Scene Effects -->
-          <div class="setting-item">
-            <label>Effects</label>
-            <div class="toggle-group">
-              <button 
-                @click="mobileBloomEnabled = !mobileBloomEnabled"
-                :class="{ active: mobileBloomEnabled }"
-                class="toggle-btn"
-              >
-                Bloom
-              </button>
-              <button 
-                @click="mobileFogEnabled = !mobileFogEnabled"
-                :class="{ active: mobileFogEnabled }"
-                class="toggle-btn"
-              >
-                Fog
-              </button>
-              <button 
-                @click="showGrass = !showGrass"
-                :class="{ active: showGrass }"
-                class="toggle-btn"
-              >
-                Grass
-              </button>
-            </div>
-          </div>
-          
-          <!-- Power Save Mode -->
-          <div class="setting-item">
-            <label>Performance</label>
-            <div class="toggle-group">
-              <button 
-                @click="isPowerSaveMode = !isPowerSaveMode"
-                :class="{ active: isPowerSaveMode }"
-                class="toggle-btn"
-              >
-                Power Save
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Mobile Color Controls -->
-    <div class="mobile-color-controls" v-if="showMobileSettings">
+    <!-- Color Controls in top left corner -->
+    <div class="color-controls-top-left">
       <MobileColorSlider
         label="Shirt"
         :initial-hue="overlayColorHue"
         @update:color="updateOverlayColor"
       />
       <MobileColorSlider
-        label="Glow"
+        label="Power-up Reactor"
         :initial-hue="torusEmissionHue"
         @update:color="updateTorusEmission"
       />
@@ -267,7 +162,6 @@ import { useMobileOptimization } from '@/composables/useMobileOptimization'
 import { useCoinPhysics } from '@/composables/useCoinPhysics'
 
 // Mobile-specific state
-const showMobileSettings = ref(false)
 const showPerformanceWarning = ref(false)
 const isPowerSaveMode = ref(false)
 const showGoalkeeper = ref(false)
@@ -342,12 +236,10 @@ const torusEmissionHue = ref(195)
 // Play goalkeeper animation based on shot direction
 const playGoalkeeperAnimation = async (animationFile: string) => {
   if (!goalkeeperGroup.value || !sceneRefs.goalkeeperMixer) {
-    console.warn('🥅 Cannot play goalkeeper animation - goalkeeper not ready')
     return
   }
 
   try {
-    console.log(`🥅 Loading goalkeeper animation: ${animationFile}`)
     const loader = new FBXLoader()
     const animationFBX = await loader.loadAsync(animationFile)
     
@@ -363,8 +255,6 @@ const playGoalkeeperAnimation = async (animationFile: string) => {
       action.clampWhenFinished = true
       action.reset().play()
       
-      console.log(`🥅 Goalkeeper animation started: ${clip.name}`)
-      
       // Return to idle after animation completes
       const onGoalkeeperFinished = (event: any) => {
         if (event.action === action) {
@@ -377,35 +267,24 @@ const playGoalkeeperAnimation = async (animationFile: string) => {
               if (idleAnimation.animations.length > 0) {
                 const idleAction = sceneRefs.goalkeeperMixer.clipAction(idleAnimation.animations[0])
                 idleAction.reset().play()
-                console.log('🥅 Goalkeeper returned to idle')
-              }
+                }
             } catch (error) {
-              console.error('🥅 Error returning goalkeeper to idle:', error)
-            }
+              }
           }, 500)
         }
       }
       sceneRefs.goalkeeperMixer.addEventListener('finished', onGoalkeeperFinished)
     }
   } catch (error) {
-    console.error(`🥅 Error loading goalkeeper animation ${animationFile}:`, error)
-  }
+    }
 }
 
 // Load goalkeeper (same character asset)
 const loadGoalkeeper = async () => {
-  console.log('🥅 Loading goalkeeper...')
-  console.log('Goalkeeper group ref:', goalkeeperGroup.value)
-  console.log('Show goalkeeper:', showGoalkeeper.value)
-  
   try {
     // Use FBXLoader directly for the goalkeeper
     const loader = new FBXLoader()
     const goalkeeperModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture1.fbx')
-    
-    console.log('Goalkeeper model loaded:', goalkeeperModel)
-    console.log('Goalkeeper model bounds:', new THREE.Box3().setFromObject(goalkeeperModel))
-    console.log('Goalkeeper model children:', goalkeeperModel.children.length)
     
     // Scale should match the parent group scale - don't double-scale
     goalkeeperModel.scale.setScalar(1) // Parent group already has characterScale
@@ -440,14 +319,12 @@ const loadGoalkeeper = async () => {
           child.parent?.add(group)
           child.parent?.remove(child)
           
-          console.log('Applied matching materials to goalkeeper mesh:', child.name)
-        }
+          }
       }
     })
     
     // Add to goalkeeper group
     if (goalkeeperGroup.value) {
-      console.log('Adding goalkeeper to group...')
       goalkeeperGroup.value.clear()
       goalkeeperGroup.value.add(goalkeeperModel)
       
@@ -458,8 +335,6 @@ const loadGoalkeeper = async () => {
       goalkeeperGroup.value.updateWorldMatrix(true, true)
       const worldPos = new THREE.Vector3()
       goalkeeperGroup.value.getWorldPosition(worldPos)
-      console.log('Goalkeeper world position:', worldPos)
-      
       // Load goalkeeper idle animation
       const idleAnimation = await loader.loadAsync('/bot1/Goalkeeper Idle.fbx')
       if (idleAnimation.animations.length > 0 && sceneRefs.scene) {
@@ -469,24 +344,14 @@ const loadGoalkeeper = async () => {
         
         // Store mixer for updates
         sceneRefs.goalkeeperMixer = mixer
-        console.log('Goalkeeper Idle animation started')
-      }
+        }
       
       // Double-check visibility of the entire hierarchy
-      console.log('Goalkeeper visibility check:')
-      console.log('- goalkeeperGroup visible:', goalkeeperGroup.value.visible)
-      console.log('- parent visible:', goalkeeperGroup.value.parent?.visible)
-      console.log('- showGoalkeeper ref:', showGoalkeeper.value)
-      console.log('- goalkeeper children count:', goalkeeperGroup.value.children.length)
-      
-    } else {
-      console.warn('Goalkeeper group ref not available')
-    }
+      } else {
+      }
     
-    console.log('✅ Goalkeeper loaded successfully')
-  } catch (error) {
-    console.error('❌ Error loading goalkeeper:', error)
-  }
+    } catch (error) {
+    }
 }
 
 // Mobile-specific methods
@@ -505,17 +370,14 @@ const enablePowerSaveMode = () => {
     backgroundVideo.value.playbackRate = 0.5
   }
   
-  console.log('🔋 Power save mode enabled')
-}
+  }
 
 // Enhanced mobile strike sequence with character movement
 const triggerMobileStrikeSequence = () => {
   if (!sceneRefs.actions || sceneRefs.actions.length < 2) {
-    console.log('❌ Strike sequence not available - animations not loaded')
     return
   }
 
-  console.log('🎬 Starting enhanced mobile strike sequence')
   animationState.isStrikeSequenceActive = true
 
   // Phase 1: Ball rolls to position
@@ -599,7 +461,6 @@ const triggerMobileStrikeSequence = () => {
 
   // End sequence - character stays running
   setTimeout(() => {
-    console.log('🎬 Mobile strike sequence completed - use reset to return')
     // Character continues running - use reset button to return
   }, 4000)
 }
@@ -607,11 +468,9 @@ const triggerMobileStrikeSequence = () => {
 // Enhanced mobile character reset
 const triggerStrike2 = () => {
   if (!sceneRefs.actions || sceneRefs.actions.length < 2) {
-    console.log('❌ Strike 2 not available - animations not loaded')
     return
   }
 
-  console.log('🥅 Starting Strike 2 sequence - shooting toward goal!')
   animationState.isStrikeSequenceActive = true
 
   // Phase 1: Ball rolls to position (same as Strike 1)
@@ -740,12 +599,10 @@ const triggerStrike2 = () => {
               if (progress < 1) {
                 requestAnimationFrame(animateStage2)
               } else {
-                console.log('Player completed celebration run and is off screen')
                 // Hide ball when player finishes running
                 if (ballState) {
                   ballState.hidden = true
-                  console.log('⚽ Ball hidden - player finished celebration')
-                }
+                  }
               }
             }
 
@@ -777,8 +634,6 @@ const triggerStrike2 = () => {
       
       // Randomly select a target
       const randomTarget = goalTargets[Math.floor(Math.random() * goalTargets.length)]
-      console.log(`🎯 Shooting at: ${randomTarget.name}`)
-
       // Trigger goalkeeper animation with slight delay to react to ball movement
       setTimeout(() => {
         playGoalkeeperAnimation(randomTarget.animation)
@@ -788,12 +643,6 @@ const triggerStrike2 = () => {
         if (ballState) {
           // Goal detection - check if ball is within goal posts
           const ballFinalPos = ballState.position
-          console.log('🏁 Ball animation completed. Checking goal detection...', {
-            targetPos: randomTarget.pos,
-            ballFinalPos: ballFinalPos,
-            ballStatePosition: ballState.position
-          })
-          
           // Goal dimensions (standard football goal)
           const goalWidth = 8 // Total width: 8 units (-4 to +4)
           const goalHeight = 2.4 // Standard height: 2.4 units
@@ -805,36 +654,15 @@ const triggerStrike2 = () => {
           const withinGoalHeight = ballFinalPos[1] >= 0 && ballFinalPos[1] <= goalHeight
           const crossedGoalLine = ballFinalPos[2] <= (goalZ + goalTolerance)
           
-          console.log('🎯 Goal detection details:', {
-            ballX: ballFinalPos[0], goalWidthRange: `${-goalWidth/2} to ${goalWidth/2}`, withinWidth: withinGoalWidth,
-            ballY: ballFinalPos[1], goalHeightRange: `0 to ${goalHeight}`, withinHeight: withinGoalHeight,
-            ballZ: ballFinalPos[2], goalLineZ: goalZ, tolerance: goalTolerance, crossedLine: crossedGoalLine
-          })
-          
           const actualGoal = withinGoalWidth && withinGoalHeight && crossedGoalLine
           
           if (actualGoal) {
-            console.log('')
-            console.log('🎉 ==========================================')
-            console.log('⚽ GOAL! GOAL! GOAL! BALL WENT IN!')
-            console.log('🎉 ==========================================')
-            console.log('Shot type:', randomTarget.name)
-            console.log('Ball final position:', ballFinalPos)
-            console.log('==========================================')
-            console.log('')
+            // Goal scored
           } else {
             const reason = !withinGoalWidth ? 'wide' : 
                          !withinGoalHeight ? 'high' : 
                          !crossedGoalLine ? 'short' : 'unknown'
-            console.log('')
-            console.log('💥 ==========================================')
-            console.log('❌ MISS! BALL WENT', reason.toUpperCase())
-            console.log('💥 ==========================================')
-            console.log('Shot type:', randomTarget.name)
-            console.log('Ball final position:', ballFinalPos)
-            console.log('Reason:', reason)
-            console.log('==========================================')
-            console.log('')
+            // Miss reason: reason
           }
           
           // Hide ball after a short delay
@@ -860,18 +688,13 @@ const triggerStrike2 = () => {
 
   // End sequence - adjusted for slower celebration (1s ball chase + 1.8s touchline + 2s corner + 1.5s off screen)
   setTimeout(() => {
-    console.log('🥅 Strike 2 sequence completed - player ran off screen')
     animationState.isStrikeSequenceActive = false
   }, 8000)
 }
 
 const rotateAndDropBall = () => {
-  console.log('↩️ Turn button pressed - showing goalkeeper and placing ball...')
-  
   // Show goalkeeper
   showGoalkeeper.value = true
-  console.log('🥅 Goalkeeper is now visible')
-  
   if (sceneRefs.modelGroup && ballState) {
     // Rotate the character 180 degrees to face the goal
     const modelGroup = sceneRefs.modelGroup
@@ -889,8 +712,6 @@ const rotateAndDropBall = () => {
     
     ballState.position = [ballX, ballY, ballZ]
     ballState.hidden = false
-    console.log('⚽ Ball placed in front of player:', ballState.position)
-    
     // Animate the rotation
     const rotationDuration = 500
     const startTime = Date.now()
@@ -908,8 +729,7 @@ const rotateAndDropBall = () => {
       if (progress < 1) {
         requestAnimationFrame(animateRotation)
       } else {
-        console.log('↩️ Character rotation complete - now facing goal')
-      }
+        }
     }
     
     animateRotation()
@@ -917,8 +737,6 @@ const rotateAndDropBall = () => {
 }
 
 const resetCharacterPosition = () => {
-  console.log('🔄 Enhanced mobile reset: Returning character to starting position...')
-
   // Stop any ongoing ball animations
   if (typeof stopBallAnimation === 'function') {
     stopBallAnimation()
@@ -974,8 +792,7 @@ const resetCharacterPosition = () => {
       const camPos = sceneRefs.camera.position
       ballState.position = [camPos.x, Math.max(0.1, camPos.y - 0.5), camPos.z - 2]
       ballState.hidden = false
-      console.log('⚽ Ball unhidden and reset to camera position')
-    }
+      }
   }, 300)
 }
 
@@ -984,8 +801,7 @@ const setVideoPlaybackRate = () => {
   if (backgroundVideo.value) {
     backgroundVideo.value.playbackRate = isPowerSaveMode.value ? 0.3 : 0.5
     backgroundVideo.value.loop = true
-    console.log('🎬 Mobile video playback rate set to:', backgroundVideo.value.playbackRate)
-  }
+    }
 }
 
 const ensureVideoLoop = () => {
@@ -1081,14 +897,8 @@ const animationLoop = () => {
 
 // Performance detection on mount
 onMounted(async () => {
-  console.log('📱 Mobile scene component mounted')
-  console.log('📹 Initial mobile camera position:', mobileCameraPosition.value)
-  console.log('📹 Initial mobile camera FOV:', mobileCameraFov.value)
-
   // Detect device performance
   const performanceLevel = await detectPerformanceLevel()
-  console.log('📊 Device performance level:', performanceLevel)
-
   // Apply optimal settings based on device
   const optimalSettings = getOptimalSettings(performanceLevel)
   Object.assign({
@@ -1108,24 +918,12 @@ onMounted(async () => {
 
   // Watch for camera position changes
   watch(mobileCameraPosition, (newPos, oldPos) => {
-    console.log('📹 Mobile camera position changed:', {
-      from: oldPos,
-      to: newPos,
-      change: newPos ? [
-        (newPos[0] - (oldPos?.[0] || 0)).toFixed(3),
-        (newPos[1] - (oldPos?.[1] || 0)).toFixed(3),
-        (newPos[2] - (oldPos?.[2] || 0)).toFixed(3)
-      ] : 'N/A'
-    })
+    // Camera position change tracking removed
   }, { deep: true })
 
   // Watch for FOV changes
   watch(mobileCameraFov, (newFov, oldFov) => {
-    console.log('📹 Mobile camera FOV changed:', {
-      from: oldFov,
-      to: newFov,
-      change: (newFov - oldFov).toFixed(1) + '°'
-    })
+    // FOV change tracking removed
   })
 })
 
@@ -1151,8 +949,7 @@ watch(modelGroup, (newModelGroup) => {
       
       // Load goalkeeper after main character is ready
       loadGoalkeeper().then(() => {
-        console.log('Both characters should now be loaded')
-      })
+        })
       
       // Mark as ready
       isReady.value = true
@@ -1163,7 +960,6 @@ watch(modelGroup, (newModelGroup) => {
 
 watch(goalkeeperGroup, (newGoalkeeperGroup) => {
   if (newGoalkeeperGroup) {
-    console.log('Goalkeeper group ref connected:', newGoalkeeperGroup)
     // Don't load goalkeeper here, wait for main character to load first
   }
 })
@@ -1177,8 +973,7 @@ watch(ballModelGroup, (newBallGroup) => {
 }, { once: true })
 
 onBeforeUnmount(() => {
-  console.log('🧹 Mobile scene component unmounting...')
-})
+  })
 
 // Expose methods for parent component
 defineExpose({
@@ -1330,36 +1125,17 @@ defineExpose({
   flex-wrap: wrap;
 }
 
-.toggle-btn {
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  color: white;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  flex: 1;
-  min-width: 80px;
-}
 
-.toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.toggle-btn.active {
-  background: #007AFF;
-  border-color: #007AFF;
-}
-
-.mobile-color-controls {
+.color-controls-top-left {
   position: fixed;
-  bottom: 120px;
+  top: 76px;
   left: 16px;
-  right: 16px;
-  z-index: 900;
+  z-index: 1100;
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: auto;  /* Ensure mouse events work */
+  max-width: 220px;      /* Set max width for desktop */
 }
 
 .mobile-loading {
@@ -1471,10 +1247,6 @@ defineExpose({
     padding: 20px;
   }
   
-  .toggle-btn {
-    min-height: 44px;
-    font-size: 16px;
-  }
   
   .primary-btn,
   .secondary-btn {

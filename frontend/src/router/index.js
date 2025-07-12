@@ -167,12 +167,6 @@ const router = createRouter({
       
     },
     {
-      path: '/select-bot',
-      name: 'select-bot',
-      component: () => import('@/views/SelectBot.vue'),
-      
-    },
-    {
       path: '/character-creator',
       name: 'character-creator',
       component: () => import('@/views/CharacterCreator.vue'),

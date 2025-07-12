@@ -28,5 +28,6 @@ click on compliment, provoke,
 ![alt text](image.png)
 use the
 
-stretch use the deom fbnx0++
-69
+
+increase buttom blur bloom radius
+om mobile eplace nomr butins with scene buttons + back button

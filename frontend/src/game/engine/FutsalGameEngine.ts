@@ -1766,36 +1766,49 @@ export class FutsalGameEngine {
     }
     player.lastTouchTime = Date.now()
     
-    // Realistic dribbling mechanics
-    const dribbleQuality = (
-      player.attributes.dribbling / 99 * 0.4 +
-      player.attributes.technique / 99 * 0.3 +
-      player.attributes.balance / 99 * 0.2 +
-      player.attributes.agility / 99 * 0.1
-    )
-    
+    // Soccer dribbling - release ball and kick it forward at intervals
+    const timeSinceLastTouch = player.lastTouchTime ? Date.now() - player.lastTouchTime : 1000
     const playerSpeed = Math.hypot(player.vx, player.vy)
-    const speedFactor = Math.min(1.5, playerSpeed / 3)
-    const baseDribbleDistance = 12 + (1 - dribbleQuality) * 8
-    const dribbleDistance = baseDribbleDistance * (1 + speedFactor * 0.3)
+    const touchInterval = 300 - playerSpeed * 20 // Touch more frequently when moving fast
     
-    // Use player facing for dribble direction
-    const dribbleAngle = player.facing + (Math.random() - 0.5) * 0.2 * (1 - dribbleQuality)
-    const wobble = (1 - dribbleQuality) * 2 * (Math.random() - 0.5)
-    
-    // Keep ball on ground when dribbling
-    this.ball.x = player.x + Math.cos(dribbleAngle) * dribbleDistance + wobble
-    this.ball.y = player.y + Math.sin(dribbleAngle) * dribbleDistance + wobble
-    this.ball.z = Math.max(0, this.ball.z * 0.5) // Bring ball down
-    
-    this.ball.vx = player.vx * 0.9
-    this.ball.vy = player.vy * 0.9
-    this.ball.vz = 0
-    
-    // Add some ball spin when dribbling
-    this.ball.spin.x = -player.vy * 0.3
-    this.ball.spin.y = player.vx * 0.3
-    this.ball.spin.z *= 0.9
+    if (timeSinceLastTouch > touchInterval || timeSinceLastTouch > 500) {
+      // Time for a dribble touch
+      player.lastTouchTime = Date.now()
+      
+      // Calculate dribble quality
+      const dribbleQuality = (
+        player.attributes.dribbling / 99 * 0.4 +
+        player.attributes.technique / 99 * 0.3 +
+        player.attributes.balance / 99 * 0.2 +
+        player.attributes.agility / 99 * 0.1
+      )
+      
+      const speedFactor = Math.min(1, playerSpeed / 5)
+      
+      // Kick distance based on speed - further kicks when running fast
+      const kickDistance = 25 + speedFactor * 40 // Between 25-65 pixels ahead
+      const kickPower = 2.5 + speedFactor * 3 // Between 2.5-5.5 power
+      
+      // Kick direction with some error based on quality
+      const kickAngle = player.facing + (Math.random() - 0.5) * (1 - dribbleQuality) * 0.4
+      
+      // Apply kick to ball
+      this.ball.vx = Math.cos(kickAngle) * kickPower
+      this.ball.vy = Math.sin(kickAngle) * kickPower
+      this.ball.vz = 0.05 // Very slight bounce
+      
+      // Move ball ahead of player
+      this.ball.x = player.x + Math.cos(kickAngle) * 15
+      this.ball.y = player.y + Math.sin(kickAngle) * 15
+      
+      // Release possession - player must chase the ball
+      this.ball.possessor = null
+      this.ball.lastKicker = player
+      
+      // Add realistic ball spin
+      this.ball.spin.x = -this.ball.vy * 0.3
+      this.ball.spin.y = this.ball.vx * 0.3
+    }
     
     // Create AI context for utility-based decision making
     const teammates = this.players.filter(p => p.team === player.team && p !== player && !p.isSentOff)

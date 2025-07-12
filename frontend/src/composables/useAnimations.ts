@@ -51,8 +51,6 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
   // Load character model
   const loadCharacterModel = async () => {
     try {
-      console.log('🤖 Loading character model...')
-      
       // Load both textures
       const textureLoader = new THREE.TextureLoader()
       const [baseTexture, overlayTexture] = await Promise.all([
@@ -79,8 +77,7 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
           )
         })
       ])
-      
-      
+
       const loader = new FBXLoader()
       const characterModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture2.fbx')
       
@@ -88,13 +85,12 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
       characterModel.position.set(0, 0, 0)
       
       // Log all mesh names
-      console.log('🔍 Logging all mesh names in the model:')
       characterModel.traverse((child) => {
         if (child instanceof THREE.Mesh) {
-          console.log(`Found mesh: ${child.name} (ID: ${child.uuid})`)
+          // Found mesh
         }
         if (child.isBone) { // THREE.Bone is a subclass of Object3D, .isBone is a type guard
-          console.log(`🦴 Found bone: ${child.name} (ID: ${child.uuid})`)
+          // Found bone
         }
       })
       
@@ -102,7 +98,6 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
       let overlayMaterialCreated = false
       characterModel.traverse((child) => {
         if (child instanceof THREE.Mesh) {
-          console.log(`🔍 Processing mesh: `);
           if (child.name.toLowerCase().includes('arcreactor') && child.material) {
             arcreactorMeshRef.value = child;
             if (Array.isArray(child.material)) {
@@ -110,30 +105,24 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
             } else {
               materials.arcreactor = child.material as THREE.MeshStandardMaterial;
             }
-            console.log('✅ Arcreactor mesh and material stored:', child.name);
             if (arcreactorMeshRef.value && materials.arcreactor) {
               arcreactorMeshRef.value.userData.defaultEmissive = materials.arcreactor.emissive.clone();
               arcreactorMeshRef.value.userData.defaultEmissiveIntensity = materials.arcreactor.emissiveIntensity;
-              console.log('✅ Stored default arcreactor emissive:', { 
-                color: materials.arcreactor.emissive.getHexString(), 
-                intensity: materials.arcreactor.emissiveIntensity 
-              });
             }
           }
           if (child.material && (child.material instanceof THREE.MeshPhongMaterial || 
               child.material instanceof THREE.MeshBasicMaterial || 
               child.material instanceof THREE.MeshStandardMaterial)) {
-            console.log(`📦 Found material on mesh ${child.name}:`, child.material.type)
             // Create base material
             const baseMaterial = new THREE.MeshStandardMaterial({
               map: baseTexture,
               normalMap: (child.material as any).normalMap || null,
               aoMap: (child.material as any).aoMap || null,
               aoMapIntensity: 1,
-              metalness: 0.6,
-              roughness: 0.1,
-              emissive: 0x44444,
-              emissiveIntensity: 0.2,
+              metalness: 0.3,  // Reduced from 0.6 for less metallic look
+              roughness: 0.3,  // Increased from 0.1 for softer reflections
+              emissive: 0x666666,  // Brighter emissive color
+              emissiveIntensity: 0.4,  // Increased from 0.2
               envMapIntensity: 1,
               transparent: true,
               opacity: 1,
@@ -144,14 +133,9 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
             // Only set base material once
             if (!materials.base) {
               materials.base = baseMaterial
-              console.log('✅ Base material created and stored')
               if (materials.base) {
                 materials.base.userData.defaultEmissive = materials.base.emissive.clone();
                 materials.base.userData.defaultEmissiveIntensity = materials.base.emissiveIntensity;
-                console.log('✅ Stored default base material emissive:', { 
-                  color: materials.base.emissive.getHexString(), 
-                  intensity: materials.base.emissiveIntensity 
-                });
               }
             }
 
@@ -178,12 +162,6 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
             if (!overlayMaterialCreated) {
               materials.overlay = overlayMaterial
               overlayMaterialCreated = true
-              console.log('✅ Overlay material created and stored:', {
-                color: overlayMaterial.color.getHexString(),
-                metalness: overlayMaterial.metalness,
-                roughness: overlayMaterial.roughness,
-                transparent: overlayMaterial.transparent
-              })
             }
             
             // Create a group for the mesh and its overlay
@@ -209,24 +187,13 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
         }
       })
       
-      console.log('🎨 Final materials state:', {
-        base: !!materials.base,
-        overlay: !!materials.overlay,
-        arcreactor: !!materials.arcreactor
-      })
-      
       if (sceneRefs.modelGroup) {
         sceneRefs.modelGroup.add(characterModel)
         sceneRefs.model = characterModel
-        console.log('✅ Character model loaded and added to scene')
-        
         // Attach new head model
         try {
-          console.log('💀 Loading new head model /bot1/bot2-head.fbx...');
           const headLoader = new FBXLoader(); // FBXLoader is already imported
           const newHeadModel = await headLoader.loadAsync('/bot1/bot2-head.fbx');
-          console.log('💀 New head model loaded:', newHeadModel);
-
           let headBone = null;
           characterModel.traverse((child) => {
             if (child.isBone && child.name === 'mixamorigHead') {
@@ -236,9 +203,7 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
 
           if (headBone) {
 
-    
             // Load texture and create new material for the head
-            console.log('💀 Loading new head texture /bot1/bot2-head.png...');
             const headTextureLoader = new THREE.TextureLoader();
             const headTexture = await new Promise<THREE.Texture>((resolve, reject) => {
               headTextureLoader.load(
@@ -250,48 +215,35 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
                 },
                 undefined,
                 (err) => {
-                  console.error('❌ Error loading head texture:', err);
                   reject(err); // Important to reject the promise on error
                 }
               );
             });
-            console.log('💀 New head texture loaded.');
-
             const newHeadMaterial = new THREE.MeshStandardMaterial({
               map: headTexture,
             });
-            console.log('💀 Created new material for head.');
-
             newHeadModel.traverse((node) => {
               if (node instanceof THREE.Mesh) {
                 node.material = newHeadMaterial;
-                console.log(`💀 Applied new material to head mesh: ${node.name}`);
-              }
+                }
             });
             
             // Adjust scale, position, rotation as needed
             newHeadModel.scale.set(1.01, 1.01, 1.01); // Adjust as necessary
             newHeadModel.position.set(0, -88, 2);   // Adjust as necessary
             newHeadModel.rotation.set(0, 0, 0);   // Adjust as necessary
-            
-         
-            
+
             headBone.add(newHeadModel);
             newHeadModelRef.value = newHeadModel; // Store the reference to the new head model
-            console.log('💀 New head model attached to bone:', headBone.name);
-
-          } else {
-            console.warn('⚠️ Target bone "mixamorig:Head" not found in the character model.');
-          }
+            } else {
+            }
         } catch (headLoadError) {
-          console.error('❌ Error loading or attaching new head model:', headLoadError);
-        }
+          }
         // End of new head attachment logic
         await loadAnimations()
       }
       
     } catch (error) {
-      console.error('❌ Error loading character model:', error)
       throw error
     }
   }
@@ -301,8 +253,6 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
     if (!sceneRefs.model) return
     
     try {
-      console.log('🎬 Loading animations...')
-      
       const loader = new FBXLoader()
       const animationFiles = animations.map(anim => anim.file)
       const loadedActions: THREE.AnimationAction[] = []
@@ -310,16 +260,13 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
       sceneRefs.mixer = new THREE.AnimationMixer(sceneRefs.model)
       
       for (let i = 0; i < animationFiles.length; i++) {
-        console.log(`🎬 Loading animation ${i + 1}: ${animationFiles[i]}`)
-        
         const animationFBX = await loader.loadAsync(animationFiles[i])
         
         if (animationFBX.animations && animationFBX.animations.length > 0) {
           const clip = animationFBX.animations[0]
           const action = sceneRefs.mixer!.clipAction(clip)
           loadedActions.push(action)
-          console.log(`✅ Animation ${i + 1} loaded: ${clip.name}`)
-        }
+          }
       }
       
       sceneRefs.actions = loadedActions
@@ -327,13 +274,9 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
       // Start with idle animation
       if (sceneRefs.actions.length > 0) {
         sceneRefs.actions[0].play()
-        console.log('🎬 Started idle animation')
-      }
+        }
       
-      console.log('✅ All animations loaded successfully')
-      
-    } catch (error) {
-      console.error('❌ Error loading animations:', error)
+      } catch (error) {
       throw error
     }
   }
@@ -357,8 +300,7 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
         arcreactorMeshRef.value.rotation.z += 0.1; // Adjust spin speed as needed
       } else {
         isArcreactorSpinning.value = false;
-        console.log('🌀 Arcreactor spin finished.');
-      }
+        }
     }
     
     return deltaTime
@@ -407,10 +349,7 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
     }
   }
 
-
-  
   const triggerPowerUpFlash = (target: 'character' | 'torus') => {
-    console.log(`💥 Triggering power-up flash for: `);
     let arcreactorToFlash: THREE.MeshStandardMaterial | null = null;
     let baseToFlash: THREE.MeshStandardMaterial | null = null;
     let torusToFlash: THREE.MeshStandardMaterial | null = null;
@@ -429,18 +368,15 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
       } else if (arcreactorMeshRef.value && arcreactorMeshRef.value.material instanceof THREE.MeshStandardMaterial) {
         // Fallback to arcreactorMeshRef if model is loaded but materials.arcreactor isn't (should be rare)
         arcreactorToFlash = arcreactorMeshRef.value.material as THREE.MeshStandardMaterial;
-        console.log("🎯 Used arcreactorMeshRef.value.material for character arcreactor flash.");
-      }
+        }
 
       if (arcreactorToFlash) {
         if (arcreactorToFlash.userData.defaultEmissive && typeof arcreactorToFlash.userData.defaultEmissiveIntensity === 'number') {
           arcreactorOriginalEmissive = (arcreactorToFlash.userData.defaultEmissive as THREE.Color).clone();
           arcreactorOriginalIntensity = arcreactorToFlash.userData.defaultEmissiveIntensity as number;
-          console.log(`🎨 Using stored default emissive for arcreactor flash: ${arcreactorOriginalEmissive.getHexString()}, intensity: ${arcreactorOriginalIntensity}`);
         } else {
           arcreactorOriginalEmissive = arcreactorToFlash.emissive.clone();
           arcreactorOriginalIntensity = arcreactorToFlash.emissiveIntensity;
-          console.log(`🎨 Cloned current emissive for arcreactor flash (default not found): ${arcreactorOriginalEmissive.getHexString()}, intensity: ${arcreactorOriginalIntensity}`);
         }
         arcreactorToFlash.emissive.setHex(0x00FF00); // Green flash
         arcreactorToFlash.emissiveIntensity = 0.2;
@@ -451,11 +387,9 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
         if (baseToFlash.userData.defaultEmissive && typeof baseToFlash.userData.defaultEmissiveIntensity === 'number') {
           baseOriginalEmissive = (baseToFlash.userData.defaultEmissive as THREE.Color).clone();
           baseOriginalIntensity = baseToFlash.userData.defaultEmissiveIntensity as number;
-          console.log(`🎨 Using stored default emissive for base material flash: ${baseOriginalEmissive.getHexString()}, intensity: ${baseOriginalIntensity}`);
         } else {
           baseOriginalEmissive = baseToFlash.emissive.clone();
           baseOriginalIntensity = baseToFlash.emissiveIntensity;
-          console.log(`🎨 Cloned current emissive for base material flash (default not found): ${baseOriginalEmissive.getHexString()}, intensity: ${baseOriginalIntensity}`);
         }
         baseToFlash.emissive.setHex(0x00FF00); // Green flash
         baseToFlash.emissiveIntensity = 0.5;
@@ -468,11 +402,9 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
         if (torusMesh.userData.defaultEmissive && typeof torusMesh.userData.defaultEmissiveIntensity === 'number') {
             torusOriginalEmissive = (torusMesh.userData.defaultEmissive as THREE.Color).clone();
             torusOriginalIntensity = torusMesh.userData.defaultEmissiveIntensity as number;
-            console.log(`🎨 Using stored default emissive for torus flash: , intensity: `);
         } else {
             torusOriginalEmissive = torusToFlash.emissive.clone();
             torusOriginalIntensity = torusToFlash.emissiveIntensity;
-            console.log(`🎨 Cloned current emissive for torus flash (default not found): , intensity: `);
         }
         torusToFlash.emissive.setHex(0x00FF00); // Green flash
         torusToFlash.emissiveIntensity = 2.0; // Brighter flash
@@ -481,7 +413,6 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
 
     // Proceed if any material was set up for flashing
     if (arcreactorToFlash || baseToFlash || torusToFlash) {
-      console.log(`💥 Setting timeout to revert flash for `);
       setTimeout(() => {
         if (arcreactorToFlash && arcreactorOriginalEmissive && arcreactorOriginalIntensity !== null) {
           arcreactorToFlash.emissive.copy(arcreactorOriginalEmissive);
@@ -495,8 +426,6 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
           torusToFlash.emissive.copy(torusOriginalEmissive);
           torusToFlash.emissiveIntensity = torusOriginalIntensity;
         }
-        console.log(`✅ Emissive flash reverted for: `);
-
         // Scaling logic ONLY for torus
         if (target === 'torus' && sceneRefs.torus) {
           const torusMeshForScaling = sceneRefs.torus.children[0] as THREE.Mesh;
@@ -505,33 +434,26 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
           if (torusMeshForScaling && torusMeshForScaling.isMesh && defaultTorusScale) {
             // if (gsap) gsap.killTweensOf(torusMeshForScaling.scale); // If GSAP were used
             torusMeshForScaling.scale.set(defaultTorusScale.x * 1.2, defaultTorusScale.y * 1.2, defaultTorusScale.z * 1.2);
-            console.log(`✅ Torus scaled up`);
-
             setTimeout(() => {
               if (torusMeshForScaling && torusMeshForScaling.parent) { // Check if still part of scene
                 torusMeshForScaling.scale.copy(defaultTorusScale);
-                console.log(`✅ Torus scale reverted`);
-              }
+                }
             }, 150); // Scale pulse duration
           } else {
-            console.log(`✅ No scaling applied for torus (mesh or defaultTorusScale not found)`);
           }
         }
       }, 200); // Flash duration 200ms
 
       if (target === 'torus' && arcreactorMeshRef.value) {
-        console.log('🌀 Initiating Arcreactor spin due to torus hit.');
         isArcreactorSpinning.value = true;
         arcreactorSpinEndTime.value = Date.now() + 1000; // Spin for 1 second
       }
     } else {
-      console.warn(`⚠️ Could not find material for target:  to apply flash.`);
-    }
+      }
   };
 
   const stopWaveAnimation = () => {
     if (currentWaveAction.value) {
-      console.log('💃 Stopping current wave animation smoothly');
       currentWaveAction.value.fadeOut(0.5);
       currentWaveAction.value = null;
     }
@@ -540,27 +462,20 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
   // Play power-up animation when hit by coin
   const playPowerUpAnimation = async () => {
     if (!sceneRefs.mixer || !sceneRefs.model) {
-      console.warn('💥 Cannot play power-up animation - mixer or model not ready')
       return
     }
 
     try {
-      console.log('💥 Loading PowerUp animation...')
       const loader = new FBXLoader()
       const powerUpFBX = await loader.loadAsync('/bot1/PowerUp.fbx')
       
       if (powerUpFBX.animations && powerUpFBX.animations.length > 0) {
         const clip = powerUpFBX.animations[0]
-        console.log(`💥 Loaded PowerUp animation clip: ${clip.name}`)
-
         // Store current animation state before PowerUp
         const previousAnimationIndex = animationState.currentIndex
         const previousAction = sceneRefs.actions && sceneRefs.actions[previousAnimationIndex] ? sceneRefs.actions[previousAnimationIndex] : null
-        console.log(`💥 Storing previous animation index: ${previousAnimationIndex}`)
-
         // Fade out current animation
         if (previousAction) {
-          console.log(`💥 Fading out current animation for PowerUp`)
           previousAction.fadeOut(0.2)
         }
 
@@ -570,87 +485,78 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
         powerUpAction.timeScale = 3.0 // Play at 3x speed
         powerUpAction.reset().fadeIn(0.2).play()
         
-        console.log('💥 PowerUp animation started at 3x speed')
-
         // Return to previous animation after 1 second
         setTimeout(() => {
-          console.log('💥 PowerUp timeout reached, returning to previous animation')
           powerUpAction.fadeOut(0.2)
 
           // Return to previous animation state
           if (previousAction) {
             animationState.currentIndex = previousAnimationIndex
             previousAction.reset().fadeIn(0.2).play()
-            console.log(`💥 PowerUp finished, returned to previous animation index: ${previousAnimationIndex}`)
-          } else if (sceneRefs.actions && sceneRefs.actions[0]) {
+            } else if (sceneRefs.actions && sceneRefs.actions[0]) {
             // Fallback to idle if previous action not available
             animationState.currentIndex = 0
             sceneRefs.actions[0].reset().fadeIn(0.2).play()
-            console.log('💥 PowerUp finished, fallback to idle animation')
-          }
+            }
         }, 1000) // 1 second timeout
       }
     } catch (error) {
-      console.error('💥 Error loading PowerUp animation:', error)
-    }
+      }
   }
 
   const playWaveAnimation = async () => {
-    console.log('💃 playWaveAnimation called.'); // New Log
+    // New Log
 
     if (!sceneRefs.model || !sceneRefs.mixer) {
-      console.warn('⚠️ Model or mixer not available to play wave animation. sceneRefs.model:', !!sceneRefs.model, 'sceneRefs.mixer:', !!sceneRefs.mixer); // Enhanced Log
+      // Enhanced Log
       return;
     }
-    console.log('💃 Model and mixer seem available.'); // New Log
+    // New Log
 
     try {
-      console.log(`💃 Loading animation from path: ${waveAnimationPath}`);
       const loader = new FBXLoader();
       const animationFBX = await loader.loadAsync(waveAnimationPath);
-      console.log(`💃 Loaded FBX for wave animation:`, animationFBX); // New Log
+      // New Log
 
       if (animationFBX.animations && animationFBX.animations.length > 0) {
         const clip = animationFBX.animations[0];
-        console.log(`💃 Loaded wave animation clip: ${clip.name}`, clip); // Enhanced Log
+        // Enhanced Log
 
         if (sceneRefs.actions && sceneRefs.actions[animationState.currentIndex]) {
-          console.log(`💃 Fading out current animation: ${sceneRefs.actions[animationState.currentIndex].getClip().name}`); // New Log
           sceneRefs.actions[animationState.currentIndex].fadeOut(0.5);
         } else {
-          console.warn('💃 No current animation to fade out or sceneRefs.actions not ready/found at currentIndex:', animationState.currentIndex); // New Log
+          // New Log
         }
 
         const waveAction = sceneRefs.mixer.clipAction(clip);
-        console.log(`💃 Created waveAction:`, waveAction); // New Log
+        // New Log
         waveAction.setLoop(THREE.LoopRepeat, Infinity);
         waveAction.reset().fadeIn(0.5).play();
         currentWaveAction.value = waveAction;
-        console.log(`💃 Wave animation "${clip.name}" should be playing.`); // New Log
+        // New Log
 
         const onWaveAnimationFinished = (event: any) => {
           if (event.action === waveAction) {
-            console.log(`💃 Wave animation "${clip.name}" finished event.`); // Enhanced Log
+            // Enhanced Log
             sceneRefs.mixer!.removeEventListener('finished', onWaveAnimationFinished);
             waveAction.fadeOut(0.5);
 
             if (sceneRefs.actions && sceneRefs.actions[0]) {
               animationState.currentIndex = 0; // Revert to idle animation
               sceneRefs.actions[0].reset().fadeIn(0.5).play();
-              console.log('🎬 Reverted to idle animation.');
-            } else {
-              console.warn('🎬 Could not revert to idle, sceneRefs.actions[0] not found.'); // New Log
+              } else {
+              // New Log
             }
           }
         };
         sceneRefs.mixer.addEventListener('finished', onWaveAnimationFinished);
-        console.log(`💃 Event listener for "finished" added for wave animation.`); // New Log
+        // New Log
 
       } else {
-        console.warn(`⚠️ No animations found in FBX file: ${waveAnimationPath}`); // Enhanced Log
+        // Enhanced Log
       }
     } catch (error) {
-      console.error(`❌ Error loading or playing wave animation:`, error); // Enhanced Log
+      // Enhanced Log
     }
   };
 
@@ -658,8 +564,7 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
     if (newHeadModelRef.value) {
       isNewHeadVisible.value = !isNewHeadVisible.value;
       newHeadModelRef.value.visible = isNewHeadVisible.value;
-      console.log(`💀 New head visibility set to: ${isNewHeadVisible.value}`);
-    }
+      }
   };
 
   return {
