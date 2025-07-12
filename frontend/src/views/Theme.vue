@@ -744,6 +744,27 @@
             
             <v-row>
               <v-col cols="12">
+                <h3 class="mb-4">Player Cards V2 - Enhanced with Detailed Stats</h3>
+                <v-row>
+                  <v-col v-for="player in samplePlayers" :key="`v2-${player.id}`" cols="12" md="6">
+                    <PlayerCardV2 
+                      :player="player" 
+                      :is-selected="selectedPlayers.includes(player.id)"
+                      :is-favorite="favoritePlayers.includes(player.id)"
+                      @click="handlePlayerClick"
+                      @compare="handleCompare"
+                      @recruit="handleRecruit"
+                      @favorite="handleFavorite(player.id)"
+                    />
+                  </v-col>
+                </v-row>
+              </v-col>
+            </v-row>
+            
+            <v-divider class="my-6"></v-divider>
+            
+            <v-row>
+              <v-col cols="12">
                 <h3 class="mb-4">Player Comparison Cards</h3>
                 <v-row>
                   <v-col v-for="player in comparisonPlayers" :key="player.id" cols="12" md="4">
@@ -968,6 +989,7 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import PlayerCard from '@/components/recruit/PlayerCard.vue'
+import PlayerCardV2 from '@/components/recruit/PlayerCardV2.vue'
 import PlayerComparisonCard from '@/components/recruit/PlayerComparisonCard.vue'
 import PlayerRadarChart from '@/components/recruit/PlayerRadarChart.vue'
 
@@ -1254,6 +1276,23 @@ const handleRemoveComparison = (playerId) => {
     comparisonPlayers.value.splice(index, 1)
   }
 }
+
+const handleFavorite = (playerId) => {
+  const index = favoritePlayers.value.indexOf(playerId)
+  if (index > -1) {
+    favoritePlayers.value.splice(index, 1)
+    snackbar.text = 'Removed from favorites'
+  } else {
+    favoritePlayers.value.push(playerId)
+    snackbar.text = 'Added to favorites'
+  }
+  snackbar.color = 'info'
+  snackbar.show = true
+}
+
+// Selected and favorite players tracking
+const selectedPlayers = ref([])
+const favoritePlayers = ref(['p1']) // Pre-favorite the elite player
 
 // Featured player for detailed view
 const featuredPlayer = ref({

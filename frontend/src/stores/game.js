@@ -246,6 +246,79 @@ export const useGameStore = defineStore('game', () => {
     error.value = null;
   };
 
+  // Game-specific methods for the soccer game
+  const getMatch = async (matchId) => {
+    if (!matchId) return null;
+    
+    try {
+      const { data, error: fetchError } = await getMatch(matchId);
+      if (fetchError) throw new Error(fetchError);
+      return data;
+    } catch (err) {
+      error.value = err.message;
+      return null;
+    }
+  };
+
+  const deleteMatch = async (matchId) => {
+    if (!userId.value || !matchId) return false;
+    
+    try {
+      // For now, just remove from local state
+      activeMatches.value = activeMatches.value.filter(m => m.id !== matchId);
+      userMatches.value = userMatches.value.filter(m => m.id !== matchId);
+      
+      // TODO: Add Firebase delete functionality
+      return true;
+    } catch (err) {
+      error.value = err.message;
+      return false;
+    }
+  };
+
+  const updateMatchResult = async (matchId, result) => {
+    if (!userId.value || !matchId) return false;
+    
+    try {
+      const updates = {
+        status: 'completed',
+        result: result,
+        completedAt: new Date().toISOString()
+      };
+      
+      const { error: updateError } = await updateMatch(matchId, updates);
+      if (updateError) throw new Error(updateError);
+      
+      // Record match result
+      const won = result.winner === userId.value;
+      await recordMatchResult(won);
+      
+      return true;
+    } catch (err) {
+      error.value = err.message;
+      return false;
+    }
+  };
+
+  const updateMatchStats = async (matchId, stats) => {
+    if (!matchId) return false;
+    
+    try {
+      const updates = {
+        lastUpdated: new Date().toISOString(),
+        gameStats: stats
+      };
+      
+      const { error: updateError } = await updateMatch(matchId, updates);
+      if (updateError) throw new Error(updateError);
+      
+      return true;
+    } catch (err) {
+      error.value = err.message;
+      return false;
+    }
+  };
+
   return {
     // State
     gameData,
@@ -274,6 +347,10 @@ export const useGameStore = defineStore('game', () => {
     fetchUserMatches,
     addAchievement,
     addToInventory,
-    clearError
+    clearError,
+    getMatch,
+    deleteMatch,
+    updateMatchResult,
+    updateMatchStats
   };
 });

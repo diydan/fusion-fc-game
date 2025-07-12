@@ -149,6 +149,12 @@ const router = createRouter({
       beforeEnter: requireAuth
     },
     {
+      path: '/play-game/:matchId?',
+      name: 'play-game',
+      component: () => import('@/views/PlayGame.vue'),
+      beforeEnter: requireAuth
+    },
+    {
       path: '/leaderboards',
       name: 'leaderboards',
       component: () => import('@/views/Leaderboards.vue'),
