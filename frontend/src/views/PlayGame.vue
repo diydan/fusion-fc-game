@@ -35,14 +35,6 @@
             </div>
           </div>
 
-          <div v-else-if="coinFlipping" class="flipping-phase">
-            <p>You chose: <strong>{{ playerChoice }}</strong></p>
-            <div class="coin-animation">
-              <div class="spinning-coin">🪙</div>
-            </div>
-            <p>Flipping coin...</p>
-          </div>
-
           <div v-else-if="coinResult" class="result-phase">
             <p>You chose: <strong>{{ playerChoice }}</strong></p>
             <div class="coin-result">
@@ -150,25 +142,68 @@
       </div>
     </div>
     
-    <!-- Engine Controls -->
-    <div class="engine-controls v1-controls">
-      <h3>Match Statistics</h3>
-      <div class="stat-row">
-        <span class="stat-label">Cards:</span>
-        <span class="stat-value">
-          <span v-for="(card, idx) in v1Stats.cards" :key="idx" class="card-indicator" :class="card.type">
-            {{ card.player }} ({{ card.time }})
+    <!-- Stats and Activity Container -->
+    <div class="stats-activity-container">
+      <!-- Activity Stream (Left) -->
+      <div class="activity-stream" :class="{ collapsed: activityStreamCollapsed }">
+        <div class="activity-header" @click="activityStreamCollapsed = !activityStreamCollapsed">
+          <h3>Activity Stream</h3>
+          <span class="toggle-icon">{{ activityStreamCollapsed ? '◀' : '▼' }}</span>
+        </div>
+        <div class="activity-content" v-if="!activityStreamCollapsed">
+          <div class="activity-list">
+            <TransitionGroup name="activity">
+              <div v-for="event in gameEvents" :key="event.id" class="activity-item" :class="event.type">
+                <span class="event-time">{{ formatEventTime(event.time) }}</span>
+                <span class="event-icon">{{ getEventIcon(event.type) }}</span>
+                <span class="event-text">{{ event.text }}</span>
+              </div>
+            </TransitionGroup>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Match Statistics (Right) -->
+      <div class="engine-controls v1-controls">
+        <h3>Match Statistics</h3>
+        <div class="stat-row">
+          <span class="stat-label">Possession:</span>
+          <span class="stat-value">
+            <span class="possession-bar">
+              <span class="possession-home" :style="{ width: possessionStats.home + '%' }">{{ possessionStats.home }}%</span>
+              <span class="possession-away" :style="{ width: possessionStats.away + '%' }">{{ possessionStats.away }}%</span>
+            </span>
           </span>
-          <span v-if="v1Stats.cards.length === 0" class="no-cards">No cards</span>
-        </span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Fouls:</span>
-        <span class="stat-value">{{ v1Stats.fouls }} ({{ v1Stats.advantages }} advantages)</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Free Kicks:</span>
-        <span class="stat-value">{{ v1Stats.freeKicks }}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Shots:</span>
+          <span class="stat-value">Home {{ matchStats?.shots?.home || 0 }} - {{ matchStats?.shots?.away || 0 }} Away</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">On Target:</span>
+          <span class="stat-value">Home {{ matchStats?.shotsOnTarget?.home || 0 }} - {{ matchStats?.shotsOnTarget?.away || 0 }} Away</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Pass Accuracy:</span>
+          <span class="stat-value">Home {{ matchStats?.passCompletionRate?.home || 0 }}% - {{ matchStats?.passCompletionRate?.away || 0 }}% Away</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Fouls:</span>
+          <span class="stat-value">{{ v1Stats.fouls }} ({{ v1Stats.advantages }} advantages)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Free Kicks:</span>
+          <span class="stat-value">{{ v1Stats.freeKicks }}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Cards:</span>
+          <span class="stat-value">
+            <span v-for="(card, idx) in v1Stats.cards" :key="idx" class="card-indicator" :class="card.type">
+              {{ card.player }} ({{ card.time }})
+            </span>
+            <span v-if="v1Stats.cards.length === 0" class="no-cards">No cards</span>
+          </span>
+        </div>
       </div>
     </div>
     
@@ -232,24 +267,6 @@
       </div>
     </TransitionGroup>
     
-    <!-- Activity Stream -->
-    <div class="activity-stream" :class="{ collapsed: activityStreamCollapsed }">
-      <div class="activity-header" @click="activityStreamCollapsed = !activityStreamCollapsed">
-        <h3>Activity Stream</h3>
-        <span class="toggle-icon">{{ activityStreamCollapsed ? '▶' : '▼' }}</span>
-      </div>
-      <div class="activity-content" v-if="!activityStreamCollapsed">
-        <div class="activity-list">
-          <TransitionGroup name="activity">
-            <div v-for="event in gameEvents" :key="event.id" class="activity-item" :class="event.type">
-              <span class="event-time">{{ formatEventTime(event.time) }}</span>
-              <span class="event-icon">{{ getEventIcon(event.type) }}</span>
-              <span class="event-text">{{ event.text }}</span>
-            </div>
-          </TransitionGroup>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -345,6 +362,20 @@ const formattedTime = computed(() => {
 const gameState = computed(() => {
   if (!gameEngine) return null
   return gameEngine.getGameState()
+})
+
+const matchStats = computed(() => {
+  if (!gameEngine) return null
+  return gameEngine.getStatistics()
+})
+
+const possessionStats = computed(() => {
+  const stats = matchStats.value
+  if (!stats?.possession) return { home: 50, away: 50 }
+  return {
+    home: Math.round(stats.possession.home),
+    away: Math.round(stats.possession.away)
+  }
 })
 
 // Initialize audio
@@ -469,29 +500,23 @@ const updateV1Statistics = () => {
 // Coin flip modal functions
 const makeChoice = (choice: 'Heads' | 'Tails') => {
   playerChoice.value = choice
-  coinFlipping.value = true
   
   // Initialize audio on user interaction
   initAudio()
   
-  // Simulate coin flip
-  setTimeout(() => {
-    const isHeads = Math.random() < 0.5
-    coinResult.value = isHeads ? 'Heads' : 'Tails'
-    playerWon.value = choice === coinResult.value
-    kickoffTeam.value = playerWon.value ? 'Home' : 'Away'
-    coinFlipping.value = false
-    
-    // Play whistle sound for result
-    playWhistleSound()
-    
-    // Set kickoff formation after a delay to make it visible
-    setTimeout(() => {
-      setKickoffFormation()
-      // Force immediate visual update
-      render()
-    }, 1000)
-  }, 2000)
+  // Immediate coin flip result - no animation
+  const isHeads = Math.random() < 0.5
+  coinResult.value = isHeads ? 'Heads' : 'Tails'
+  playerWon.value = choice === coinResult.value
+  kickoffTeam.value = playerWon.value ? 'Home' : 'Away'
+  
+  // Play whistle sound for result
+  playWhistleSound()
+  
+  // Set kickoff formation immediately
+  setKickoffFormation()
+  // Force immediate visual update
+  render()
 }
 
 const startGame = () => {
@@ -1655,6 +1680,9 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   padding: 20px;
   border-radius: 10px;
   margin: 20px 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .engine-controls h3 {
@@ -1704,6 +1732,36 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 .no-cards {
   color: #666;
   font-style: italic;
+}
+
+/* Possession bar */
+.possession-bar {
+  display: flex;
+  width: 100%;
+  height: 20px;
+  background-color: #1a1a1a;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.possession-home {
+  background-color: #4a90e2;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.possession-away {
+  background-color: #e24a4a;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 /* Player display */
@@ -1889,14 +1947,6 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   color: #ccc;
 }
 
-.coin-animation {
-  margin: 30px 0;
-}
-
-.spinning-coin {
-  font-size: 80px;
-  animation: coinFlip 2s ease-in-out infinite;
-}
 
 .result-phase p {
   font-size: 18px;
@@ -1950,10 +2000,6 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 /* Animations */
-@keyframes coinFlip {
-  0%, 100% { transform: rotateY(0deg); }
-  50% { transform: rotateY(180deg); }
-}
 
 @keyframes coinBounce {
   0% { transform: scale(0) rotate(0deg); }
@@ -2021,22 +2067,29 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   transition: transform 0.3s;
 }
 
+/* Stats and Activity Container */
+.stats-activity-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin: 20px 0;
+  align-items: stretch;
+}
+
 /* Activity Stream */
 .activity-stream {
-  position: fixed;
-  right: 0;
-  top: 100px;
-  width: 350px;
-  max-height: 600px;
   background-color: #2a2a2a;
-  border-radius: 10px 0 0 10px;
-  box-shadow: -4px 0 10px rgba(0, 0, 0, 0.5);
-  transition: transform 0.3s ease;
-  z-index: 1000;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
 }
 
 .activity-stream.collapsed {
-  transform: translateX(calc(100% - 40px));
+  grid-column: 1 / 2;
+}
+
+.activity-stream.collapsed .activity-content {
+  display: none;
 }
 
 .activity-header {
@@ -2045,7 +2098,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   align-items: center;
   padding: 15px 20px;
   background-color: #1a1a1a;
-  border-radius: 10px 0 0 0;
+  border-radius: 10px 10px 0 0;
   cursor: pointer;
   user-select: none;
 }
@@ -2063,8 +2116,9 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .activity-content {
-  max-height: 550px;
+  max-height: 400px;
   overflow-y: auto;
+  padding: 15px;
 }
 
 .activity-list {

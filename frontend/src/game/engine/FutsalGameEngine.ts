@@ -440,8 +440,8 @@ export class FutsalGameEngine {
           // Check if player is close enough to the ball
           const ballDist = Math.hypot(this.ball.x - player.x, this.ball.y - player.y)
           
-          // For kick-ins, allow larger distance since player might be in buffer zone
-          const maxDistance = this.gameState.restartType === 'kick-in' ? 30 : player.radius + this.ball.radius + 10
+          // For kick-ins, free kicks, and goal kicks, allow larger distance since player might be positioned away
+          const maxDistance = (this.gameState.restartType === 'kick-in' || this.gameState.restartType === 'free-kick' || this.gameState.restartType === 'goal-kick') ? 30 : player.radius + this.ball.radius + 10
           
           if (ballDist > maxDistance) {
             // Still need to get closer to the ball
@@ -486,6 +486,16 @@ export class FutsalGameEngine {
               this.ball.vx = Math.cos(targetAngle) * shotPower
               this.ball.vy = Math.sin(targetAngle) * shotPower
               this.ball.vz = 2 // Add some height
+              this.ball.lastKicker = player
+              this.gameState.possession = player.team
+            } else if (restartType === 'goal-kick') {
+              // For goal kicks, kick upfield with power
+              const targetX = player.team === 'home' ? this.config.fieldWidth * 0.7 : this.config.fieldWidth * 0.3
+              const goalKickAngle = Math.atan2(this.config.fieldHeight / 2 - player.y, targetX - player.x)
+              const kickPower = 5
+              this.ball.vx = Math.cos(goalKickAngle) * kickPower
+              this.ball.vy = Math.sin(goalKickAngle) * kickPower
+              this.ball.vz = 1 // Some height for goal kicks
               this.ball.lastKicker = player
               this.gameState.possession = player.team
             } else {
@@ -619,7 +629,10 @@ export class FutsalGameEngine {
     this.updatePlayerMovement(player, maxSpeed, accelRate)
     
     // Handle ball interactions with tactical context
-    this.updatePlayerBallInteraction(player, hasBall, tactic)
+    // Check if player can pick up the ball based on distance
+    // Reduce collision distance slightly for better visual alignment (multiply by 0.8)
+    const canPickUpBall = ballDist < (player.radius + this.ball.radius) * 0.8 && !this.ball.possessor && ballIsLoose
+    this.updatePlayerBallInteraction(player, hasBall || canPickUpBall, tactic)
     
     // Tactical discipline - players maintain shape
     this.enforceTacticalDiscipline(player, tactic, strategy)
@@ -900,8 +913,10 @@ export class FutsalGameEngine {
         this.executeCorner()
       } else if (this.gameState.restartType === 'kick-in') {
         this.executeKickIn()
+      } else if (this.gameState.restartType === 'goal-kick') {
+        this.executeGoalKick()
       }
-      // Note: goal-kicks and free-kicks are handled separately
+      // Note: free-kicks are handled separately through handleFoul
     }, 800) // Futsal has quicker restarts than regular soccer
   }
   
@@ -1133,6 +1148,60 @@ export class FutsalGameEngine {
         this.completeRestart(kickInTaker)
       }, 2000) // 2 second timeout for kick-ins
     }
+  }
+
+  // Setup goal kick
+  private executeGoalKick(): void {
+    if (!this.gameState.restartPosition || !this.gameState.restartTeam) return
+    
+    // Place ball at goal kick position
+    this.ball.x = this.gameState.restartPosition.x
+    this.ball.y = this.gameState.restartPosition.y
+    this.ball.z = 0
+    this.ball.vx = 0
+    this.ball.vy = 0
+    this.ball.vz = 0
+    this.ball.isStationary = true
+    
+    // Set timer for fallback
+    this.freeKickStartTime = Date.now()
+    
+    // Find goalkeeper to take the goal kick
+    const goalkeeper = this.players.find(p => 
+      p.team === this.gameState.restartTeam && 
+      p.role === 'goalkeeper' && 
+      !p.isSentOff
+    )
+    
+    if (!goalkeeper) {
+      // If no goalkeeper, find any player
+      const anyPlayer = this.players.find(p => 
+        p.team === this.gameState.restartTeam && !p.isSentOff
+      )
+      if (anyPlayer) {
+        this.setupGoalKickTaker(anyPlayer)
+      }
+    } else {
+      this.setupGoalKickTaker(goalkeeper)
+    }
+  }
+
+  private setupGoalKickTaker(player: Player): void {
+    // Set the taker to move to the ball
+    player.isMovingToRestart = true
+    player.restartRole = 'taker'
+    
+    // Position close to the ball
+    const kickDistance = 15
+    player.restartTarget = {
+      x: this.ball.x,
+      y: this.ball.y
+    }
+    
+    // Start a timer to complete the goal kick if player doesn't reach in time
+    setTimeout(() => {
+      this.completeRestart(player)
+    }, 2000) // 2 second timeout for goal kicks
   }
 
   private updatePlayerPositioning(player: Player, tactic: string, strategy: number, hasBall: boolean, ballDist: number, tacticalAwareness: number, compactness: number, pushUpField: number): void {
@@ -3103,7 +3172,8 @@ export class FutsalGameEngine {
       const receivingPlayer = this.players.find(p => {
         const dist = Math.hypot(p.x - this.ball.x, p.y - this.ball.y)
         // Check both lastKicker and restartTaker
-        return dist < p.radius + this.ball.radius && p !== this.ball.lastKicker && p !== this.ball.restartTaker
+        // Reduce collision distance for better visual alignment
+        return dist < (p.radius + this.ball.radius) * 0.8 && p !== this.ball.lastKicker && p !== this.ball.restartTaker
       })
       
       if (receivingPlayer) {
@@ -3185,8 +3255,8 @@ export class FutsalGameEngine {
     
     const playersNearBall = this.players.filter(p => {
       const dist = Math.hypot(p.x - this.ball.x, p.y - this.ball.y)
-      // Reduced radius to prevent constant clustering
-      return dist < p.radius + this.ball.radius + 5 && !p.isMovingToRestart
+      // Reduced radius to prevent constant clustering, use same 0.8 multiplier
+      return dist < (p.radius + this.ball.radius) * 0.8 + 5 && !p.isMovingToRestart
     })
     
     if (playersNearBall.length >= 2 && !this.ball.possessor) {
@@ -3453,6 +3523,7 @@ export class FutsalGameEngine {
     // Set free kick timer - 2 seconds to take the kick
     this.gameState.freeKickTimer = Date.now()
     this.gameState.freeKickTimerExpiry = Date.now() + 2000 // 2 seconds
+    this.freeKickStartTime = Date.now() // For fallback mechanism
     
     // Place ball at free kick position
     this.ball.x = this.gameState.restartPosition.x
@@ -3500,6 +3571,11 @@ export class FutsalGameEngine {
       
       // Track for stats
       this.lastFreeKickTaker = freeKickTaker
+      
+      // Start a timer to complete the free kick if player doesn't reach in time
+      setTimeout(() => {
+        this.completeRestart(freeKickTaker)
+      }, 2500) // 2.5 second timeout for free kicks
     }
     
     // Move opposing players away gradually
@@ -3668,6 +3744,17 @@ export class FutsalGameEngine {
           this.ball.vx = Math.cos(targetAngle) * kickPower
           this.ball.vy = Math.sin(targetAngle) * kickPower
           this.ball.vz = 0
+          this.ball.possessor = null
+          this.ball.lastKicker = actualTaker
+        } else if (this.gameState.restartType === 'goal-kick') {
+          // For goal kicks, kick upfield with more power
+          const targetX = actualTaker.team === 'home' ? this.config.fieldWidth * 0.75 : this.config.fieldWidth * 0.25
+          const targetY = this.config.fieldHeight / 2
+          const targetAngle = Math.atan2(targetY - this.ball.y, targetX - this.ball.x)
+          const kickPower = 6 // Stronger kick for goal kicks
+          this.ball.vx = Math.cos(targetAngle) * kickPower
+          this.ball.vy = Math.sin(targetAngle) * kickPower
+          this.ball.vz = 1.5 // Some height for goal kicks
           this.ball.possessor = null
           this.ball.lastKicker = actualTaker
         }
