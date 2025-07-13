@@ -38,7 +38,7 @@
         </div>
 
         <!-- Original 3D Scene Canvas -->
-        <MobileSelectBotScene ref="sceneCanvas" />
+        <MobileSelectBotScene ref="sceneCanvas" :lock-camera="true" />
 
         <!-- Touch Control Hints -->
         <div v-if="showTouchHints" class="touch-hints">
@@ -114,7 +114,7 @@
 
             <!-- Shorts Color Slider -->
             <div class="color-slider-section">
-              <label class="color-label">Shorts Color</label>
+http://localhost:3003/auto-battler
               <div class="color-slider-container">
                 <input
                   type="range"
@@ -252,16 +252,16 @@ const currentPlayerData = computed(() => {
       name: 'Gen 1 DanBot',
       position: 'FW',
       nationality: 'Digital',
-      overall: 50,
-      tier: 'semi-pro',
-      price: 2500000,
+      overall: 51,
+      tier: 'amateur',
+      price: 51 * 50000,
       stats: {
-        pace: 52,
-        shooting: 55,
-        passing: 48,
-        defense: 42,
-        physical: 50,
-        dribbling: 53
+        pace: 50,
+        shooting: 51,
+        passing: 51,
+        defense: 39,
+        physical: 46,
+        dribbling: 51
       },
       bot: { name: 'DanBot', model: '/bot1/soccer_player.fbx' }
     }
@@ -270,22 +270,25 @@ const currentPlayerData = computed(() => {
   const tokenData = getTeamByToken(currentPelletPack.value.tokenSymbol)
   const tokenSymbol = currentPelletPack.value.tokenSymbol
 
-  // Map token attributes to player card stats
+  // Map token attributes to player card stats - scaled down to amateur level
+  // Scale factor to bring high-level team stats (80-90) down to amateur level (45-55)
+  const scaleToAmateur = (value: number) => Math.round(value * 0.57) // Scales 90 to ~51, 89 to ~51, etc.
+
   return {
     id: 1,
     name: 'Gen 1 DanBot',
     position: 'FW',
     nationality: tokenData?.team || 'Digital',
-    overall: tokenData?.overall || 75,
-    tier: tokenData?.overall >= 55 ? 'amateur' : tokenData?.overall >= 50 ? 'semi-pro' : 'amateur',
-    price: (tokenData?.overall || 75) * 50000,
+    overall: 51, // Fixed at 51 for amateur level
+    tier: 'amateur',
+    price: 51 * 50000, // Based on overall
     stats: {
-      pace: tokenData?.speed || 75,
-      shooting: tokenData?.attack || 75,
-      passing: tokenData?.skill || 75,
-      defense: tokenData?.defense || 75,
-      physical: tokenData?.physical || 75,
-      dribbling: tokenData?.mental || 75
+      pace: scaleToAmateur(tokenData?.speed || 75),      // PSG: 87 → ~50
+      shooting: scaleToAmateur(tokenData?.attack || 75), // PSG: 89 → ~51
+      passing: scaleToAmateur(tokenData?.skill || 75),   // PSG: 89 → ~51
+      defense: scaleToAmateur(tokenData?.defense || 75), // PSG: 68 → ~39
+      physical: scaleToAmateur(tokenData?.physical || 75), // PSG: 81 → ~46
+      dribbling: scaleToAmateur(tokenData?.mental || 75)  // PSG: 89 → ~51
     },
     bot: { name: 'DanBot', model: '/bot1/soccer_player.fbx' }
   }
@@ -749,12 +752,12 @@ watch(() => sceneCanvas.value?.currentPelletPack, (newPack) => {
 
 /* Color Controls Panel */
 .color-controls-panel {
-  background: rgba(0, 0, 0, 0.7);
+  background: rgb(8 13 8) !important;
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
-  padding: 20px;
-  margin-top: 20px;
+  padding: 20px ;
+  margin-top: 10px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
@@ -762,7 +765,7 @@ watch(() => sceneCanvas.value?.currentPelletPack, (newPack) => {
   color: white;
   font-size: 18px;
   font-weight: 600;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 1px;

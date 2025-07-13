@@ -37,10 +37,10 @@
           :style="{ backgroundImage: 'url(/textures/stadium_bg_mobile.jpg)' }">
         </div>
 
-        <!-- Original 3D Scene Canvas with locked camera and hidden UI -->
-        <MobileSelectBotScene 
-          ref="sceneCanvas" 
-          :lock-camera="true" 
+        <!-- Original 3D Scene Canvas with camera controls enabled and hidden UI -->
+        <MobileSelectBotScene
+          ref="sceneCanvas"
+          :lock-camera="false"
           :hide-ui-elements="true"
         />
 
