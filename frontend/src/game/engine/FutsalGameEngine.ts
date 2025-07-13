@@ -440,7 +440,10 @@ export class FutsalGameEngine {
           // Check if player is close enough to the ball
           const ballDist = Math.hypot(this.ball.x - player.x, this.ball.y - player.y)
           
-          if (ballDist > player.radius + this.ball.radius + 10) {
+          // For kick-ins, allow larger distance since player might be in buffer zone
+          const maxDistance = this.gameState.restartType === 'kick-in' ? 30 : player.radius + this.ball.radius + 10
+          
+          if (ballDist > maxDistance) {
             // Still need to get closer to the ball
             player.targetX = this.ball.x
             player.targetY = this.ball.y
@@ -1013,6 +1016,9 @@ export class FutsalGameEngine {
     this.ball.vz = 0
     this.ball.isStationary = true
     
+    // Set kick-in timer for fallback
+    this.freeKickStartTime = Date.now()
+    
     // Find nearest player from the restart team to take the kick-in
     const restartPlayers = this.players.filter(p => 
       p.team === this.gameState.restartTeam && !p.isSentOff
@@ -1120,6 +1126,13 @@ export class FutsalGameEngine {
         }
       }
     })
+    
+    // Start a timer to complete the kick-in if player doesn't reach in time
+    if (kickInTaker) {
+      setTimeout(() => {
+        this.completeRestart(kickInTaker)
+      }, 2000) // 2 second timeout for kick-ins
+    }
   }
 
   private updatePlayerPositioning(player: Player, tactic: string, strategy: number, hasBall: boolean, ballDist: number, tacticalAwareness: number, compactness: number, pushUpField: number): void {
@@ -3605,7 +3618,10 @@ export class FutsalGameEngine {
     // Check if restart taker is close enough to the ball, or force completion if they're reasonably close
     const distanceToBall = Math.hypot(restartTaker.x - this.ball.x, restartTaker.y - this.ball.y)
     
-    if (distanceToBall < 25 || restartTaker.isSentOff || forceShoot) {
+    // For kick-ins, allow larger distance since player might be in buffer zone
+    const maxAllowedDistance = this.gameState.restartType === 'kick-in' ? 35 : 25
+    
+    if (distanceToBall < maxAllowedDistance || restartTaker.isSentOff || forceShoot) {
       // If original taker is sent off, find another player
       let actualTaker = restartTaker
       if (restartTaker.isSentOff) {
@@ -3639,9 +3655,22 @@ export class FutsalGameEngine {
         this.lastFreeKickTaker = actualTaker
       }
       
-      // If forced due to timeout, immediately shoot at goal
+      // If forced due to timeout
       if (forceShoot) {
-        this.executeAutomaticShot(actualTaker)
+        if (this.gameState.restartType === 'free-kick') {
+          // For free kicks, shoot at goal
+          this.executeAutomaticShot(actualTaker)
+        } else if (this.gameState.restartType === 'kick-in') {
+          // For kick-ins, make a simple pass infield
+          const fieldCenter = { x: this.config.fieldWidth / 2, y: this.config.fieldHeight / 2 }
+          const targetAngle = Math.atan2(fieldCenter.y - this.ball.y, fieldCenter.x - this.ball.x)
+          const kickPower = 3
+          this.ball.vx = Math.cos(targetAngle) * kickPower
+          this.ball.vy = Math.sin(targetAngle) * kickPower
+          this.ball.vz = 0
+          this.ball.possessor = null
+          this.ball.lastKicker = actualTaker
+        }
       }
       
       // Clear restart state

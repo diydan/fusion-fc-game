@@ -4,8 +4,6 @@
 - covnert token to powerups 0'
 - create one and 
 
-
-p=-p
 - check auto deploy on mater and stage
 - manager  dialog
     - motiva te team, provok oppostion
