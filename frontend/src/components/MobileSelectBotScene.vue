@@ -65,9 +65,20 @@
         <TresShadowMaterial :color="0x000000" :opacity="0.1" />
       </TresMesh>
 
-      <!-- Character Group -->
-      <TresGroup :position="[props.showDanceBot ? -1.55 : 0, sceneOffsetY, props.showDanceBot ? -0.8 : 0]">
-        <TresGroup ref="modelGroup" :scale="characterScale" />
+      <!-- Character Group - Triangle Formation -->
+      <!-- Character 1 - Top of triangle -->
+      <TresGroup :position="[0, sceneOffsetY, -2]">
+        <TresGroup ref="modelGroup1" :scale="characterScale" />
+      </TresGroup>
+
+      <!-- Character 2 - Bottom left of triangle -->
+      <TresGroup :position="[-2, sceneOffsetY, 1]">
+        <TresGroup ref="modelGroup2" :scale="characterScale" />
+      </TresGroup>
+
+      <!-- Character 3 - Bottom right of triangle -->
+      <TresGroup :position="[2, sceneOffsetY, 1]">
+        <TresGroup ref="modelGroup3" :scale="characterScale" />
       </TresGroup>
 
       <!-- Jamie Bot Group (only visible on dance page) -->
@@ -866,7 +877,9 @@ const loadCansuBot = async () => {
   }
 }
 
-// Load goalkeeper (same character asset)
+// DEPRECATED: Load goalkeeper (same character asset)
+// Goalkeepers now use the same visual style as main character
+/*
 const loadGoalkeeper = async () => {
   try {
     // Use FBXLoader directly for the goalkeeper
@@ -925,6 +938,7 @@ const loadGoalkeeper = async () => {
     } catch (error) {
     }
 }
+*/
 
 // Mobile-specific methods
 const enablePowerSaveMode = () => {
@@ -1600,9 +1614,10 @@ watch(modelGroup, (newModelGroup) => {
       loadGoalpostModel() // Add goalposts to both ends of the field
       loadCornerFlags() // Add corner flags to all 4 corners
       
-      // Load goalkeeper after main character is ready
-      loadGoalkeeper().then(() => {
-        })
+      // DEPRECATED: Load goalkeeper after main character is ready
+      // Goalkeepers now use the same visual style as main character
+      // loadGoalkeeper().then(() => {
+      //   })
       
       // Mark as ready
       isReady.value = true

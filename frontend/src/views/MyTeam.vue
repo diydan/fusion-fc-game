@@ -6,169 +6,21 @@
       </v-col>
     </v-row>
 
-    <!-- Manager Info Card -->
-    <v-row>
-      <v-col cols="12" md="4">
-        <v-card>
-          <v-card-title>Manager Profile</v-card-title>
-          <v-card-text>
-            <div class="text-center mb-4">
-              <v-avatar size="80" class="mb-2">
-                <v-img 
-                  v-if="managerProfile?.avatar" 
-                  :src="managerProfile.avatar"
-                  :alt="managerProfile.name"
-                />
-                <v-icon v-else size="40">mdi-account-circle</v-icon>
-              </v-avatar>
-              <h3 class="text-h6">{{ managerProfile?.name || 'Manager' }}</h3>
-              <v-chip 
-                color="primary" 
-                variant="outlined" 
-                size="small"
-                class="mt-1"
-              >
-                {{ managerProfile?.rank || 'Amateur' }} Manager
-              </v-chip>
-            </div>
-            
-            <v-list density="compact">
-              <v-list-item>
-                <template v-slot:prepend>
-                  <v-icon>mdi-currency-usd</v-icon>
-                </template>
-                <v-list-item-title>Budget</v-list-item-title>
-                <v-list-item-subtitle>${{ formatBudget(managerProfile?.recruitmentBudget) }}</v-list-item-subtitle>
-              </v-list-item>
-              
-              <v-list-item>
-                <template v-slot:prepend>
-                  <v-icon>mdi-star</v-icon>
-                </template>
-                <v-list-item-title>Reputation</v-list-item-title>
-                <v-list-item-subtitle>{{ managerProfile?.reputation || 'Amateur' }}</v-list-item-subtitle>
-              </v-list-item>
-              
-              <v-list-item>
-                <template v-slot:prepend>
-                  <v-icon>mdi-star-outline</v-icon>
-                </template>
-                <v-list-item-title>Experience</v-list-item-title>
-                <v-list-item-subtitle>{{ managerProfile?.experience || 0 }} XP</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <!-- Team Scout/Recruitment Section -->
-      <v-col cols="12" md="8">
-        <v-card>
-          <v-card-title class="d-flex align-center">
-            <v-icon class="me-2">mdi-account-search</v-icon>
-            Player Recruitment
-          </v-card-title>
-          <v-card-text>
-            <v-alert type="info" variant="tonal" class="mb-4">
-              <template v-slot:prepend>
-                <v-icon>mdi-information</v-icon>
-              </template>
-              Scout players from major football leagues worldwide. More leagues and detailed scouting coming soon!
-            </v-alert>
-
-            <v-row>
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="selectedCountry"
-                  :items="countries"
-                  item-title="name"
-                  item-value="code"
-                  label="Select Country"
-                  variant="outlined"
-                  prepend-inner-icon="mdi-flag"
-                  @update:model-value="onCountryChange"
-                >
-                  <template v-slot:item="{ props, item }">
-                    <v-list-item v-bind="props">
-                      <template v-slot:prepend>
-                        <span class="me-2">{{ item.raw.flag }}</span>
-                      </template>
-                    </v-list-item>
-                  </template>
-                  
-                  <template v-slot:selection="{ item }">
-                    <span class="me-2">{{ item.raw.flag }}</span>
-                    {{ item.raw.name }}
-                  </template>
-                </v-select>
-              </v-col>
-              
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="selectedTeam"
-                  :items="availableTeams"
-                  :loading="loadingTeams"
-                  :disabled="!selectedCountry"
-                  item-title="name"
-                  item-value="id"
-                  label="Select Team"
-                  variant="outlined"
-                  prepend-inner-icon="mdi-shield"
-                  clearable
-                >
-                  <template v-slot:no-data>
-                    <v-list-item>
-                      <v-list-item-title>
-                        {{ selectedCountry ? 'Loading teams...' : 'Select a country first' }}
-                      </v-list-item-title>
-                    </v-list-item>
-                  </template>
-                </v-select>
-              </v-col>
-            </v-row>
-
-
-            <!-- Coming Soon Features -->
-            <v-divider class="my-4" />
-            <h3 class="text-h6 mb-3">Coming Soon</h3>
-            <v-chip-group>
-              <v-chip variant="outlined" size="small">
-                <v-icon start size="small">mdi-account-plus</v-icon>
-                Player Contracts
-              </v-chip>
-              <v-chip variant="outlined" size="small">
-                <v-icon start size="small">mdi-soccer-field</v-icon>
-                Squad Management
-              </v-chip>
-              <v-chip variant="outlined" size="small">
-                <v-icon start size="small">mdi-chart-line</v-icon>
-                Player Stats
-              </v-chip>
-              <v-chip variant="outlined" size="small">
-                <v-icon start size="small">mdi-swap-horizontal</v-icon>
-                Transfers
-              </v-chip>
-            </v-chip-group>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
     <!-- Current Squad Section -->
     <v-row class="mt-4">
       <v-col cols="12">
         <v-card>
-          <v-card-title class="d-flex align-center justify-space-between">
+          <v-card-title class="d-flex align-center justify-space-between ma-2">
             <div class="d-flex align-center">
               <v-icon class="me-2">mdi-account-group</v-icon>
               Squad
             </div>
             <v-btn
-              color="primary"
-              variant="outlined"
+              color="green"
+              variant="elevated"
               prepend-icon="mdi-account-plus"
               @click="goToRecruitPage"
-              size="small"
+              size="large"
             >
               Recruit
             </v-btn>
@@ -190,14 +42,14 @@
 
             <!-- Squad List -->
             <div v-else>
-              <v-row>
-                <v-col 
-                  v-for="player in squad" 
+              <v-row class="mt-2">
+                <v-col
+                  v-for="player in squad"
                   :key="player.id"
-                  cols="12" 
-                  sm="6" 
+                  cols="12"
+                  sm="6"
                   md="4"
-                  lg="3"
+                  lg="4"
                 >
                   <div class="player-card-wrapper" :class="{ 'card-selected': selectedPlayers.includes(player.id) }">
                     <PlayerCardV3
@@ -207,45 +59,15 @@
                       @compare="togglePlayerSelection(player.id)"
                       @recruit="handlePlayerAction(player)"
                       @select-bot="selectBotForPlayer(player)"
+                      @add-powerups="goToCharacterCreator(player)"
                     />
                   </div>
                   
-                  <!-- Condition Warning for Damaged Players -->
-                  <v-alert
-                    v-if="player.condition && player.condition < 30"
-                    type="error"
-                    density="compact"
-                    variant="tonal"
-                    class="mt-2"
-                  >
-                    <v-icon size="small">mdi-alert</v-icon>
-                    Low condition - Consider sending to junk yard
-                    <v-btn
-                      color="error"
-                      variant="text"
-                      size="x-small"
-                      class="ml-2"
-                      @click="sendToJunkYard(player)"
-                    >
-                      Send to Junk Yard
-                    </v-btn>
-                  </v-alert>
+
                 </v-col>
               </v-row>
 
-              <!-- Junk Yard Alert -->
-              <v-alert 
-                v-if="hasJunkYardPlayers"
-                type="error" 
-                variant="tonal" 
-                class="mt-4"
-              >
-                <template v-slot:prepend>
-                  <v-icon>mdi-alert</v-icon>
-                </template>
-                <strong>Warning:</strong> You have players with very low condition (&lt;30%). 
-                Consider sending them to the junk yard to free up squad space.
-              </v-alert>
+
             </div>
           </v-card-text>
         </v-card>
@@ -274,58 +96,115 @@ const selectedPlayers = ref([])
 const squad = ref([
   {
     id: 1,
-    name: 'Marcus Silva',
+    name: 'Root',
     position: 'FW',
     nationality: 'Brazil',
-    overall: 85,
+    overall: 60,
     condition: 85,
-    tier: 'pro',
-    price: 2500000,
+    tier: 'amateur',
+    price: 180000,
     stats: {
-      pace: 82,
-      shooting: 78,
-      passing: 75,
-      defense: 45,
-      physical: 75,
-      dribbling: 80
+      pace: 58,
+      shooting: 62,
+      passing: 55,
+      defense: 35,
+      physical: 60,
+      dribbling: 65
     },
     bot: null
   },
   {
     id: 2,
-    name: 'David Chen',
+    name: 'Sage',
     position: 'MF',
     nationality: 'China',
-    overall: 72,
-    condition: 25,
-    tier: 'semi-pro',
-    price: 800000,
+    overall: 58,
+    condition: 75,
+    tier: 'amateur',
+    price: 160000,
     stats: {
-      pace: 70,
-      shooting: 60,
-      passing: 75,
-      defense: 68,
-      physical: 68,
-      dribbling: 72
+      pace: 55,
+      shooting: 50,
+      passing: 68,
+      defense: 58,
+      physical: 55,
+      dribbling: 60
     },
     bot: { name: 'DanBot', model: '/bot1/soccer_player.fbx' }
   },
   {
     id: 3,
-    name: 'Alex Rodriguez',
+    name: 'Stone',
     position: 'DF',
     nationality: 'Spain',
-    overall: 78,
-    condition: 60,
-    tier: 'pro',
-    price: 1500000,
+    overall: 62,
+    condition: 80,
+    tier: 'amateur',
+    price: 170000,
     stats: {
-      pace: 65,
-      shooting: 45,
-      passing: 70,
-      defense: 85,
-      physical: 85,
-      dribbling: 60
+      pace: 50,
+      shooting: 35,
+      passing: 58,
+      defense: 70,
+      physical: 68,
+      dribbling: 45
+    },
+    bot: null
+  },
+  {
+    id: 4,
+    name: 'Reed',
+    position: 'GK',
+    nationality: 'England',
+    overall: 58,
+    condition: 75,
+    tier: 'amateur',
+    price: 150000,
+    stats: {
+      pace: 45,
+      shooting: 25,
+      passing: 55,
+      defense: 70,
+      physical: 65,
+      dribbling: 35
+    },
+    bot: null
+  },
+  {
+    id: 5,
+    name: 'Moss',
+    position: 'MF',
+    nationality: 'Mexico',
+    overall: 56,
+    condition: 80,
+    tier: 'amateur',
+    price: 140000,
+    stats: {
+      pace: 60,
+      shooting: 48,
+      passing: 62,
+      defense: 52,
+      physical: 55,
+      dribbling: 58
+    },
+    bot: null
+  },
+  {
+    id: 6,
+    name: 'Bark',
+    position: 'DF',
+    nationality: 'France',
+    overall: 55,
+    condition: 70,
+    tier: 'amateur',
+    price: 120000,
+    stats: {
+      pace: 50,
+      shooting: 30,
+      passing: 52,
+      defense: 68,
+      physical: 70,
+      dribbling: 40
     },
     bot: null
   }
@@ -546,6 +425,12 @@ const handlePlayerAction = (player) => {
 const selectBotForPlayer = (player) => {
   console.log('Select bot for player:', player)
   router.push(`/character-creator?playerId=${player.id}`)
+}
+
+// Go to character creator for powerups
+const goToCharacterCreator = (player) => {
+  console.log('Adding powerups for player:', player)
+  router.push('/character-creator')
 }
 
 // Lifecycle

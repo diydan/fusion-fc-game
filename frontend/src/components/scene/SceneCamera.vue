@@ -15,9 +15,9 @@
     :enabled="props.enableControls"
     :enable-damping="true"
     :damping-factor="0.05"
-    :enable-zoom="props.enableControls"
-    :enable-pan="props.enableControls"
-    :enable-rotate="props.enableControls"
+    :enable-zoom="props.enableControls && props.enableZoom"
+    :enable-pan="props.enableControls && props.enablePan"
+    :enable-rotate="props.enableControls && props.enableRotate"
     :auto-rotate="false"
   />
 </template>
@@ -30,10 +30,16 @@ interface Props {
   cameraPosition: [number, number, number]
   fov: number
   enableControls?: boolean
+  enablePan?: boolean
+  enableZoom?: boolean
+  enableRotate?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  enableControls: true
+  enableControls: true,
+  enablePan: true,
+  enableZoom: true,
+  enableRotate: true
 })
 const camera = ref()
 const controls = ref()

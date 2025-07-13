@@ -24,7 +24,10 @@
       <SceneCamera 
         :camera-position="[0, 16, 40]" 
         :fov="45"
-        :enable-controls="true" 
+        :enable-controls="true"
+        :enable-pan="true"
+        :enable-zoom="true"
+        :enable-rotate="true"
       />
       
       <!-- Fog -->
@@ -267,26 +270,25 @@ const loadAllPlayers = async () => {
   
   // Function to create a player instance with layered materials
   const createPlayer = async (group: THREE.Group, color: string, isGoalkeeper = false) => {
-    if (isGoalkeeper) {
-      // Use loadMainCharacter for goalkeepers
-      const goalkeepierPlayer = await loadMainCharacter(true)
-      group.add(goalkeepierPlayer)
-      return goalkeepierPlayer
-    }
-    
-    // Keep current colored-jersey logic for non-goalkeepers
+    // All players now use the same visual style (white kit + overlay)
+    // Goalkeepers visually match the main character
     const player = playerModel.clone()
     player.scale.setScalar(0.02) // Same scale as original main character
     
     // Create base and overlay materials using helper function
     const materials = createMainCharacterMaterials(baseTexture, overlayTexture, 1)
     
-    // Set team color on overlay material
-    if (color === 'blue') {
-      materials.overlay.color.setHSL(220/360, 0.8, 0.5)
-    } else {
-      materials.overlay.color.setHSL(0/360, 0.8, 0.5)
+    // Only apply team colors to defenders/midfielders/forwards
+    // Goalkeepers keep the default white kit appearance
+    if (!isGoalkeeper) {
+      // Set team color on overlay material
+      if (color === 'blue') {
+        materials.overlay.color.setHSL(220/360, 0.8, 0.5)
+      } else {
+        materials.overlay.color.setHSL(0/360, 0.8, 0.5)
+      }
     }
+    // If isGoalkeeper, materials remain as default (white kit)
     
     // Apply layered materials to player
     player.traverse((child) => {
@@ -309,14 +311,21 @@ const loadAllPlayers = async () => {
     const mixer = new THREE.AnimationMixer(player)
     mixers.push(mixer)
     
-    // Load idle animation
-    loadAnimation(mixer, '/bot1/Soccer Idle.fbx')
+    // Load appropriate animation based on role
+    const animationPath = isGoalkeeper 
+      ? '/bot1/Goalkeeper Idle.fbx' 
+      : '/bot1/Soccer Idle.fbx'
+    loadAnimation(mixer, animationPath)
     
     return player
   }
   
   // Create Team 1 (Blue)
-  if (team1Goalkeeper.value) await createPlayer(team1Goalkeeper.value, 'blue', true)
+  if (team1Goalkeeper.value) {
+    await createPlayer(team1Goalkeeper.value, 'blue', true)
+    // Ensure Blue GK position matches goal location
+    team1Goalkeeper.value.position.set(0, 0, -14)
+  }
   if (team1Defender1.value) await createPlayer(team1Defender1.value, 'blue')
   if (team1Defender2.value) await createPlayer(team1Defender2.value, 'blue')
   if (team1Defender3.value) await createPlayer(team1Defender3.value, 'blue')
@@ -332,6 +341,8 @@ const loadAllPlayers = async () => {
   if (team2Goalkeeper.value) {
     const player = await createPlayer(team2Goalkeeper.value, 'red', true)
     player.rotation.y = Math.PI
+    // Ensure Red GK position matches goal location (facing the field)
+    team2Goalkeeper.value.position.set(0, 0, 14)
   }
   if (team2Defender1.value) {
     const player = await createPlayer(team2Defender1.value, 'red')
@@ -389,8 +400,10 @@ const loadAnimation = async (mixer: THREE.AnimationMixer, animationPath: string)
   }
 }
 
-// Load main character
-const loadMainCharacter = async (isGoalkeeper: boolean): Promise<THREE.Group> => {
+// DEPRECATED: This function is no longer needed as goalkeepers now use the same visual style
+// as other players in the createPlayer function above
+/*
+const loadMainCharacter = async (isGoalkeeper: boolean): Promise<{ player: THREE.Group, mixer: THREE.AnimationMixer }> => {
   const loader = new FBXLoader()
   
   // Try to load the main character model with fallback
@@ -454,7 +467,6 @@ const loadMainCharacter = async (isGoalkeeper: boolean): Promise<THREE.Group> =>
   
   // Create animation mixer and load appropriate animation
   const mixer = new THREE.AnimationMixer(playerModel)
-  mixers.push(mixer)
   
   // Load animation based on goalkeeper status
   const animationPath = isGoalkeeper 
@@ -463,8 +475,9 @@ const loadMainCharacter = async (isGoalkeeper: boolean): Promise<THREE.Group> =>
   
   await loadAnimation(mixer, animationPath)
   
-  return playerModel
+  return { player: playerModel, mixer }
 }
+*/
 
 // Load ball
 const loadBall = () => {

@@ -261,3 +261,5 @@ release-*.sh
 .env.backup
 .env.example.local
 TODO.md
+frontend/manager_portrait_template.sh
+frontend/quick_portrait_curl.sh

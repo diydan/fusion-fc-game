@@ -1,171 +1,187 @@
 <template>
-  <div class="recruit-page">
-    <!-- Header -->
-    <div class="page-header">
-      <h1 class="page-title">🎯 Player Recruitment</h1>
-      <p class="page-subtitle">Scout and recruit players from around the world</p>
-    </div>
+  <v-container>
+    <v-row>
+      <v-col cols="12">
+        <h1 class="text-h4 text-md-h3 font-weight-bold mb-6">🎯 Player Recruitment</h1>
+        <p class="text-body-1 mb-6">Scout and recruit players from around the world</p>
+      </v-col>
+    </v-row>
 
     <!-- Filters and Controls -->
-    <v-card class="filters-card mb-6">
-      <v-card-title>
-        <v-icon class="mr-2">mdi-filter</v-icon>
-        Filters & Search
-      </v-card-title>
-      <v-card-text>
-        <v-row>
-          <!-- Search -->
-          <v-col cols="12" md="3">
-            <v-text-field
-              v-model="searchQuery"
-              label="Search players..."
-              prepend-inner-icon="mdi-magnify"
-              variant="outlined"
-              density="compact"
-              hide-details
-              clearable
-            />
-          </v-col>
+    <v-row>
+      <v-col cols="12">
+        <v-card class="ma-2">
+          <v-card-title class="d-flex align-center justify-space-between ma-2">
+            <div class="d-flex align-center">
+              <v-icon class="me-2">mdi-filter</v-icon>
+              Filters & Search
+            </div>
+          </v-card-title>
+          <v-card-text>
+            <v-row>
+              <!-- Search -->
+              <v-col cols="12" md="3">
+                <v-text-field
+                  v-model="searchQuery"
+                  label="Search players..."
+                  prepend-inner-icon="mdi-magnify"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  clearable
+                />
+              </v-col>
 
-          <!-- Tier Filter -->
-          <v-col cols="6" md="2">
-            <v-select
-              v-model="selectedTier"
-              :items="tierOptions"
-              label="Tier"
-              variant="outlined"
-              density="compact"
-              hide-details
-            />
-          </v-col>
+              <!-- Tier Filter -->
+              <v-col cols="6" md="2">
+                <v-select
+                  v-model="selectedTier"
+                  :items="tierOptions"
+                  label="Tier"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                />
+              </v-col>
 
-          <!-- Position Filter -->
-          <v-col cols="6" md="2">
-            <v-select
-              v-model="selectedPosition"
-              :items="positionOptions"
-              label="Position"
-              variant="outlined"
-              density="compact"
-              hide-details
-            />
-          </v-col>
+              <!-- Position Filter -->
+              <v-col cols="6" md="2">
+                <v-select
+                  v-model="selectedPosition"
+                  :items="positionOptions"
+                  label="Position"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                />
+              </v-col>
 
-          <!-- Price Range -->
-          <v-col cols="12" md="3">
-            <v-range-slider
-              v-model="priceRange"
-              :min="2000"
-              :max="2000000"
-              :step="1000"
-              label="Price Range"
-              density="compact"
-              hide-details
-            >
-              <template v-slot:prepend>
-                <span class="text-caption">{{ formatPrice(priceRange[0]) }}</span>
-              </template>
-              <template v-slot:append>
-                <span class="text-caption">{{ formatPrice(priceRange[1]) }}</span>
-              </template>
-            </v-range-slider>
-          </v-col>
+              <!-- Price Range -->
+              <v-col cols="12" md="3">
+                <v-range-slider
+                  v-model="priceRange"
+                  :min="2000"
+                  :max="2000000"
+                  :step="1000"
+                  label="Price Range"
+                  density="compact"
+                  hide-details
+                >
+                  <template v-slot:prepend>
+                    <span class="text-caption">{{ formatPrice(priceRange[0]) }}</span>
+                  </template>
+                  <template v-slot:append>
+                    <span class="text-caption">{{ formatPrice(priceRange[1]) }}</span>
+                  </template>
+                </v-range-slider>
+              </v-col>
 
-          <!-- View Toggle -->
-          <v-col cols="12" md="2">
-            <v-btn-toggle
-              v-model="viewMode"
-              variant="outlined"
-              density="compact"
-              mandatory
-              divided
-            >
-              <v-btn value="table" icon="mdi-table" />
-              <v-btn value="cards" icon="mdi-view-grid" />
-            </v-btn-toggle>
-          </v-col>
-        </v-row>
+              <!-- View Toggle -->
+              <v-col cols="12" md="2">
+                <v-btn-toggle
+                  v-model="viewMode"
+                  variant="outlined"
+                  density="compact"
+                  mandatory
+                  divided
+                >
+                  <v-btn value="table" icon="mdi-table" />
+                  <v-btn value="cards" icon="mdi-view-grid" />
+                </v-btn-toggle>
+              </v-col>
+            </v-row>
 
-        <!-- Stat Filters -->
-        <v-row class="mt-2">
-          <v-col cols="12">
-            <v-expansion-panels variant="accordion">
-              <v-expansion-panel>
-                <v-expansion-panel-title>
-                  <v-icon class="mr-2">mdi-chart-bar</v-icon>
-                  Advanced Stat Filters
-                </v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <v-row>
-                    <v-col v-for="stat in statFilters" :key="stat.key" cols="6" md="3">
-                      <div class="stat-filter">
-                        <label class="stat-label">{{ stat.label }}</label>
-                        <v-range-slider
-                          v-model="stat.range"
-                          :min="0"
-                          :max="100"
-                          :step="1"
-                          density="compact"
-                          hide-details
-                        />
-                        <div class="stat-values">
-                          <span>{{ stat.range[0] }}</span>
-                          <span>{{ stat.range[1] }}</span>
-                        </div>
-                      </div>
-                    </v-col>
-                  </v-row>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-            </v-expansion-panels>
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
+            <!-- Stat Filters -->
+            <v-row class="mt-2">
+              <v-col cols="12">
+                <v-expansion-panels variant="accordion">
+                  <v-expansion-panel>
+                    <v-expansion-panel-title>
+                      <v-icon class="me-2">mdi-chart-bar</v-icon>
+                      Advanced Stat Filters
+                    </v-expansion-panel-title>
+                    <v-expansion-panel-text>
+                      <v-row>
+                        <v-col v-for="stat in statFilters" :key="stat.key" cols="6" md="3">
+                          <div class="stat-filter">
+                            <label class="stat-label">{{ stat.label }}</label>
+                            <v-range-slider
+                              v-model="stat.range"
+                              :min="0"
+                              :max="100"
+                              :step="1"
+                              density="compact"
+                              hide-details
+                            />
+                            <div class="stat-values">
+                              <span>{{ stat.range[0] }}</span>
+                              <span>{{ stat.range[1] }}</span>
+                            </div>
+                          </div>
+                        </v-col>
+                      </v-row>
+                    </v-expansion-panel-text>
+                  </v-expansion-panel>
+                </v-expansion-panels>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
 
     <!-- Comparison Panel -->
-    <v-card v-if="selectedPlayers.length > 0" class="comparison-card mb-6">
-      <v-card-title>
-        <v-icon class="mr-2">mdi-compare</v-icon>
-        Player Comparison ({{ selectedPlayers.length }}/3)
-        <v-spacer />
-        <v-btn 
-          color="error" 
-          variant="outlined" 
-          size="small"
-          @click="clearComparison"
-        >
-          Clear All
-        </v-btn>
-      </v-card-title>
-      <v-card-text>
-        <div class="comparison-grid">
-          <div v-for="player in selectedPlayers" :key="player.id" class="comparison-item">
-            <PlayerComparisonCard 
-              :player="player" 
-              @remove="removeFromComparison"
-            />
-          </div>
-        </div>
-      </v-card-text>
-    </v-card>
+    <v-row v-if="selectedPlayers.length > 0">
+      <v-col cols="12">
+        <v-card class="comparison-card ma-2">
+          <v-card-title class="d-flex align-center justify-space-between ma-2">
+            <div class="d-flex align-center">
+              <v-icon class="me-2">mdi-compare</v-icon>
+              Player Comparison ({{ selectedPlayers.length }}/3)
+            </div>
+            <v-btn
+              color="error"
+              variant="outlined"
+              size="small"
+              @click="clearComparison"
+            >
+              Clear All
+            </v-btn>
+          </v-card-title>
+          <v-card-text>
+            <div class="comparison-grid">
+              <div v-for="player in selectedPlayers" :key="player.id" class="comparison-item">
+                <PlayerComparisonCard
+                  :player="player"
+                  @remove="removeFromComparison"
+                />
+              </div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
 
     <!-- Results -->
-    <v-card>
-      <v-card-title>
-        <v-icon class="mr-2">mdi-account-group</v-icon>
-        Available Players ({{ filteredPlayers.length }})
-        <v-spacer />
-        <v-btn
-          color="primary"
-          variant="outlined"
-          @click="generateMorePlayers"
-          :loading="generatingPlayers"
-        >
-          <v-icon class="mr-2">mdi-refresh</v-icon>
-          Generate More
-        </v-btn>
-      </v-card-title>
+    <v-row>
+      <v-col cols="12">
+        <v-card class="ma-2">
+          <v-card-title class="d-flex align-center justify-space-between ma-2">
+            <div class="d-flex align-center">
+              <v-icon class="me-2">mdi-account-group</v-icon>
+              Available Players ({{ filteredPlayers.length }})
+            </div>
+            <v-btn
+              color="green"
+              variant="elevated"
+              @click="generateMorePlayers"
+              :loading="generatingPlayers"
+              size="large"
+            >
+              <v-icon class="me-2">mdi-refresh</v-icon>
+              Generate More
+            </v-btn>
+          </v-card-title>
 
       <!-- Table View -->
       <div v-if="viewMode === 'table'">

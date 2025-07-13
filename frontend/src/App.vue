@@ -131,14 +131,7 @@
           title="PowerUps"
           to="/tokens"
           rounded="xl"
-        ></v-list-item>
-        <v-list-item
-          prepend-icon="mdi-account-edit"
-          title="Character Creator"
-          to="/character-creator"
-          rounded="xl"
-        ></v-list-item>
-
+        ></v-list-item>Scout players from major football leagues worldwide. More leagues and detailed scouting coming soon!
         <v-divider class="my-2"></v-divider>
       </v-list>
     </v-navigation-drawer>

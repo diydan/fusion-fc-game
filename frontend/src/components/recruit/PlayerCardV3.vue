@@ -88,6 +88,21 @@
         <v-icon size="16">mdi-account-plus</v-icon>
       </v-btn>
     </div>
+
+    <!-- Add Powerups Button -->
+    <div class="powerups-section">
+      <v-btn
+        size="small"
+        color="blue"
+        variant="elevated"
+        @click.stop="$emit('add-powerups')"
+        block
+        class="powerups-btn"
+      >
+        <v-icon start size="16">mdi-lightning-bolt</v-icon>
+        Add Powerups
+      </v-btn>
+    </div>
   </v-card>
 </template>
 
@@ -146,7 +161,7 @@ const radarColors = computed(() => {
   return tierColors[props.player.tier] || tierColors.amateur
 })
 
-defineEmits(['click', 'compare', 'recruit', 'select-bot'])
+defineEmits(['click', 'compare', 'recruit', 'select-bot', 'add-powerups'])
 </script>
 
 <style scoped>
@@ -333,8 +348,12 @@ defineEmits(['click', 'compare', 'recruit', 'select-bot'])
 .action-buttons {
   display: flex;
   justify-content: space-around;
-  padding: 0 16px 16px;
+  padding: 0 16px 8px;
   gap: 8px;
+}
+
+.powerups-section {
+  padding: 0 16px 16px;
 }
 
 /* Animation for card entrance */
