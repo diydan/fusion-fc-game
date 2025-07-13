@@ -2701,7 +2701,7 @@ defineExpose({
 
 /* Auto-Battler Controls */
 .auto-battler-controls {
-  position: fixed;
+  position: absolute;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
@@ -2723,21 +2723,18 @@ defineExpose({
   box-shadow: 
     0 4px 0 0 #059669,
     0 8px 16px rgba(0, 0, 0, 0.3);
-  transition: all 0.2s ease;
+  transition: background 0.2s ease;
   text-transform: uppercase;
   letter-spacing: 1px;
+  position: relative;
 }
 
 .start-game-btn:hover {
   background: linear-gradient(135deg, #34D399, #6EE7B7);
-  transform: translateX(-50%) translateY(-2px);
-  box-shadow: 
-    0 6px 0 0 #059669,
-    0 12px 24px rgba(0, 0, 0, 0.4);
 }
 
 .start-game-btn:active {
-  transform: translateX(-50%) translateY(2px);
+  top: 2px;
   box-shadow: 
     0 2px 0 0 #059669,
     0 4px 8px rgba(0, 0, 0, 0.2);

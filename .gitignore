@@ -73,6 +73,7 @@ web_modules/
 # Test files
 test-*.html
 test-*.md
+test-endpoints.js
 !test-multi-auth.md  # Keep documentation
 
 # parcel-bundler cache (https://parceljs.org/)
