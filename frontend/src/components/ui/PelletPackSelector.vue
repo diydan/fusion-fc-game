@@ -54,9 +54,6 @@
           <div class="pellet-count">{{ pack.currentPellets }}/{{ pack.maxPellets }}</div>
         </div>
         
-        <div v-if="pack.powerMultiplier > 1" class="power-badge">
-          {{ pack.powerMultiplier }}x Power
-        </div>
       </div>
     </div>
   </div>
@@ -246,19 +243,6 @@ const selectPack = (pack: PelletPack) => {
   font-weight: 600;
 }
 
-.power-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: linear-gradient(135deg, #FF6B6B, #FF5722);
-  color: white;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
 
 /* Mobile adjustments */
 @media (max-width: 768px) {

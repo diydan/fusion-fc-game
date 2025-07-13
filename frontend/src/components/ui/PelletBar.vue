@@ -23,9 +23,6 @@
         <div class="pellet-glow"></div>
       </div>
     </div>
-    <div v-if="currentPack?.powerMultiplier && currentPack.powerMultiplier > 1" class="power-indicator">
-      {{ currentPack.powerMultiplier }}x
-    </div>
   </div>
 </template>
 
@@ -103,14 +100,6 @@ watch(() => props.currentPellets, (newVal, oldVal) => {
   gap: 4px;
 }
 
-.selector-icon {
-  color: rgba(255, 255, 255, 0.6);
-  transition: transform 0.3s ease;
-}
-
-.pellet-bar-container:hover .selector-icon {
-  transform: translateY(2px);
-}
 
 .label-text {
   font-size: 12px;
@@ -184,19 +173,6 @@ watch(() => props.currentPellets, (newVal, oldVal) => {
   100% { left: 200%; }
 }
 
-.power-indicator {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: linear-gradient(135deg, #FF6B6B, #FF5722);
-  color: white;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
 
 @keyframes deplete {
   0% {

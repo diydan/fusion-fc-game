@@ -2136,8 +2136,8 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 /* Manager Speech Bubble */
 .manager-speech-bubble {
   position: absolute;
-  bottom: 100px;
-  left: 100px;
+  bottom: 0px;
+  left: 80px;
   background: rgba(255, 255, 255, 0.95);
   color: #333;
   padding: 12px 18px;
@@ -2150,12 +2150,12 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .manager-speech-bubble.home-speech {
-  left: 100px;
+  left: 80px;
 }
 
 .manager-speech-bubble:not(.home-speech) {
   left: auto;
-  right: 100px;
+  right: 80px;
 }
 
 .manager-speech-bubble:not(.home-speech) .speech-tail {

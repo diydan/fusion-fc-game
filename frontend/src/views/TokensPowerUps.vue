@@ -433,8 +433,8 @@
                   <v-col cols="12" md="3">
                     <v-card class="bonus-card">
                       <div class="bonus-icon d-flex align-center justify-center">
-                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-AM.svg" alt="Aston Martin" style="max-width: 70px; height: auto" class="mr-1">
-                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-ROUSH.svg" alt="Roush" style="max-width: 70px; height: auto">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-AM.svg" alt="Aston Martin" style="max-width: 35px; height: auto" class="mr-1">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-ROUSH.svg" alt="Roush" style="max-width: 35px; height: auto">
                       </div>
                       <h4>Motorsport Tokens</h4>
                       <div class="bonus-value mt-3">+1% Speed</div>
@@ -444,8 +444,8 @@
                   <v-col cols="12" md="3">
                     <v-card class="bonus-card">
                       <div class="bonus-icon d-flex align-center justify-center">
-                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-SHARKS.svg" alt="Sharks" style="max-width: 70px; height: auto" class="mr-1">
-                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-SFP.svg" alt="SF Pioneers" style="max-width: 70px; height: auto">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-SHARKS.svg" alt="Sharks" style="max-width: 35px; height: auto" class="mr-1">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-SFP.svg" alt="SF Pioneers" style="max-width: 35px; height: auto">
                       </div>
                       <h4>Rugby Tokens</h4>
                       <div class="bonus-value mt-3">+1% Physical</div>
@@ -455,10 +455,10 @@
                   <v-col cols="12" md="3">
                     <v-card class="bonus-card">
                       <div class="bonus-icon d-flex align-center justify-center flex-wrap">
-                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-OG.svg" alt="OG" style="max-width: 70px; height: auto" class="ma-1">
-                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-TH.svg" alt="Talon" style="max-width: 70px; height: auto" class="ma-1">
-                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-ALL.svg" alt="Alliance" style="max-width: 70px; height: auto" class="ma-1">
-                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-MIBR.svg" alt="MIBR" style="max-width: 70px; height: auto" class="ma-1">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-OG.svg" alt="OG" style="max-width: 35px; height: auto" class="ma-1">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-TH.svg" alt="Talon" style="max-width: 35px; height: auto" class="ma-1">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-ALL.svg" alt="Alliance" style="max-width: 35px; height: auto" class="ma-1">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-MIBR.svg" alt="MIBR" style="max-width: 35px; height: auto" class="ma-1">
                       </div>
                       <h4>Esports Tokens</h4>
                       <div class="bonus-value mt-3">+1% Mental</div>
@@ -468,8 +468,8 @@
                   <v-col cols="12" md="3">
                     <v-card class="bonus-card">
                       <div class="bonus-icon d-flex align-center justify-center">
-                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-UFC.svg" alt="UFC" style="max-width: 70px; height: auto" class="mr-2">
-                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-PFL.svg" alt="PFL" style="max-width: 70px; height: auto">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-UFC.svg" alt="UFC" style="max-width: 35px; height: auto" class="mr-2">
+                        <img src="https://www.socios.com/wp-content/uploads/2024/01/Token-PFL.svg" alt="PFL" style="max-width: 35px; height: auto">
                       </div>
                       <h4>UFC & PFL Tokens</h4>
                       <div class="bonus-value mt-3">+1% Aggression</div>

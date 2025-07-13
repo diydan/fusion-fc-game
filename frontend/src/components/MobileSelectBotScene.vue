@@ -233,6 +233,7 @@ import MobileControlPanel from './mobile/MobileControlPanel.vue'
 import PelletBar from './ui/PelletBar.vue'
 import PelletPackSelector from './ui/PelletPackSelector.vue'
 import MobileColorSlider from './mobile/MobileColorSlider.vue'
+import PlayerCardV3 from './recruit/PlayerCardV3.vue'
 import type { PelletPack } from './ui/PelletPackSelector.vue'
 
 // Composables (reuse existing ones)
@@ -337,15 +338,6 @@ const initializePelletPacks = () => {
   // Default packs - these will be replaced with actual token data
   availablePelletPacks.value = [
     {
-      tokenSymbol: 'CHZ',
-      tokenBalance: 100,
-      currentPellets: 10,
-      maxPellets: 10,
-      color: '#FFD700',
-      powerMultiplier: 1,
-      refillCost: 10
-    },
-    {
       tokenSymbol: 'PSG',
       tokenBalance: 50,
       currentPellets: 8,
@@ -371,6 +363,15 @@ const initializePelletPacks = () => {
       color: '#000000',
       powerMultiplier: 2.5,
       refillCost: 5
+    },
+    {
+      tokenSymbol: 'MCI',
+      tokenBalance: 15,
+      currentPellets: 7,
+      maxPellets: 7,
+      color: '#6CABDD',
+      powerMultiplier: 1.8,
+      refillCost: 7
     }
   ]
   
@@ -414,41 +415,43 @@ const shootCoinWithPellets = () => {
 
 // Update token balances from external source (wallet integration)
 const updateTokenBalances = (tokens: Array<{ symbol: string, balance: number, logoURI?: string }>) => {
-  // Map tokens to pellet packs
-  availablePelletPacks.value = tokens.map(token => {
-    // Find existing pack to preserve current pellets
-    const existingPack = availablePelletPacks.value.find(p => p.tokenSymbol === token.symbol)
-    
-    // Different pack configurations based on token type
-    let config = { maxPellets: 10, powerMultiplier: 1, refillCost: 10, color: '#FFD700' }
-    
-    // Custom configurations for known tokens
-    switch (token.symbol) {
-      case 'PSG':
-        config = { maxPellets: 8, powerMultiplier: 1.5, refillCost: 8, color: '#FF0000' }
-        break
-      case 'BAR':
-        config = { maxPellets: 6, powerMultiplier: 2, refillCost: 6, color: '#004D98' }
-        break
-      case 'JUV':
-        config = { maxPellets: 5, powerMultiplier: 2.5, refillCost: 5, color: '#000000' }
-        break
-      case 'MCI':
-        config = { maxPellets: 7, powerMultiplier: 1.8, refillCost: 7, color: '#6CABDD' }
-        break
-    }
-    
-    return {
-      tokenSymbol: token.symbol,
-      tokenBalance: token.balance,
-      currentPellets: existingPack?.currentPellets || config.maxPellets,
-      maxPellets: config.maxPellets,
-      color: config.color,
-      logoURI: token.logoURI,
-      powerMultiplier: config.powerMultiplier,
-      refillCost: config.refillCost
-    }
-  })
+  // Filter out CHZ and map tokens to pellet packs
+  availablePelletPacks.value = tokens
+    .filter(token => token.symbol !== 'CHZ')
+    .map(token => {
+      // Find existing pack to preserve current pellets
+      const existingPack = availablePelletPacks.value.find(p => p.tokenSymbol === token.symbol)
+      
+      // Different pack configurations based on token type
+      let config = { maxPellets: 10, powerMultiplier: 1, refillCost: 10, color: '#FFD700' }
+      
+      // Custom configurations for known tokens
+      switch (token.symbol) {
+        case 'PSG':
+          config = { maxPellets: 8, powerMultiplier: 1.5, refillCost: 8, color: '#FF0000' }
+          break
+        case 'BAR':
+          config = { maxPellets: 6, powerMultiplier: 2, refillCost: 6, color: '#004D98' }
+          break
+        case 'JUV':
+          config = { maxPellets: 5, powerMultiplier: 2.5, refillCost: 5, color: '#000000' }
+          break
+        case 'MCI':
+          config = { maxPellets: 7, powerMultiplier: 1.8, refillCost: 7, color: '#6CABDD' }
+          break
+      }
+      
+      return {
+        tokenSymbol: token.symbol,
+        tokenBalance: token.balance,
+        currentPellets: existingPack?.currentPellets || config.maxPellets,
+        maxPellets: config.maxPellets,
+        color: config.color,
+        logoURI: token.logoURI,
+        powerMultiplier: config.powerMultiplier,
+        refillCost: config.refillCost
+      }
+    })
   
   // If no current pack selected, select the first one
   if (!currentPelletPack.value && availablePelletPacks.value.length > 0) {
