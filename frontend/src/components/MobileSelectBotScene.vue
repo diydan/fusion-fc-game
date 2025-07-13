@@ -72,6 +72,7 @@
       
       <!-- Triangle Formation Characters -->
       <TresGroup v-if="props.showTriangleFormation">
+        <!-- Home Team -->
         <!-- Front Character (Striker) -->
         <TresGroup :position="[0, sceneOffsetY, -3]">
           <TresGroup ref="modelGroup" :scale="characterScale" />
@@ -95,6 +96,32 @@
         <!-- Goalkeeper -->
         <TresGroup :position="[0, sceneOffsetY, -17]">
           <TresGroup ref="modelGroup5" :scale="characterScale * 1.1" />
+        </TresGroup>
+        
+        <!-- Opposing Team (Mirror Formation) -->
+        <!-- Opposing Goalkeeper -->
+        <TresGroup :position="[0, sceneOffsetY, 17]" :rotation="[0, Math.PI, 0]">
+          <TresGroup ref="opposingModelGroup1" :scale="characterScale * 1.1" />
+        </TresGroup>
+        
+        <!-- Opposing Defender -->
+        <TresGroup :position="[0, sceneOffsetY, 12]" :rotation="[0, Math.PI, 0]">
+          <TresGroup ref="opposingModelGroup2" :scale="characterScale" />
+        </TresGroup>
+        
+        <!-- Opposing Mid Right (their left from their perspective) -->
+        <TresGroup :position="[-5, sceneOffsetY, 8]" :rotation="[0, Math.PI, 0]">
+          <TresGroup ref="opposingModelGroup3" :scale="characterScale" />
+        </TresGroup>
+        
+        <!-- Opposing Mid Left (their right from their perspective) -->
+        <TresGroup :position="[5, sceneOffsetY, 8]" :rotation="[0, Math.PI, 0]">
+          <TresGroup ref="opposingModelGroup4" :scale="characterScale" />
+        </TresGroup>
+        
+        <!-- Opposing Striker -->
+        <TresGroup :position="[0, sceneOffsetY, 3]" :rotation="[0, Math.PI, 0]">
+          <TresGroup ref="opposingModelGroup5" :scale="characterScale" />
         </TresGroup>
       </TresGroup>
 
@@ -164,9 +191,9 @@
       <!-- Ball Group -->
       <TresGroup
         ref="ballModelGroup"
-        :position="ballState?.position || [0, 0, 0]"
+        :position="ballState?.position || [0, 0.5, 0]"
         :rotation="ballState?.rotation || [0, 0, 0]"
-        :visible="ballState ? !ballState.hidden : false"
+        :visible="ballState ? !ballState.hidden : true"
       />
     </SceneCanvas>
 
@@ -180,6 +207,18 @@
       @open-powerup-selector="showPelletSelector = true"
       @shoot-coin="shootCoinWithPellets"
     />
+    
+    <!-- Camera Controls Button (for auto-battler) -->
+    <div v-if="props.showTriangleFormation && !props.hideUiElements" class="camera-controls-container">
+      <button @click="saveCameraSettings" class="camera-control-btn save-btn">
+        <span class="btn-icon">💾</span>
+        Save Camera
+      </button>
+      <button @click="resetCameraSettings" class="camera-control-btn reset-btn">
+        <span class="btn-icon">🔄</span>
+        Reset Camera
+      </button>
+    </div>
 
     <!-- Token Attributes Display in top left corner -->
     <div v-if="!props.hideUiElements && currentPelletPack" class="token-attributes-display">
@@ -379,6 +418,12 @@ const modelGroup2 = ref()
 const modelGroup3 = ref()
 const modelGroup4 = ref()
 const modelGroup5 = ref()
+// Opposing team refs
+const opposingModelGroup1 = ref()
+const opposingModelGroup2 = ref()
+const opposingModelGroup3 = ref()
+const opposingModelGroup4 = ref()
+const opposingModelGroup5 = ref()
 const goalkeeperGroup = ref()
 const ballModelGroup = ref()
 const danceBotGroup = ref()
@@ -850,7 +895,7 @@ const loadCansuBot = async () => {
 }
 
 // Load character copy for triangle formation
-const loadCharacterCopy = async (targetGroup: any, animationDelay: number = 0, isGoalkeeper: boolean = false) => {
+const loadCharacterCopy = async (targetGroup: any, animationDelay: number = 0, isGoalkeeper: boolean = false, isOpposingTeam: boolean = false) => {
   try {
     // Load textures
     const textureLoader = new THREE.TextureLoader()
@@ -887,6 +932,14 @@ const loadCharacterCopy = async (targetGroup: any, animationDelay: number = 0, i
     
     // Create materials using helper function
     const materialPair = createMainCharacterMaterials(baseTexture, overlayTexture, materialSettings.brightness)
+    
+    // Modify colors for opposing team
+    if (isOpposingTeam) {
+      // Change overlay color to red for opposing team
+      if (materialPair.overlay) {
+        materialPair.overlay.color = new THREE.Color(0xff0000) // Red color
+      }
+    }
     
     // Apply materials and setup shadows
     characterModel.traverse((child) => {
@@ -1483,6 +1536,92 @@ const getFogColorWithOpacity = () => {
   return new THREE.Color(0x666666) // Simple gray fog for mobile
 }
 
+// Camera settings storage
+const saveCameraSettings = () => {
+  if (sceneRefs.camera && sceneRefs.scene) {
+    // Get camera position
+    const position = sceneRefs.camera.position
+    
+    // Get camera rotation (from looking at target)
+    const rotation = sceneRefs.camera.rotation
+    
+    // Get camera zoom/fov
+    const fov = sceneRefs.camera.fov || mobileCameraFov.value
+    
+    // Get orbit controls target if available
+    let target = { x: 0, y: 0, z: 0 }
+    if (sceneRefs.scene.userData.controls) {
+      target = sceneRefs.scene.userData.controls.target
+    }
+    
+    const cameraSettings = {
+      position: { x: position.x, y: position.y, z: position.z },
+      rotation: { x: rotation.x, y: rotation.y, z: rotation.z },
+      fov: fov,
+      target: target
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('autoBattlerCameraSettings', JSON.stringify(cameraSettings))
+    console.log('Camera settings saved:', cameraSettings)
+  }
+}
+
+const resetCameraSettings = () => {
+  // Remove saved settings
+  localStorage.removeItem('autoBattlerCameraSettings')
+  
+  // Reset to default position
+  if (sceneRefs.camera) {
+    sceneRefs.camera.position.set(...mobileCameraPosition.value)
+    sceneRefs.camera.fov = mobileCameraFov.value
+    sceneRefs.camera.updateProjectionMatrix()
+    
+    // Reset controls target if available
+    if (sceneRefs.scene && sceneRefs.scene.userData.controls) {
+      sceneRefs.scene.userData.controls.target.set(0, 0, 0)
+      sceneRefs.scene.userData.controls.update()
+    }
+  }
+  console.log('Camera reset to default')
+}
+
+// Load saved camera settings on mount
+const loadSavedCameraSettings = () => {
+  const savedSettings = localStorage.getItem('autoBattlerCameraSettings')
+  if (savedSettings && sceneRefs.camera) {
+    try {
+      const settings = JSON.parse(savedSettings)
+      
+      // Apply saved position
+      if (settings.position) {
+        sceneRefs.camera.position.set(settings.position.x, settings.position.y, settings.position.z)
+      }
+      
+      // Apply saved rotation
+      if (settings.rotation) {
+        sceneRefs.camera.rotation.set(settings.rotation.x, settings.rotation.y, settings.rotation.z)
+      }
+      
+      // Apply saved FOV
+      if (settings.fov) {
+        sceneRefs.camera.fov = settings.fov
+        sceneRefs.camera.updateProjectionMatrix()
+      }
+      
+      // Apply saved controls target
+      if (settings.target && sceneRefs.scene && sceneRefs.scene.userData.controls) {
+        sceneRefs.scene.userData.controls.target.set(settings.target.x, settings.target.y, settings.target.z)
+        sceneRefs.scene.userData.controls.update()
+      }
+      
+      console.log('Loaded saved camera settings:', settings)
+    } catch (error) {
+      console.error('Error loading camera settings:', error)
+    }
+  }
+}
+
 // Color update methods
 const updateOverlayColor = (color: string) => {
   // Extract hue from HSL color string
@@ -1523,6 +1662,13 @@ const onSceneReady = (event: any) => {
   
   if (sceneRefs.scene && sceneRefs.camera && sceneRefs.renderer) {
     loadingStatus.value = 'Ready'
+    
+    // Load saved camera settings for auto-battler
+    if (props.showTriangleFormation) {
+      setTimeout(() => {
+        loadSavedCameraSettings()
+      }, 100)
+    }
   }
 }
 
@@ -1737,6 +1883,42 @@ watch(modelGroup5, (newModelGroup) => {
   }
 }, { once: true })
 
+// Watch for opposing team model groups
+watch(opposingModelGroup1, (newModelGroup) => {
+  if (newModelGroup && props.showTriangleFormation) {
+    // Opposing goalkeeper with 1500ms delay
+    loadCharacterCopy(newModelGroup, 1500, true, true)
+  }
+}, { once: true })
+
+watch(opposingModelGroup2, (newModelGroup) => {
+  if (newModelGroup && props.showTriangleFormation) {
+    // Opposing defender with 1800ms delay
+    loadCharacterCopy(newModelGroup, 1800, false, true)
+  }
+}, { once: true })
+
+watch(opposingModelGroup3, (newModelGroup) => {
+  if (newModelGroup && props.showTriangleFormation) {
+    // Opposing mid right with 2100ms delay
+    loadCharacterCopy(newModelGroup, 2100, false, true)
+  }
+}, { once: true })
+
+watch(opposingModelGroup4, (newModelGroup) => {
+  if (newModelGroup && props.showTriangleFormation) {
+    // Opposing mid left with 2400ms delay
+    loadCharacterCopy(newModelGroup, 2400, false, true)
+  }
+}, { once: true })
+
+watch(opposingModelGroup5, (newModelGroup) => {
+  if (newModelGroup && props.showTriangleFormation) {
+    // Opposing striker with 2700ms delay
+    loadCharacterCopy(newModelGroup, 2700, false, true)
+  }
+}, { once: true })
+
 watch(goalkeeperGroup, (newGoalkeeperGroup) => {
   if (newGoalkeeperGroup) {
     // Don't load goalkeeper here, wait for main character to load first
@@ -1747,7 +1929,13 @@ watch(ballModelGroup, (newBallGroup) => {
   if (newBallGroup) {
     sceneRefs.ballModelGroup = newBallGroup
     // Ball model will be loaded after character loads
-    loadBallModel()
+    loadBallModel().then(() => {
+      // Position ball at center for triangle formation
+      if (props.showTriangleFormation && ballState) {
+        ballState.position = [0, 0.5, 0]
+        ballState.hidden = false
+      }
+    })
   }
 }, { once: true })
 
@@ -2145,5 +2333,65 @@ defineExpose({
   .attr-value {
     font-size: 18px;
   }
+}
+
+/* Camera Controls */
+.camera-controls-container {
+  position: fixed;
+  bottom: 120px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.camera-control-btn {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px 20px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+}
+
+.camera-control-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.camera-control-btn:active {
+  transform: translateY(0);
+}
+
+.camera-control-btn.save-btn {
+  background: rgba(0, 122, 255, 0.2);
+  border-color: rgba(0, 122, 255, 0.5);
+}
+
+.camera-control-btn.save-btn:hover {
+  background: rgba(0, 122, 255, 0.3);
+}
+
+.camera-control-btn.reset-btn {
+  background: rgba(255, 69, 58, 0.2);
+  border-color: rgba(255, 69, 58, 0.5);
+}
+
+.camera-control-btn.reset-btn:hover {
+  background: rgba(255, 69, 58, 0.3);
+}
+
+.btn-icon {
+  font-size: 18px;
 }
 </style>
