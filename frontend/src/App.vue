@@ -131,7 +131,7 @@
           title="PowerUps"
           to="/tokens"
           rounded="xl"
-        ></v-list-item>Scout players from major football leagues worldwide. More leagues and detailed scouting coming soon!
+        ></v-list-item>
         <v-divider class="my-2"></v-divider>
       </v-list>
     </v-navigation-drawer>

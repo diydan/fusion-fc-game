@@ -2,7 +2,7 @@
   <div class="pellet-bar-container">
     <div class="pellet-bar-label">
       <div class="label-left">
-        <span class="label-text">{{ currentPack?.tokenSymbol || 'PowerUp' }} Ammo</span>
+        <span class="label-text">{{ currentPack?.tokenSymbol || 'PowerUp' }} PowerUps</span>
       </div>
       <span class="pellet-count">{{ currentPellets }}/{{ maxPellets }}</span>
     </div>

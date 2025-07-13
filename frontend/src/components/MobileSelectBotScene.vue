@@ -263,6 +263,7 @@ import { useAudio } from '@/composables/useAudio'
 import { useMobileOptimization } from '@/composables/useMobileOptimization'
 import { useCoinPhysics } from '@/composables/useCoinPhysics'
 import { createLayeredMeshGroup } from '@/utils/materialHelpers'
+import { useTeamsData } from '@/composables/useTeamsData'
 
 // Mobile-specific state
 const showPerformanceWarning = ref(false)
@@ -353,83 +354,28 @@ const showPelletSelector = ref(false)
 const currentPelletPack = ref<PelletPack | null>(null)
 const availablePelletPacks = ref<PelletPack[]>([])
 
-// Token team attributes data
-const tokenTeamData: Record<string, any> = {
-  PSG: {
-    team: 'Paris Saint-Germain',
-    overall: 90,
-    attack: 89,
-    speed: 87,
-    skill: 89,
-    defense: 68,
-    physical: 81,
-    mental: 89,
-    aggression: 84
-  },
-  BAR: {
-    team: 'FC Barcelona',
-    overall: 89,
-    attack: 88,
-    speed: 85,
-    skill: 90,
-    defense: 70,
-    physical: 78,
-    mental: 88,
-    aggression: 76
-  },
-  JUV: {
-    team: 'Juventus',
-    overall: 86,
-    attack: 84,
-    speed: 82,
-    skill: 85,
-    defense: 87,
-    physical: 85,
-    mental: 87,
-    aggression: 82
-  },
-  MCI: {
-    team: 'Manchester City',
-    overall: 91,
-    attack: 90,
-    speed: 86,
-    skill: 91,
-    defense: 85,
-    physical: 84,
-    mental: 92,
-    aggression: 78
-  }
-}
+// Use shared teams data
+const { getTeamByToken, getTeamAttributes } = useTeamsData()
 
 // Computed token attributes
 const currentTokenAttributes = computed(() => {
   if (!currentPelletPack.value) return []
-  
-  const tokenData = tokenTeamData[currentPelletPack.value.tokenSymbol]
-  if (!tokenData) {
-    // Default attributes for unknown tokens
-    return [
-      { key: 'overall', label: 'OVR', value: 75 },
-      { key: 'attack', label: 'ATK', value: 75 },
-      { key: 'speed', label: 'SPD', value: 75 },
-      { key: 'skill', label: 'SKL', value: 75 },
-      { key: 'defense', label: 'DEF', value: 75 },
-      { key: 'physical', label: 'PHY', value: 75 },
-      { key: 'mental', label: 'MEN', value: 75 },
-      { key: 'aggression', label: 'AGG', value: 75 }
-    ]
-  }
-  
-  return [
-    { key: 'overall', label: 'OVR', value: tokenData.overall },
-    { key: 'attack', label: 'ATK', value: tokenData.attack },
-    { key: 'speed', label: 'SPD', value: tokenData.speed },
-    { key: 'skill', label: 'SKL', value: tokenData.skill },
-    { key: 'defense', label: 'DEF', value: tokenData.defense },
-    { key: 'physical', label: 'PHY', value: tokenData.physical },
-    { key: 'mental', label: 'MEN', value: tokenData.mental },
-    { key: 'aggression', label: 'AGG', value: tokenData.aggression }
-  ]
+
+  const attributes = getTeamAttributes(currentPelletPack.value.tokenSymbol)
+
+  // Convert to abbreviated labels for mobile display
+  return attributes.map(attr => ({
+    ...attr,
+    label: attr.label === 'Overall' ? 'OVR' :
+           attr.label === 'Attack' ? 'ATK' :
+           attr.label === 'Speed' ? 'SPD' :
+           attr.label === 'Skill' ? 'SKL' :
+           attr.label === 'Defense' ? 'DEF' :
+           attr.label === 'Physical' ? 'PHY' :
+           attr.label === 'Mental' ? 'MEN' :
+           attr.label === 'Aggression' ? 'AGG' :
+           attr.label
+  }))
 })
 
 // Get color based on attribute value

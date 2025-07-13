@@ -1,5 +1,4 @@
-- starting screen 5 asied dancing, 
--endlside us dancing
+- xplain how fansty works with countries
 -improved mobile menu
 - covnert token to powerups 0'
 - create one and 

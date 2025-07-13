@@ -96,17 +96,6 @@
                 <span class="attr-value" :style="{ color: getAttributeColor(attr.value) }">{{ attr.value }}</span>
               </div>
             </div>
-            
-            <div class="token-stats">
-              <div class="stat-item">
-                <span class="stat-label">Balance</span>
-                <span class="stat-value">{{ currentPelletPack.tokenBalance }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Power</span>
-                <span class="stat-value">{{ currentPelletPack.powerMultiplier }}x</span>
-              </div>
-            </div>
           </div>
         </div>
         
@@ -136,6 +125,7 @@ import { useDisplay } from 'vuetify'
 import MobileSelectBotScene from "@/components/MobileSelectBotScene.vue"
 import PlayerCardV3 from '@/components/recruit/PlayerCardV3.vue'
 import { useAudio } from '@/composables/useAudio'
+import { useTeamsData } from '@/composables/useTeamsData'
 import { useWallet } from '@/composables/useWallet'
 
 // Vuetify composables
@@ -197,9 +187,9 @@ const currentPlayerData = computed(() => {
     }
   }
   
-  const tokenData = tokenTeamData[currentPelletPack.value.tokenSymbol]
+  const tokenData = getTeamByToken(currentPelletPack.value.tokenSymbol)
   const tokenSymbol = currentPelletPack.value.tokenSymbol
-  
+
   // Map token attributes to player card stats
   return {
     id: 1,
@@ -322,62 +312,11 @@ const getBackgroundStyle = () => {
 
 // Get team name for token
 const getTokenTeamName = (tokenSymbol: string) => {
-  const teamNames: Record<string, string> = {
-    PSG: 'Paris Saint-Germain',
-    BAR: 'FC Barcelona',
-    JUV: 'Juventus',
-    MCI: 'Manchester City'
-  }
-  return teamNames[tokenSymbol] || 'Team'
+  return getTeamName(tokenSymbol)
 }
 
-// Token team attributes data - scores between 40-60
-const tokenTeamData: Record<string, any> = {
-  PSG: {
-    team: 'Paris Saint-Germain',
-    overall: 56,
-    attack: 58,
-    speed: 55,
-    skill: 57,
-    defense: 45,
-    physical: 52,
-    mental: 56,
-    aggression: 54
-  },
-  BAR: {
-    team: 'FC Barcelona',
-    overall: 55,
-    attack: 56,
-    speed: 53,
-    skill: 58,
-    defense: 46,
-    physical: 50,
-    mental: 55,
-    aggression: 48
-  },
-  JUV: {
-    team: 'Juventus',
-    overall: 52,
-    attack: 51,
-    speed: 49,
-    skill: 52,
-    defense: 55,
-    physical: 53,
-    mental: 54,
-    aggression: 51
-  },
-  MCI: {
-    team: 'Manchester City',
-    overall: 58,
-    attack: 57,
-    speed: 54,
-    skill: 59,
-    defense: 53,
-    physical: 51,
-    mental: 58,
-    aggression: 49
-  }
-}
+// Use shared teams data
+const { getTeamByToken, getTeamAttributes, getTeamName } = useTeamsData()
 
 // Current pellet pack (mock data)
 const currentPelletPack = ref({
@@ -394,31 +333,8 @@ const currentPelletPack = ref({
 // Computed token attributes
 const currentTokenAttributes = computed(() => {
   if (!currentPelletPack.value) return []
-  
-  const tokenData = tokenTeamData[currentPelletPack.value.tokenSymbol]
-  if (!tokenData) {
-    return [
-      { key: 'overall', label: 'Overall', value: 50 },
-      { key: 'attack', label: 'Attack', value: 50 },
-      { key: 'speed', label: 'Speed', value: 50 },
-      { key: 'skill', label: 'Skill', value: 50 },
-      { key: 'defense', label: 'Defense', value: 50 },
-      { key: 'physical', label: 'Physical', value: 50 },
-      { key: 'mental', label: 'Mental', value: 50 },
-      { key: 'aggression', label: 'Aggression', value: 50 }
-    ]
-  }
-  
-  return [
-    { key: 'overall', label: 'Overall', value: tokenData.overall },
-    { key: 'attack', label: 'Attack', value: tokenData.attack },
-    { key: 'speed', label: 'Speed', value: tokenData.speed },
-    { key: 'skill', label: 'Skill', value: tokenData.skill },
-    { key: 'defense', label: 'Defense', value: tokenData.defense },
-    { key: 'physical', label: 'Physical', value: tokenData.physical },
-    { key: 'mental', label: 'Mental', value: tokenData.mental },
-    { key: 'aggression', label: 'Aggression', value: tokenData.aggression }
-  ]
+
+  return getTeamAttributes(currentPelletPack.value.tokenSymbol)
 })
 
 // Get color based on attribute value (adjusted for 40-60 range)

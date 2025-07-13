@@ -543,6 +543,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import GameButton from '@/components/GameButton.vue'
+import { useTeamsData } from '@/composables/useTeamsData'
 import { 
   chilizWallet, 
   formatTokenBalance, 
@@ -584,73 +585,9 @@ const chartLegendContainer = ref(null)
 const selectedTeam = ref(null)
 const isModalVisible = ref(false)
 
-// Sample teams data for preview
-const sampleTeams = ref([
-  {
-    team: 'Paris Saint-Germain',
-    token: '$PSG',
-    country: 'France',
-    league: 'Ligue 1',
-    logo: 'https://www.socios.com/wp-content/uploads/2024/01/Token-PSG.svg',
-    flag: 'https://flagicons.lipis.dev/flags/4x3/fr.svg',
-    overall: 90,
-    attack: 89,
-    speed: 87,
-    skill: 89,
-    defense: 68,
-    physical: 81,
-    mental: 89,
-    aggression: 84
-  },
-  {
-    team: 'FC Barcelona',
-    token: '$BAR',
-    country: 'Spain',
-    league: 'La Liga',
-    logo: 'https://www.socios.com/wp-content/uploads/2024/01/Token-FCB.svg',
-    flag: 'https://flagicons.lipis.dev/flags/4x3/es.svg',
-    overall: 89,
-    attack: 87,
-    speed: 87,
-    skill: 90,
-    defense: 73,
-    physical: 82,
-    mental: 90,
-    aggression: 75
-  },
-  {
-    team: 'Manchester City',
-    token: '$CITY',
-    country: 'England',
-    league: 'Premier League',
-    logo: 'https://www.socios.com/wp-content/uploads/2024/01/Token-CITY.svg',
-    flag: 'https://flagicons.lipis.dev/flags/4x3/gb-eng.svg',
-    overall: 88,
-    attack: 89,
-    speed: 86,
-    skill: 91,
-    defense: 85,
-    physical: 84,
-    mental: 90,
-    aggression: 80
-  },
-  {
-    team: 'Juventus',
-    token: '$JUV',
-    country: 'Italy',
-    league: 'Serie A',
-    logo: 'https://www.socios.com/wp-content/uploads/2024/01/Token-JUV.svg',
-    flag: 'https://flagicons.lipis.dev/flags/4x3/it.svg',
-    overall: 83,
-    attack: 81,
-    speed: 75,
-    skill: 81,
-    defense: 87,
-    physical: 82,
-    mental: 84,
-    aggression: 84
-  }
-])
+// Use shared teams data
+const { getAllTeams } = useTeamsData()
+const sampleTeams = getAllTeams
 
 // Teams Matrix computed and options
 const filteredAndSortedTeams = computed(() => {
