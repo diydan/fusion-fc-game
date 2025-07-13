@@ -107,15 +107,12 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
       objLoader.setMaterials(materials)
       objLoader.setPath('/props/Ball/')
       
-      // TEMPORARY: Skip loading ball model as file is missing
-      // const ballModel = await objLoader.loadAsync('Ball.obj')
+      // Load the actual ball model
+      const ballModel = await objLoader.loadAsync('Ball.obj')
       
-      // Create simple sphere as fallback
-      const ballGeometry = new THREE.SphereGeometry(BALL_RADIUS * 1.2, 32, 16)
-      const ballModel = new THREE.Mesh(ballGeometry, whiteMaterial)
-      
-      // Scale and position the ball (10x smaller, then 20% bigger)
-      ballModel.scale.setScalar(BALL_RADIUS * 1.2 * 1.2) // 20% bigger ball
+      // Scale the ball model to match the desired radius
+      // The original ball model is quite large, so we scale it down
+      ballModel.scale.setScalar(BALL_RADIUS * 4) // Scale based on ball radius
       ballModel.position.set(0, 0, 0)
       
       // Apply shadows to all meshes

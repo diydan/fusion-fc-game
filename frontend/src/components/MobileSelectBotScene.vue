@@ -191,7 +191,7 @@
       <!-- Ball Group -->
       <TresGroup
         ref="ballModelGroup"
-        :position="ballState?.position || [0, 0.5, 0]"
+        :position="ballState?.position || [0, 0.1, 0]"
         :rotation="ballState?.rotation || [0, 0, 0]"
         :visible="ballState ? !ballState.hidden : true"
       />
@@ -218,6 +218,25 @@
         <span class="btn-icon">🔄</span>
         Reset Camera
       </button>
+      <button @click="showCameraData" class="camera-control-btn info-btn">
+        <span class="btn-icon">📷</span>
+        Show Camera
+      </button>
+    </div>
+    
+    <!-- Camera Data Display -->
+    <div v-if="showCameraDataPanel" class="camera-data-panel">
+      <div class="camera-data-header">
+        <h3>Camera Settings</h3>
+        <button @click="showCameraDataPanel = false" class="close-data-btn">✕</button>
+      </div>
+      <div class="camera-data-content">
+        <pre>{{ cameraDataDisplay }}</pre>
+        <button @click="copyCameraData" class="copy-data-btn">
+          <span class="btn-icon">📋</span>
+          Copy to Clipboard
+        </button>
+      </div>
     </div>
 
     <!-- Token Attributes Display in top left corner -->
@@ -435,6 +454,10 @@ const torusEmissionHue = ref(195)
 const showPelletSelector = ref(false)
 const currentPelletPack = ref<PelletPack | null>(null)
 const availablePelletPacks = ref<PelletPack[]>([])
+
+// Camera data display
+const showCameraDataPanel = ref(false)
+const cameraDataDisplay = ref('')
 
 // Use shared teams data
 const { getTeamByToken, getTeamAttributes } = useTeamsData()
@@ -894,8 +917,9 @@ const loadCansuBot = async () => {
   }
 }
 
+
 // Load character copy for triangle formation
-const loadCharacterCopy = async (targetGroup: any, animationDelay: number = 0, isGoalkeeper: boolean = false, isOpposingTeam: boolean = false) => {
+const loadCharacterCopy = async (targetGroup: any, animationDelay: number = 0, isGoalkeeper: boolean = false, isOpposingTeam: boolean = false, playerIndex: number = 0) => {
   try {
     // Load textures
     const textureLoader = new THREE.TextureLoader()
@@ -929,6 +953,12 @@ const loadCharacterCopy = async (targetGroup: any, animationDelay: number = 0, i
     const characterModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture2.fbx')
     
     characterModel.scale.setScalar(1)
+    
+    // Position off-screen if walk-out is enabled
+    if (props.enableWalkOut && props.showTriangleFormation) {
+      const tunnelPos = isOpposingTeam ? tunnelPositions.away[playerIndex] : tunnelPositions.home[playerIndex]
+      characterModel.position.set(tunnelPos.x, 0, tunnelPos.z)
+    }
     
     // Create materials using helper function
     const materialPair = createMainCharacterMaterials(baseTexture, overlayTexture, materialSettings.brightness)
@@ -992,8 +1022,139 @@ const loadCharacterCopy = async (targetGroup: any, animationDelay: number = 0, i
     }
     
     console.log('Character copy loaded successfully')
+    
+    // Store character reference for walk-out animation
+    if (props.enableWalkOut && props.showTriangleFormation) {
+      if (!sceneRefs.characterModels) {
+        sceneRefs.characterModels = { home: [], away: [] }
+      }
+      const team = isOpposingTeam ? 'away' : 'home'
+      sceneRefs.characterModels[team][playerIndex] = characterModel
+    }
   } catch (error) {
     console.error('Error loading character copy:', error)
+  }
+}
+
+// Start walk-out sequence
+const startWalkOutSequence = () => {
+  if (!props.enableWalkOut || !props.showTriangleFormation) return
+  
+  walkOutState.value.isActive = true
+  
+  // Start with home team walk-out
+  animateTeamWalkOut('home', () => {
+    walkOutState.value.homeTeamReady = true
+    // Then away team
+    animateTeamWalkOut('away', () => {
+      walkOutState.value.awayTeamReady = true
+      // Start warm-up animations
+      startWarmUpAnimations()
+    })
+  })
+}
+
+// Animate team walk-out
+const animateTeamWalkOut = (team: 'home' | 'away', onComplete: () => void) => {
+  const players = sceneRefs.characterModels?.[team]
+  if (!players) return
+  
+  let completedCount = 0
+  
+  players.forEach((player, index) => {
+    if (!player) return
+    
+    // Delay each player
+    setTimeout(() => {
+      // First walk to center
+      animatePlayerWalk(player, entryPoint, () => {
+        // Then to final position
+        const finalPos = finalPositions[team][index]
+        animatePlayerWalk(player, finalPos, () => {
+          completedCount++
+          if (completedCount === players.length) {
+            onComplete()
+          }
+        }, true) // Run to position
+      })
+    }, index * 800) // Stagger by 800ms
+  })
+}
+
+// Animate individual player walk
+const animatePlayerWalk = (player: THREE.Object3D, target: { x: number, z: number }, onComplete: () => void, isRunning: boolean = false) => {
+  const startPos = player.position.clone()
+  const endPos = new THREE.Vector3(target.x, 0, target.z)
+  const duration = isRunning ? 2000 : 3000
+  const startTime = Date.now()
+  
+  // Face the target direction
+  const direction = new THREE.Vector3().subVectors(endPos, startPos).normalize()
+  const angle = Math.atan2(direction.x, direction.z)
+  player.rotation.y = angle
+  
+  const animate = () => {
+    const elapsed = Date.now() - startTime
+    const progress = Math.min(elapsed / duration, 1)
+    
+    // Smooth easing
+    const eased = 1 - Math.pow(1 - progress, 3)
+    
+    player.position.lerpVectors(startPos, endPos, eased)
+    
+    if (progress < 1) {
+      requestAnimationFrame(animate)
+    } else {
+      onComplete()
+    }
+  }
+  
+  animate()
+}
+
+// Start warm-up animations
+const startWarmUpAnimations = () => {
+  walkOutState.value.isActive = false
+  
+  // Load different warm-up animations for variety
+  const warmUpAnimations = [
+    '/bot1/Soccer Idle.fbx',
+    '/bot1/jog backward.fbx',
+    '/bot1/jog forward.fbx',
+    '/bot1/jog strafe left.fbx',
+    '/bot1/jog strafe right.fbx',
+    '/bot1/header soccerball.fbx',
+    '/bot1/Running.fbx',
+    '/bot1/Strike Foward Jog.fbx',
+    '/bot1/jog forward diagonal.fbx',
+    '/bot1/jog backward diagonal.fbx'
+  ]
+  
+  // Apply random warm-up animation to each player
+  if (sceneRefs.additionalMixers) {
+    sceneRefs.additionalMixers.forEach((mixer, index) => {
+      const animFile = warmUpAnimations[index % warmUpAnimations.length]
+      loadWarmUpAnimation(mixer, animFile)
+    })
+  }
+}
+
+// Load warm-up animation
+const loadWarmUpAnimation = async (mixer: THREE.AnimationMixer, animationFile: string) => {
+  try {
+    const loader = new FBXLoader()
+    const animFbx = await loader.loadAsync(animationFile)
+    
+    if (animFbx.animations.length > 0) {
+      // Stop current animation
+      mixer.stopAllAction()
+      
+      // Play warm-up animation
+      const action = mixer.clipAction(animFbx.animations[0])
+      action.play()
+    }
+  } catch (error) {
+    console.error('Error loading warm-up animation:', error)
   }
 }
 
@@ -1536,6 +1697,51 @@ const getFogColorWithOpacity = () => {
   return new THREE.Color(0x666666) // Simple gray fog for mobile
 }
 
+// Show camera data panel
+const showCameraData = () => {
+  if (sceneRefs.camera && sceneRefs.scene) {
+    const position = sceneRefs.camera.position
+    const rotation = sceneRefs.camera.rotation
+    const fov = sceneRefs.camera.fov || mobileCameraFov.value
+    
+    let target = { x: 0, y: 0, z: 0 }
+    if (sceneRefs.scene.userData.controls) {
+      target = sceneRefs.scene.userData.controls.target
+    }
+    
+    const cameraData = {
+      position: { 
+        x: position.x.toFixed(3), 
+        y: position.y.toFixed(3), 
+        z: position.z.toFixed(3) 
+      },
+      rotation: { 
+        x: rotation.x.toFixed(3), 
+        y: rotation.y.toFixed(3), 
+        z: rotation.z.toFixed(3) 
+      },
+      fov: fov,
+      target: { 
+        x: target.x.toFixed(3), 
+        y: target.y.toFixed(3), 
+        z: target.z.toFixed(3) 
+      }
+    }
+    
+    cameraDataDisplay.value = JSON.stringify(cameraData, null, 2)
+    showCameraDataPanel.value = true
+  }
+}
+
+// Copy camera data to clipboard
+const copyCameraData = () => {
+  navigator.clipboard.writeText(cameraDataDisplay.value).then(() => {
+    console.log('Camera data copied to clipboard')
+  }).catch(err => {
+    console.error('Failed to copy camera data:', err)
+  })
+}
+
 // Camera settings storage
 const saveCameraSettings = () => {
   if (sceneRefs.camera && sceneRefs.scene) {
@@ -1781,6 +1987,13 @@ onMounted(async () => {
   
   // Detect device performance
   const performanceLevel = await detectPerformanceLevel()
+  
+  // Auto-start walk-out sequence after a delay
+  if (props.enableWalkOut && props.showTriangleFormation) {
+    setTimeout(() => {
+      startWalkOutSequence()
+    }, 5000) // Wait 5 seconds for all players to load
+  }
   // Apply optimal settings based on device
   const optimalSettings = getOptimalSettings(performanceLevel)
   Object.assign({
@@ -1847,6 +2060,18 @@ watch(modelGroup, (newModelGroup) => {
         }
         startSynchronizedDance()
       }
+      
+      // Store main character for walk-out if enabled
+      if (props.enableWalkOut && props.showTriangleFormation && sceneRefs.model) {
+        if (!sceneRefs.characterModels) {
+          sceneRefs.characterModels = { home: [], away: [] }
+        }
+        sceneRefs.characterModels.home[0] = sceneRefs.model
+        
+        // Position off-screen for walk-out
+        const tunnelPos = tunnelPositions.home[0]
+        sceneRefs.model.position.set(tunnelPos.x, 0, tunnelPos.z)
+      }
     })
   }
 }, { once: true })
@@ -1855,7 +2080,7 @@ watch(modelGroup, (newModelGroup) => {
 watch(modelGroup2, (newModelGroup) => {
   if (newModelGroup && props.showTriangleFormation) {
     // Load with 300ms delay
-    loadCharacterCopy(newModelGroup, 300)
+    loadCharacterCopy(newModelGroup, 300, false, false, 1)
   }
 }, { once: true })
 
@@ -1863,7 +2088,7 @@ watch(modelGroup2, (newModelGroup) => {
 watch(modelGroup3, (newModelGroup) => {
   if (newModelGroup && props.showTriangleFormation) {
     // Load with 600ms delay
-    loadCharacterCopy(newModelGroup, 600)
+    loadCharacterCopy(newModelGroup, 600, false, false, 2)
   }
 }, { once: true })
 
@@ -1871,7 +2096,7 @@ watch(modelGroup3, (newModelGroup) => {
 watch(modelGroup4, (newModelGroup) => {
   if (newModelGroup && props.showTriangleFormation) {
     // Load with 900ms delay
-    loadCharacterCopy(newModelGroup, 900)
+    loadCharacterCopy(newModelGroup, 900, false, false, 3)
   }
 }, { once: true })
 
@@ -1879,7 +2104,7 @@ watch(modelGroup4, (newModelGroup) => {
 watch(modelGroup5, (newModelGroup) => {
   if (newModelGroup && props.showTriangleFormation) {
     // Load goalkeeper with 1200ms delay
-    loadCharacterCopy(newModelGroup, 1200, true)
+    loadCharacterCopy(newModelGroup, 1200, true, false, 4)
   }
 }, { once: true })
 
@@ -1887,35 +2112,35 @@ watch(modelGroup5, (newModelGroup) => {
 watch(opposingModelGroup1, (newModelGroup) => {
   if (newModelGroup && props.showTriangleFormation) {
     // Opposing goalkeeper with 1500ms delay
-    loadCharacterCopy(newModelGroup, 1500, true, true)
+    loadCharacterCopy(newModelGroup, 1500, true, true, 0)
   }
 }, { once: true })
 
 watch(opposingModelGroup2, (newModelGroup) => {
   if (newModelGroup && props.showTriangleFormation) {
     // Opposing defender with 1800ms delay
-    loadCharacterCopy(newModelGroup, 1800, false, true)
+    loadCharacterCopy(newModelGroup, 1800, false, true, 1)
   }
 }, { once: true })
 
 watch(opposingModelGroup3, (newModelGroup) => {
   if (newModelGroup && props.showTriangleFormation) {
     // Opposing mid right with 2100ms delay
-    loadCharacterCopy(newModelGroup, 2100, false, true)
+    loadCharacterCopy(newModelGroup, 2100, false, true, 2)
   }
 }, { once: true })
 
 watch(opposingModelGroup4, (newModelGroup) => {
   if (newModelGroup && props.showTriangleFormation) {
     // Opposing mid left with 2400ms delay
-    loadCharacterCopy(newModelGroup, 2400, false, true)
+    loadCharacterCopy(newModelGroup, 2400, false, true, 3)
   }
 }, { once: true })
 
 watch(opposingModelGroup5, (newModelGroup) => {
   if (newModelGroup && props.showTriangleFormation) {
     // Opposing striker with 2700ms delay
-    loadCharacterCopy(newModelGroup, 2700, false, true)
+    loadCharacterCopy(newModelGroup, 2700, false, true, 4)
   }
 }, { once: true })
 
@@ -1932,7 +2157,7 @@ watch(ballModelGroup, (newBallGroup) => {
     loadBallModel().then(() => {
       // Position ball at center for triangle formation
       if (props.showTriangleFormation && ballState) {
-        ballState.position = [0, 0.5, 0]
+        ballState.position = [0, 0.3, 0]
         ballState.hidden = false
       }
     })
@@ -2393,5 +2618,121 @@ defineExpose({
 
 .btn-icon {
   font-size: 18px;
+}
+
+.camera-control-btn.info-btn {
+  background: rgba(52, 199, 89, 0.2);
+  border-color: rgba(52, 199, 89, 0.5);
+}
+
+.camera-control-btn.info-btn:hover {
+  background: rgba(52, 199, 89, 0.3);
+}
+
+.camera-control-btn.walkout-btn {
+  background: rgba(255, 149, 0, 0.2);
+  border-color: rgba(255, 149, 0, 0.5);
+}
+
+.camera-control-btn.walkout-btn:hover {
+  background: rgba(255, 149, 0, 0.3);
+}
+
+/* Camera Data Panel */
+.camera-data-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 0;
+  min-width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.camera-data-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.camera-data-header h3 {
+  margin: 0;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.close-data-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.close-data-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.camera-data-content {
+  padding: 20px;
+}
+
+.camera-data-content pre {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  color: #00ff41;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  margin: 0 0 16px 0;
+  overflow-x: auto;
+  max-height: 400px;
+}
+
+.copy-data-btn {
+  background: rgba(0, 122, 255, 0.2);
+  border: 1px solid rgba(0, 122, 255, 0.5);
+  border-radius: 8px;
+  padding: 10px 20px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 auto;
+}
+
+.copy-data-btn:hover {
+  background: rgba(0, 122, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Add walking animation placeholder */
+@keyframes playerWalk {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
 }
 </style>

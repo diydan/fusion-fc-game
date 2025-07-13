@@ -41,7 +41,7 @@
         <MobileSelectBotScene
           ref="sceneCanvas"
           :lock-camera="false"
-          :hide-ui-elements="true"
+          :hide-ui-elements="false"
           :show-triangle-formation="true"
         />
 

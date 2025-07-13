@@ -253,27 +253,24 @@ const currentPlayerData = computed(() => {
   if (!currentPelletPack.value) {
     // Base amateur stats without any powerup
     const baseStats = {
-      pace: 45,
-      shooting: 46,
-      passing: 46,
+      overall: 43,
+      attack: 46,
+      speed: 45,
+      skill: 46,
       defense: 35,
       physical: 42,
-      dribbling: 46
+      mental: 46,
+      aggression: 44
     }
-
-    const baseOverall = Math.round(
-      (baseStats.pace + baseStats.shooting + baseStats.passing +
-       baseStats.defense + baseStats.physical + baseStats.dribbling) / 6
-    )
 
     return {
       id: 1,
       name: 'Gen 1 DanBot',
       position: 'FW',
       nationality: 'Digital',
-      overall: baseOverall, // ~43
+      overall: baseStats.overall,
       tier: 'amateur',
-      price: baseOverall * 50000,
+      price: baseStats.overall * 50000,
       stats: baseStats,
       bot: { name: 'DanBot', model: '/bot1/soccer_player.fbx' }
     }
@@ -314,7 +311,7 @@ const currentPlayerData = computed(() => {
   }
 
   // Calculate coin collection bonus (small incremental boost per coin)
-  const coinBonus = Math.floor(coinsCollected.value * 0.5) // +0.5 per coin collected
+  const coinBonus = Math.floor(coinsCollected.value * 0.1) // +0.1 per coin collected
 
   const boostedStats = {
     overall: calculateBoost(tokenData?.overall || 75, baseStats.overall) + coinBonus,
@@ -338,12 +335,14 @@ const currentPlayerData = computed(() => {
     tier: 'amateur',
     price: boostedStats.overall * 50000,
     stats: {
-      pace: boostedStats.speed,
-      shooting: boostedStats.attack,
-      passing: boostedStats.skill,
+      overall: boostedStats.overall,
+      attack: boostedStats.attack,
+      speed: boostedStats.speed,
+      skill: boostedStats.skill,
       defense: boostedStats.defense,
       physical: boostedStats.physical,
-      dribbling: boostedStats.mental
+      mental: boostedStats.mental,
+      aggression: boostedStats.aggression
     },
     bot: { name: 'DanBot', model: '/bot1/soccer_player.fbx' }
   }
