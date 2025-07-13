@@ -8,3 +8,5 @@ unity/Fusion[[:space:]]FC[[:space:]]v1/Library/PackageCache/** filter=lfs diff=l
 *.gif filter=lfs diff=lfs merge=lfs -text
 *.mp4 filter=lfs diff=lfs merge=lfs -text
 *.mov filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.tar.gz filter=lfs diff=lfs merge=lfs -text
