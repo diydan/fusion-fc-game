@@ -72,19 +72,29 @@
       
       <!-- Triangle Formation Characters -->
       <TresGroup v-if="props.showTriangleFormation">
-        <!-- Front Character -->
-        <TresGroup :position="[0, sceneOffsetY, 2]">
+        <!-- Front Character (Striker) -->
+        <TresGroup :position="[0, sceneOffsetY, -3]">
           <TresGroup ref="modelGroup" :scale="characterScale" />
         </TresGroup>
         
-        <!-- Back Left Character -->
-        <TresGroup :position="[-2, sceneOffsetY, -1]">
+        <!-- Mid Left Character -->
+        <TresGroup :position="[-5, sceneOffsetY, -8]">
           <TresGroup ref="modelGroup2" :scale="characterScale" />
         </TresGroup>
         
-        <!-- Back Right Character -->
-        <TresGroup :position="[2, sceneOffsetY, -1]">
+        <!-- Mid Right Character -->
+        <TresGroup :position="[5, sceneOffsetY, -8]">
           <TresGroup ref="modelGroup3" :scale="characterScale" />
+        </TresGroup>
+        
+        <!-- Defender (Center Back) -->
+        <TresGroup :position="[0, sceneOffsetY, -12]">
+          <TresGroup ref="modelGroup4" :scale="characterScale" />
+        </TresGroup>
+        
+        <!-- Goalkeeper -->
+        <TresGroup :position="[0, sceneOffsetY, -17]">
+          <TresGroup ref="modelGroup5" :scale="characterScale * 1.1" />
         </TresGroup>
       </TresGroup>
 
@@ -264,6 +274,9 @@ const props = withDefaults(defineProps<Props>(), {
   showTriangleFormation: false
 })
 
+// Emits
+const emit = defineEmits(['coin-collected'])
+
 // Components
 import SceneCanvas from './scene/SceneCanvas.vue'
 import SceneCamera from './scene/SceneCamera.vue'
@@ -349,7 +362,7 @@ const mobileLightingSettings = computed(() => ({
 const { animationState, loadCharacterModel, updateAnimations, getCurrentAnimation, materials, triggerPowerUpFlash, playWaveAnimation, playPowerUpAnimation, updateOverlayColor: updateOverlayColorFromAnimation, updateArcreactorColor } = useAnimations(sceneRefs, materialSettings)
 const { ballState, loadBallModel, updateBallPhysics, animateBallToPosition, animateBallWithPhysics, stopBallAnimation } = useBallPhysics(sceneRefs, 0.1, cameraPosition)
 const { audioState, toggleBackgroundMusic, stopMusic, playBallKick, playCoinSpin, playCoinHitTorusSound, playVictorySound, nextTrack, previousTrack } = useAudio()
-const { shootCoin } = useCoinPhysics(sceneRefs, cameraPosition, triggerPowerUpFlash, playCoinSpin, playCoinHitTorusSound, playPowerUpAnimation, playVictorySound)
+const { shootCoin } = useCoinPhysics(sceneRefs, cameraPosition, triggerPowerUpFlash, playCoinSpin, playCoinHitTorusSound, playPowerUpAnimation, playVictorySound, () => emit('coin-collected'))
 
 // Mobile optimization composable
 const { 
@@ -364,6 +377,8 @@ const backgroundVideo = ref<HTMLVideoElement>()
 const modelGroup = ref()
 const modelGroup2 = ref()
 const modelGroup3 = ref()
+const modelGroup4 = ref()
+const modelGroup5 = ref()
 const goalkeeperGroup = ref()
 const ballModelGroup = ref()
 const danceBotGroup = ref()
@@ -835,7 +850,7 @@ const loadCansuBot = async () => {
 }
 
 // Load character copy for triangle formation
-const loadCharacterCopy = async (targetGroup: any) => {
+const loadCharacterCopy = async (targetGroup: any, animationDelay: number = 0, isGoalkeeper: boolean = false) => {
   try {
     // Load textures
     const textureLoader = new THREE.TextureLoader()
@@ -901,11 +916,20 @@ const loadCharacterCopy = async (targetGroup: any) => {
     // Create animation mixer for this character
     const mixer = new THREE.AnimationMixer(characterModel)
     
-    // Load idle animation
-    const idleAnimation = await loader.loadAsync('/bot1/Soccer Idle.fbx')
+    // Load appropriate animation based on character type
+    const animationFile = isGoalkeeper ? '/bot1/Goalkeeper Idle.fbx' : '/bot1/Soccer Idle.fbx'
+    const idleAnimation = await loader.loadAsync(animationFile)
     if (idleAnimation.animations.length > 0) {
       const action = mixer.clipAction(idleAnimation.animations[0])
-      action.play()
+      
+      // Apply animation delay for staggered start
+      if (animationDelay > 0) {
+        setTimeout(() => {
+          action.play()
+        }, animationDelay)
+      } else {
+        action.play()
+      }
       
       // Store mixer in array for updates
       if (!sceneRefs.additionalMixers) {
@@ -1681,19 +1705,35 @@ watch(modelGroup, (newModelGroup) => {
   }
 }, { once: true })
 
-// Watch for modelGroup2 (triangle formation)
+// Watch for modelGroup2 (triangle formation - left midfielder)
 watch(modelGroup2, (newModelGroup) => {
   if (newModelGroup && props.showTriangleFormation) {
-    // Load the second character copy
-    loadCharacterCopy(newModelGroup)
+    // Load with 300ms delay
+    loadCharacterCopy(newModelGroup, 300)
   }
 }, { once: true })
 
-// Watch for modelGroup3 (triangle formation)
+// Watch for modelGroup3 (triangle formation - right midfielder)
 watch(modelGroup3, (newModelGroup) => {
   if (newModelGroup && props.showTriangleFormation) {
-    // Load the third character copy
-    loadCharacterCopy(newModelGroup)
+    // Load with 600ms delay
+    loadCharacterCopy(newModelGroup, 600)
+  }
+}, { once: true })
+
+// Watch for modelGroup4 (triangle formation - defender)
+watch(modelGroup4, (newModelGroup) => {
+  if (newModelGroup && props.showTriangleFormation) {
+    // Load with 900ms delay
+    loadCharacterCopy(newModelGroup, 900)
+  }
+}, { once: true })
+
+// Watch for modelGroup5 (triangle formation - goalkeeper)
+watch(modelGroup5, (newModelGroup) => {
+  if (newModelGroup && props.showTriangleFormation) {
+    // Load goalkeeper with 1200ms delay
+    loadCharacterCopy(newModelGroup, 1200, true)
   }
 }, { once: true })
 

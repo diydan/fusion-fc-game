@@ -38,7 +38,7 @@
         </div>
 
         <!-- Original 3D Scene Canvas -->
-        <MobileSelectBotScene ref="sceneCanvas" :lock-camera="true" />
+        <MobileSelectBotScene ref="sceneCanvas" :lock-camera="true" @coin-collected="onCoinCollected" />
 
         <!-- Touch Control Hints -->
         <div v-if="showTouchHints" class="touch-hints">
@@ -232,6 +232,9 @@ const activePanel = ref(['performance'])
 // Pellet pack selector state
 const showPelletSelector = ref(false)
 
+// Coin collection tracking for incremental boosts
+const coinsCollected = ref(0)
+
 // Color controls state
 const shortColorHue = ref(218) // Default blue-ish
 const torusColorHue = ref(195) // Default blue-ish
@@ -289,12 +292,14 @@ const currentPlayerData = computed(() => {
 
   // Base amateur stats (without any powerup boost)
   const baseStats = {
-    pace: 45,
-    shooting: 46,
-    passing: 46,
+    overall: 43,
+    attack: 46,
+    speed: 45,
+    skill: 46,
     defense: 35,
     physical: 42,
-    dribbling: 46
+    mental: 46,
+    aggression: 44
   }
 
   // Calculate powerup boost based on team's relative strength
@@ -308,32 +313,38 @@ const currentPlayerData = computed(() => {
     return baseStat + boost
   }
 
+  // Calculate coin collection bonus (small incremental boost per coin)
+  const coinBonus = Math.floor(coinsCollected.value * 0.5) // +0.5 per coin collected
+
   const boostedStats = {
-    pace: calculateBoost(tokenData?.speed || 75, baseStats.pace),
-    shooting: calculateBoost(tokenData?.attack || 75, baseStats.shooting),
-    passing: calculateBoost(tokenData?.skill || 75, baseStats.passing),
-    defense: calculateBoost(tokenData?.defense || 75, baseStats.defense),
-    physical: calculateBoost(tokenData?.physical || 75, baseStats.physical),
-    dribbling: calculateBoost(tokenData?.mental || 75, baseStats.dribbling)
+    overall: calculateBoost(tokenData?.overall || 75, baseStats.overall) + coinBonus,
+    attack: calculateBoost(tokenData?.attack || 75, baseStats.attack) + coinBonus,
+    speed: calculateBoost(tokenData?.speed || 75, baseStats.speed) + coinBonus,
+    skill: calculateBoost(tokenData?.skill || 75, baseStats.skill) + coinBonus,
+    defense: calculateBoost(tokenData?.defense || 75, baseStats.defense) + coinBonus,
+    physical: calculateBoost(tokenData?.physical || 75, baseStats.physical) + coinBonus,
+    mental: calculateBoost(tokenData?.mental || 75, baseStats.mental) + coinBonus,
+    aggression: calculateBoost(tokenData?.aggression || 75, baseStats.aggression) + coinBonus
   }
 
   console.log('🚀 Final boosted stats:', boostedStats)
-
-  // Calculate overall based on boosted stats
-  const calculatedOverall = Math.round(
-    (boostedStats.pace + boostedStats.shooting + boostedStats.passing +
-     boostedStats.defense + boostedStats.physical + boostedStats.dribbling) / 6
-  )
 
   return {
     id: 1,
     name: 'Gen 1 DanBot',
     position: 'FW',
     nationality: 'Digital',
-    overall: calculatedOverall,
+    overall: boostedStats.overall,
     tier: 'amateur',
-    price: calculatedOverall * 50000,
-    stats: boostedStats,
+    price: boostedStats.overall * 50000,
+    stats: {
+      pace: boostedStats.speed,
+      shooting: boostedStats.attack,
+      passing: boostedStats.skill,
+      defense: boostedStats.defense,
+      physical: boostedStats.physical,
+      dribbling: boostedStats.mental
+    },
     bot: { name: 'DanBot', model: '/bot1/soccer_player.fbx' }
   }
 })
@@ -469,6 +480,12 @@ const updateTorusColor = () => {
     const hslColor = `hsl(${torusColorHue.value}, 70%, 50%)`
     sceneCanvas.value.updateTorusEmission(hslColor)
   }
+}
+
+// Function to increment coin collection count
+const onCoinCollected = () => {
+  coinsCollected.value += 1
+  console.log(`🪙 Coin collected! Total: ${coinsCollected.value}`)
 }
 
 // Use shared teams data
