@@ -425,3 +425,20 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* Back button styling */
+.back-button {
+  color: white !important;
+  opacity: 0.9;
+}
+
+.back-button:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.back-button .v-btn__content {
+  font-weight: normal;
+}
+</style>

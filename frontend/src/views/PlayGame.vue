@@ -3,16 +3,19 @@
     <div class="game-header">
       <div class="score-board">
         <div class="team-score home">
-          <span class="team-name">Home</span>
+          <img src="/sim/team-left.png" alt="Home Team" class="team-logo-small" />
           <span class="score">{{ homeScore }}</span>
         </div>
-        <div class="timer">
-          <span class="time">{{ formattedTime }}</span>
-          <div v-if="gameOver" class="game-status">{{ gameStatus }}</div>
+        <div class="vs-section">
+          <div class="timer">
+            <span class="time">{{ formattedTime }}</span>
+            <div v-if="gameOver" class="game-status">{{ gameStatus }}</div>
+          </div>
+          <span class="vs-text">VS</span>
         </div>
         <div class="team-score away">
-          <span class="team-name">Away</span>
           <span class="score">{{ awayScore }}</span>
+          <img src="/sim/team-right.png" alt="Away Team" class="team-logo-small" />
         </div>
       </div>
 
@@ -129,39 +132,6 @@
           />
         </div>
       </div>
-      
-      <div class="team-settings">
-        <div class="team-config home-team">
-          <h3>My Team</h3>
-          <div class="config-row">
-            <label>Formation:</label>
-            <select v-model="homeFormation">
-              <option value="1-2-1-1">1-2-1-1 (Balanced)</option>
-              <option value="1-1-2-1">1-1-2-1 (Midfield)</option>
-              <option value="1-3-1">1-3-1 (Defensive)</option>
-              <option value="1-2-2">1-2-2 (Attacking)</option>
-            </select>
-          </div>
-          <div class="config-row">
-            <label>Tactic:</label>
-            <select v-model="homeTactic">
-              <option value="rotation">Rotation in Attack</option>
-              <option value="flying-keeper">Flying Keeper</option>
-              <option value="pass-move">Pass and Move</option>
-              <option value="defensive">Defensive Positioning</option>
-              <option value="counter">Counter-Attacking</option>
-              <option value="high-press">High Press</option>
-              <option value="wing-play">Wing Play</option>
-              <option value="pivot">Pivot Play</option>
-            </select>
-          </div>
-          <div class="config-row">
-            <label>Strategy:</label>
-            <input type="range" v-model="homeStrategy" min="0" max="8" step="1" />
-            <span class="strategy-label">{{ getStrategyLabel(homeStrategy) }}</span>
-          </div>
-        </div>
-      </div>
     </div>
     
     <div class="game-canvas-container">
@@ -176,10 +146,32 @@
       />
       
       <!-- Team Avatars -->
-      <div class="team-avatar home-avatar">
-        <div class="avatar-circle">
+      <div class="team-avatar home-avatar" @click="toggleManagerMenu">
+        <div class="avatar-circle manager-clickable">
           <img src="/sim/demo-manger-left.png" alt="Home Manager" class="manager-image" />
         </div>
+        
+        <!-- Manager Menu Popover -->
+        <transition name="popover">
+          <div v-if="showManagerMenu" class="manager-menu">
+            <div class="menu-item" @click.stop="managerAction('encourage')">
+              <span class="menu-icon">💪</span>
+              <span>Encourage Team</span>
+            </div>
+            <div class="menu-item" @click.stop="managerAction('belittle')">
+              <span class="menu-icon">😤</span>
+              <span>Belittle Team</span>
+            </div>
+            <div class="menu-item" @click.stop="managerAction('provoke')">
+              <span class="menu-icon">🤬</span>
+              <span>Provoke Manager</span>
+            </div>
+            <div class="menu-item" @click.stop="managerAction('swear')">
+              <span class="menu-icon">🤯</span>
+              <span>Swear at Ref</span>
+            </div>
+          </div>
+        </transition>
       </div>
       
       <div class="team-avatar away-avatar">
@@ -188,7 +180,13 @@
         </div>
       </div>
       
-      <div class="managers-label">Managers</div>
+      <!-- Manager Speech Bubble -->
+      <transition name="speech-bubble">
+        <div v-if="managerSpeech" class="manager-speech-bubble" :class="{ 'home-speech': managerSpeech.team === 'home' }">
+          <div class="speech-content">{{ managerSpeech.text }}</div>
+          <div class="speech-tail"></div>
+        </div>
+      </transition>
     </div>
     
     <div class="controls">
@@ -225,18 +223,57 @@
     <div class="stats-activity-container">
       <!-- Activity Stream (Left) -->
       <div class="activity-stream">
-        <div class="activity-header">
-          <h3>Activity Stream</h3>
+        <!-- My Team Configuration -->
+        <div class="my-team-section">
+          <div class="my-team-header">
+            <h3>My Team</h3>
+          </div>
+          <div class="my-team-content">
+            <div class="config-row">
+              <label>Formation:</label>
+              <select v-model="homeFormation">
+                <option value="1-2-1-1">1-2-1-1 (Balanced)</option>
+                <option value="1-1-2-1">1-1-2-1 (Midfield)</option>
+                <option value="1-3-1">1-3-1 (Defensive)</option>
+                <option value="1-2-2">1-2-2 (Attacking)</option>
+              </select>
+            </div>
+            <div class="config-row">
+              <label>Tactic:</label>
+              <select v-model="homeTactic">
+                <option value="rotation">Rotation in Attack</option>
+                <option value="flying-keeper">Flying Keeper</option>
+                <option value="pass-move">Pass and Move</option>
+                <option value="defensive">Defensive Positioning</option>
+                <option value="counter">Counter-Attacking</option>
+                <option value="high-press">High Press</option>
+                <option value="wing-play">Wing Play</option>
+                <option value="pivot">Pivot Play</option>
+              </select>
+            </div>
+            <div class="config-row">
+              <label>Strategy:</label>
+              <input type="range" v-model="homeStrategy" min="0" max="8" step="1" />
+              <span class="strategy-label">{{ getStrategyLabel(homeStrategy) }}</span>
+            </div>
+          </div>
         </div>
-        <div class="activity-content">
-          <div class="activity-list">
-            <TransitionGroup name="activity">
-              <div v-for="event in gameEvents" :key="event.id" class="activity-item" :class="event.type">
-                <span class="event-time">{{ formatEventTime(event.time) }}</span>
-                <span class="event-icon">{{ getEventIcon(event.type) }}</span>
-                <span class="event-text">{{ event.text }}</span>
-              </div>
-            </TransitionGroup>
+        
+        <!-- Activity Feed -->
+        <div class="activity-feed-section">
+          <div class="activity-header">
+            <h3>Activity Stream</h3>
+          </div>
+          <div class="activity-content">
+            <div class="activity-list">
+              <TransitionGroup name="activity">
+                <div v-for="event in gameEvents" :key="event.id" class="activity-item" :class="event.type">
+                  <span class="event-time">{{ formatEventTime(event.time) }}</span>
+                  <span class="event-icon">{{ getEventIcon(event.type) }}</span>
+                  <span class="event-text">{{ event.text }}</span>
+                </div>
+              </TransitionGroup>
+            </div>
           </div>
         </div>
       </div>
@@ -389,6 +426,8 @@ const coinResult = ref<'Heads' | 'Tails' | null>(null)
 const kickoffTeam = ref<'Home' | 'Away' | null>(null)
 const playerWon = ref(false)
 const showStrategyModal = ref(false)
+const showManagerMenu = ref(false)
+const managerSpeech = ref<{ text: string; team: string } | null>(null)
 
 // Sound effects
 const soundEnabled = ref(true)
@@ -404,6 +443,58 @@ const awayStrategy = ref(4)
 
 // Game settings
 const gameSpeed = ref(1)
+
+// Manager speech options
+const managerSpeeches = {
+  encourage: [
+    "Come on lads, we've got this!",
+    "Keep pushing! You're doing great!",
+    "That's the spirit! Keep it up!",
+    "Brilliant work out there!",
+    "Show them what we're made of!",
+    "I believe in every one of you!",
+    "This is our moment, seize it!",
+    "Keep your heads up, we're stronger!",
+    "Fantastic effort, keep going!",
+    "You're making me proud out there!"
+  ],
+  belittle: [
+    "Is that the best you can do?!",
+    "My grandmother could play better!",
+    "Wake up out there!",
+    "You call that football?!",
+    "Absolutely pathetic performance!",
+    "I've seen better play in Sunday league!",
+    "You're embarrassing the badge!",
+    "What are you doing out there?!",
+    "This is amateur hour!",
+    "You're playing like children!"
+  ],
+  provoke: [
+    "Your tactics are a joke!",
+    "Go back to coaching school!",
+    "Is that your game plan? Really?",
+    "My team's destroying yours!",
+    "You're out of your depth!",
+    "Nice substitution... NOT!",
+    "Your team looks tired already!",
+    "Tactical masterclass? I think not!",
+    "You should've stayed home!",
+    "Amateur tactics, amateur results!"
+  ],
+  swear: [
+    "That's never a foul, ref!",
+    "Are you blind?!",
+    "Absolute disgrace of a decision!",
+    "You're having a laugh, ref!",
+    "Open your eyes!",
+    "That's a clear penalty!",
+    "You're ruining the game!",
+    "Shocking refereeing!",
+    "Get some glasses, ref!",
+    "Worst decision I've ever seen!"
+  ]
+}
 
 // Player state
 const players = ref<Player[]>([])
@@ -973,6 +1064,41 @@ const handleCanvasLeave = () => {
   }
 }
 
+// Manager functions
+const toggleManagerMenu = () => {
+  showManagerMenu.value = !showManagerMenu.value
+}
+
+const managerAction = (action: 'encourage' | 'belittle' | 'provoke' | 'swear') => {
+  showManagerMenu.value = false
+  
+  // Get random speech from the action category
+  const speeches = managerSpeeches[action]
+  const randomSpeech = speeches[Math.floor(Math.random() * speeches.length)]
+  
+  // Show speech bubble
+  managerSpeech.value = {
+    text: randomSpeech,
+    team: 'home'
+  }
+  
+  // Add to activity stream
+  addGameEvent({
+    type: 'manager',
+    text: `Manager: "${randomSpeech}"`
+  })
+  
+  // Hide speech bubble after 3 seconds
+  setTimeout(() => {
+    managerSpeech.value = null
+  }, 3000)
+  
+  // Play sound effect if enabled
+  if (soundEnabled.value) {
+    playWhistleSound()
+  }
+}
+
 // Rendering
 const render = () => {
   if (!canvas.value || !gameEngine) return
@@ -1522,10 +1648,21 @@ onMounted(() => {
   initializeGameEngine()
   lastTime = performance.now()
   animationId = requestAnimationFrame(gameLoop)
+  
+  // Click outside handler for manager menu
+  document.addEventListener('click', handleClickOutside)
 })
+
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.home-avatar') && showManagerMenu.value) {
+    showManagerMenu.value = false
+  }
+}
 
 // Cleanup
 onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
   if (animationId) {
     cancelAnimationFrame(animationId)
   }
@@ -1566,7 +1703,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   align-items: center;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
-  padding: 20px 40px;
+  padding: 15px 30px;
   border-radius: 15px;
   margin-bottom: 20px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
@@ -1575,8 +1712,17 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 
 .team-score {
   display: flex;
-  flex-direction: column;
   align-items: center;
+  gap: 20px;
+}
+
+.team-logo-small {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .team-score.home .score {
@@ -1604,8 +1750,24 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   line-height: 1;
 }
 
+.vs-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+}
+
 .timer {
   text-align: center;
+}
+
+.vs-text {
+  font-size: 20px;
+  font-weight: 800;
+  color: #999;
+  letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
 .time {
@@ -1703,6 +1865,193 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   white-space: nowrap;
 }
 
+/* Team logos now integrated into scoreboard */
+
+/* My Team Section in Activity Stream */
+.my-team-section {
+  border-bottom: 1px solid rgba(0, 120, 237, 0.3);
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+
+.my-team-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(0, 120, 237, 0.3);
+}
+
+.my-team-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #3366FF;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.my-team-content {
+  padding: 15px 20px;
+}
+
+.my-team-content .config-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.my-team-content .config-row:last-child {
+  margin-bottom: 0;
+}
+
+.my-team-content label {
+  flex: 0 0 80px;
+  font-size: 12px;
+  color: #999;
+  font-weight: bold;
+}
+
+.my-team-content select {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.my-team-content select:focus {
+  outline: none;
+  border-color: #0078ed;
+  box-shadow: 0 0 0 2px rgba(0, 120, 237, 0.3);
+}
+
+.my-team-content input[type="range"] {
+  flex: 1;
+}
+
+.my-team-content .strategy-label {
+  flex: 0 0 120px;
+  font-size: 11px;
+  color: #00b4d8;
+  text-align: right;
+  font-weight: 600;
+}
+
+/* Activity Feed Section */
+.activity-feed-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Manager Clickable Avatar */
+.manager-clickable {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.manager-clickable:hover {
+  transform: scale(1.1);
+}
+
+/* Manager Menu Popover */
+.manager-menu {
+  position: absolute;
+  bottom: 85px;
+  left: 0;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(0, 120, 237, 0.5);
+  border-radius: 12px;
+  padding: 8px;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  color: white;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.menu-item:hover {
+  background: rgba(0, 120, 237, 0.3);
+}
+
+.menu-icon {
+  font-size: 18px;
+}
+
+/* Manager Speech Bubble */
+.manager-speech-bubble {
+  position: absolute;
+  bottom: 100px;
+  left: 100px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  padding: 12px 18px;
+  border-radius: 18px;
+  max-width: 250px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 999;
+}
+
+.manager-speech-bubble.home-speech {
+  left: 100px;
+}
+
+.speech-content {
+  position: relative;
+  z-index: 1;
+}
+
+.speech-tail {
+  position: absolute;
+  bottom: -8px;
+  left: 20px;
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid rgba(255, 255, 255, 0.95);
+}
+
+/* Popover animation */
+.popover-enter-active, .popover-leave-active {
+  transition: all 0.2s ease;
+}
+
+.popover-enter-from, .popover-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+/* Speech bubble animation */
+.speech-bubble-enter-active, .speech-bubble-leave-active {
+  transition: all 0.3s ease;
+}
+
+.speech-bubble-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.speech-bubble-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
 .controls {
   display: flex;
   justify-content: center;
@@ -1768,12 +2117,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   width: 120px;
 }
 
-.team-settings {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 20px;
-}
+/* Removed team-settings - now integrated into activity stream */
 
 .team-config {
   background: rgba(0, 0, 0, 0.4);
@@ -1782,6 +2126,8 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   border-radius: 12px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(0, 120, 237, 0.3);
+  width: 100%;
+  max-width: 400px;
 }
 
 .team-config h3 {
@@ -2491,6 +2837,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+  min-height: 0;
 }
 
 .activity-list {

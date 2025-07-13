@@ -148,11 +148,9 @@
       :is-ready="isReady"
       :loading-status="loadingStatus"
       :is-strike-sequence-active="animationState.isStrikeSequenceActive"
-      :is-music-playing="audioState.isMusicPlaying"
       :current-animation="getCurrentAnimation()"
       @trigger-strike="triggerMobileStrikeSequence"
-      @shoot-coin="shootCoin"
-      @toggle-music="toggleBackgroundMusic"
+      @shoot-coin="shootCoinWithPellets"
       @trigger-dance="playWaveAnimation"
       @reset-character="resetCharacterPosition"
       @rotate-and-drop="rotateAndDropBall"
@@ -173,16 +171,15 @@
       />
     </div>
 
-    <!-- Global Music Footer moved to top -->
-    <GlobalMusicFooter
+    <!-- Pellet Bar for PowerUp Fuel -->
+    <PelletBar
       v-if="!props.hideUiElements"
-      :audio-state="audioState"
-      @toggle="toggleBackgroundMusic"
-      @stop="stopMusic"
-      @next-track="nextTrack"
-      @previous-track="previousTrack"
-      @toggle-lyrics="() => audioState.showLyrics = !audioState.showLyrics"
+      :current-pellets="currentPellets"
+      :max-pellets="maxPellets"
+      :token-balance="tokenBalance"
+      @pellet-depleted="onPelletDepleted"
     />
+
 
     <!-- Mobile Loading Indicator -->
     <div v-if="loadingStatus !== 'Ready'" class="mobile-loading">
@@ -227,8 +224,8 @@ import SceneCanvas from './scene/SceneCanvas.vue'
 import SceneCamera from './scene/SceneCamera.vue'
 import SceneLighting from './scene/SceneLighting.vue'
 import MobileControlPanel from './mobile/MobileControlPanel.vue'
+import PelletBar from './ui/PelletBar.vue'
 import MobileColorSlider from './mobile/MobileColorSlider.vue'
-import GlobalMusicFooter from './ui/GlobalMusicFooter.vue'
 
 // Composables (reuse existing ones)
 import { useSceneSetup } from '@/composables/useSceneSetup'
@@ -321,6 +318,46 @@ const danceBotGroup = ref()
 const cansuBotGroup = ref()
 const overlayColorHue = ref(218)
 const torusEmissionHue = ref(195)
+
+// Pellet management state
+const tokenBalance = ref(10) // Default token balance
+const maxPellets = ref(10) // Maximum pellets based on tokens
+const currentPellets = ref(10) // Current pellets available
+
+// Handle pellet depletion
+const onPelletDepleted = () => {
+  // Refill pellets when they reach 0
+  if (currentPellets.value === 0 && tokenBalance.value > 0) {
+    const refillAmount = Math.min(tokenBalance.value, maxPellets.value)
+    currentPellets.value = refillAmount
+    tokenBalance.value = Math.max(0, tokenBalance.value - refillAmount)
+  }
+}
+
+// Modified shoot coin function that consumes pellets
+const shootCoinWithPellets = () => {
+  if (currentPellets.value > 0) {
+    currentPellets.value--
+    shootCoin()
+  } else {
+    // Optional: Show a message that pellets are depleted
+    console.log('No pellets available!')
+  }
+}
+
+// Update token balance and pellets (can be called from parent component)
+const updateTokenBalance = (newBalance: number) => {
+  tokenBalance.value = newBalance
+  // If we have no pellets but have tokens, refill
+  if (currentPellets.value === 0 && tokenBalance.value > 0) {
+    onPelletDepleted()
+  }
+}
+
+// Expose method for parent component
+defineExpose({
+  updateTokenBalance
+})
 
 // Label refs
 const mainCharacterLabel = ref()

@@ -61,14 +61,6 @@
     <!-- Secondary Actions -->
     <div class="secondary-actions">
       <button 
-        @click="$emit('toggle-music')"
-        class="secondary-btn music-btn"
-        :class="{ active: isMusicPlaying }"
-      >
-        <div class="btn-icon">{{ isMusicPlaying ? '🔊' : '🔇' }}</div>
-      </button>
-      
-      <button 
         @click="$emit('toggle-settings')"
         class="secondary-btn settings-btn"
       >
@@ -96,7 +88,6 @@ interface Props {
   isReady: boolean
   loadingStatus: string
   isStrikeSequenceActive: boolean
-  isMusicPlaying: boolean
   currentAnimation?: string
 }
 
@@ -110,7 +101,6 @@ const emit = defineEmits<{
   'shoot-coin': []
   'trigger-dance': []
   'reset-character': []
-  'toggle-music': []
   'toggle-settings': []
   'rotate-and-drop': []
 }>()
@@ -268,11 +258,6 @@ const statusText = computed(() => {
 
 .secondary-btn:active {
   background: rgba(255, 255, 255, 0.2);
-}
-
-.music-btn.active {
-  background: linear-gradient(135deg, #4CAF50, #8BC34A);
-  border-color: #4CAF50;
 }
 
 .settings-btn:hover {
