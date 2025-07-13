@@ -130,6 +130,7 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
 import SceneCanvas from './scene/SceneCanvas.vue'
 import SceneCamera from './scene/SceneCamera.vue'
 import SceneLighting from './scene/SceneLighting.vue'
+import { createMainCharacterMaterials, createLayeredMeshGroup, type MaterialPair } from '@/utils/materialHelpers'
 
 // Battle state
 const isBattling = ref(false)
@@ -235,35 +236,70 @@ const createFieldLines = () => {
 // Load player models
 const loadAllPlayers = async () => {
   const loader = new FBXLoader()
+  const textureLoader = new THREE.TextureLoader()
   
-  // Load player model
-  const playerModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture.fbx')
+  // Load player model and textures
+  const [playerModel, baseTexture, overlayTexture] = await Promise.all([
+    loader.loadAsync('/bot1/soccer_player_humanoid__texture.fbx'),
+    new Promise<THREE.Texture>((resolve, reject) => {
+      textureLoader.load(
+        '/bot1/bot1_original.png',
+        (texture) => {
+          texture.colorSpace = THREE.SRGBColorSpace
+          resolve(texture)
+        },
+        undefined,
+        reject
+      )
+    }),
+    new Promise<THREE.Texture>((resolve, reject) => {
+      textureLoader.load(
+        '/bot1/bot1_shorts.png',
+        (texture) => {
+          texture.colorSpace = THREE.SRGBColorSpace
+          resolve(texture)
+        },
+        undefined,
+        reject
+      )
+    })
+  ])
   
-  // Function to create a player instance
-  const createPlayer = (group: THREE.Group, color: string, isGoalkeeper = false) => {
+  // Function to create a player instance with layered materials
+  const createPlayer = async (group: THREE.Group, color: string, isGoalkeeper = false) => {
+    if (isGoalkeeper) {
+      // Use loadMainCharacter for goalkeepers
+      const goalkeepierPlayer = await loadMainCharacter(true)
+      group.add(goalkeepierPlayer)
+      return goalkeepierPlayer
+    }
+    
+    // Keep current colored-jersey logic for non-goalkeepers
     const player = playerModel.clone()
     player.scale.setScalar(0.02) // Same scale as original main character
     
-    // Set team color
+    // Create base and overlay materials using helper function
+    const materials = createMainCharacterMaterials(baseTexture, overlayTexture, 1)
+    
+    // Set team color on overlay material
+    if (color === 'blue') {
+      materials.overlay.color.setHSL(220/360, 0.8, 0.5)
+    } else {
+      materials.overlay.color.setHSL(0/360, 0.8, 0.5)
+    }
+    
+    // Apply layered materials to player
     player.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.castShadow = true
         child.receiveShadow = true
         
-        // Create colored material
-        const material = new THREE.MeshPhongMaterial({
-          color: color === 'blue' ? 0x0066cc : 0xcc0000,
-          emissive: color === 'blue' ? 0x0033aa : 0xaa0000,
-          emissiveIntensity: 0.2,
-          shininess: 100
-        })
+        // Create layered mesh group using helper function
+        const layeredGroup = createLayeredMeshGroup(child, materials)
         
-        // Goalkeeper gets different shade
-        if (isGoalkeeper) {
-          material.color = new THREE.Color(color === 'blue' ? 0x004499 : 0x990000)
-        }
-        
-        child.material = material
+        // Replace the original mesh with the layered group
+        child.parent?.add(layeredGroup)
+        child.parent?.remove(child)
       }
     })
     
@@ -274,67 +310,67 @@ const loadAllPlayers = async () => {
     mixers.push(mixer)
     
     // Load idle animation
-    loadAnimation(mixer, isGoalkeeper ? '/bot1/Goalkeeper Idle.fbx' : '/bot1/Soccer Idle.fbx')
+    loadAnimation(mixer, '/bot1/Soccer Idle.fbx')
     
     return player
   }
   
   // Create Team 1 (Blue)
-  if (team1Goalkeeper.value) createPlayer(team1Goalkeeper.value, 'blue', true)
-  if (team1Defender1.value) createPlayer(team1Defender1.value, 'blue')
-  if (team1Defender2.value) createPlayer(team1Defender2.value, 'blue')
-  if (team1Defender3.value) createPlayer(team1Defender3.value, 'blue')
-  if (team1Defender4.value) createPlayer(team1Defender4.value, 'blue')
-  if (team1Midfielder1.value) createPlayer(team1Midfielder1.value, 'blue')
-  if (team1Midfielder2.value) createPlayer(team1Midfielder2.value, 'blue')
-  if (team1Midfielder3.value) createPlayer(team1Midfielder3.value, 'blue')
-  if (team1Midfielder4.value) createPlayer(team1Midfielder4.value, 'blue')
-  if (team1Forward1.value) createPlayer(team1Forward1.value, 'blue')
-  if (team1Forward2.value) createPlayer(team1Forward2.value, 'blue')
+  if (team1Goalkeeper.value) await createPlayer(team1Goalkeeper.value, 'blue', true)
+  if (team1Defender1.value) await createPlayer(team1Defender1.value, 'blue')
+  if (team1Defender2.value) await createPlayer(team1Defender2.value, 'blue')
+  if (team1Defender3.value) await createPlayer(team1Defender3.value, 'blue')
+  if (team1Defender4.value) await createPlayer(team1Defender4.value, 'blue')
+  if (team1Midfielder1.value) await createPlayer(team1Midfielder1.value, 'blue')
+  if (team1Midfielder2.value) await createPlayer(team1Midfielder2.value, 'blue')
+  if (team1Midfielder3.value) await createPlayer(team1Midfielder3.value, 'blue')
+  if (team1Midfielder4.value) await createPlayer(team1Midfielder4.value, 'blue')
+  if (team1Forward1.value) await createPlayer(team1Forward1.value, 'blue')
+  if (team1Forward2.value) await createPlayer(team1Forward2.value, 'blue')
   
   // Create Team 2 (Red) - facing opposite direction
   if (team2Goalkeeper.value) {
-    const player = createPlayer(team2Goalkeeper.value, 'red', true)
+    const player = await createPlayer(team2Goalkeeper.value, 'red', true)
     player.rotation.y = Math.PI
   }
   if (team2Defender1.value) {
-    const player = createPlayer(team2Defender1.value, 'red')
+    const player = await createPlayer(team2Defender1.value, 'red')
     player.rotation.y = Math.PI
   }
   if (team2Defender2.value) {
-    const player = createPlayer(team2Defender2.value, 'red')
+    const player = await createPlayer(team2Defender2.value, 'red')
     player.rotation.y = Math.PI
   }
   if (team2Defender3.value) {
-    const player = createPlayer(team2Defender3.value, 'red')
+    const player = await createPlayer(team2Defender3.value, 'red')
     player.rotation.y = Math.PI
   }
   if (team2Defender4.value) {
-    const player = createPlayer(team2Defender4.value, 'red')
+    const player = await createPlayer(team2Defender4.value, 'red')
     player.rotation.y = Math.PI
   }
   if (team2Midfielder1.value) {
-    const player = createPlayer(team2Midfielder1.value, 'red')
+    const player = await createPlayer(team2Midfielder1.value, 'red')
     player.rotation.y = Math.PI
   }
   if (team2Midfielder2.value) {
-    const player = createPlayer(team2Midfielder2.value, 'red')
+    const player = await createPlayer(team2Midfielder2.value, 'red')
     player.rotation.y = Math.PI
   }
   if (team2Midfielder3.value) {
-    const player = createPlayer(team2Midfielder3.value, 'red')
+    const player = await createPlayer(team2Midfielder3.value, 'red')
     player.rotation.y = Math.PI
   }
   if (team2Midfielder4.value) {
-    const player = createPlayer(team2Midfielder4.value, 'red')
+    const player = await createPlayer(team2Midfielder4.value, 'red')
     player.rotation.y = Math.PI
   }
   if (team2Forward1.value) {
-    const player = createPlayer(team2Forward1.value, 'red')
+    const player = await createPlayer(team2Forward1.value, 'red')
     player.rotation.y = Math.PI
   }
   if (team2Forward2.value) {
-    const player = createPlayer(team2Forward2.value, 'red')
+    const player = await createPlayer(team2Forward2.value, 'red')
     player.rotation.y = Math.PI
   }
 }
@@ -351,6 +387,83 @@ const loadAnimation = async (mixer: THREE.AnimationMixer, animationPath: string)
   } catch (error) {
     console.error('Failed to load animation:', animationPath, error)
   }
+}
+
+// Load main character
+const loadMainCharacter = async (isGoalkeeper: boolean): Promise<THREE.Group> => {
+  const loader = new FBXLoader()
+  
+  // Try to load the main character model with fallback
+  let playerModel: THREE.Group
+  try {
+    playerModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture.fbx')
+  } catch (error) {
+    console.warn('Failed to load primary model, trying fallback:', error)
+    try {
+      playerModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture2.fbx')
+    } catch (fallbackError) {
+      console.error('Failed to load fallback model:', fallbackError)
+      throw fallbackError
+    }
+  }
+  
+  // Load textures for materials
+  const textureLoader = new THREE.TextureLoader()
+  const [baseTexture, overlayTexture] = await Promise.all([
+    new Promise<THREE.Texture>((resolve, reject) => {
+      textureLoader.load(
+        '/bot1/bot1_original.png',
+        (texture) => {
+          texture.colorSpace = THREE.SRGBColorSpace
+          resolve(texture)
+        },
+        undefined,
+        reject
+      )
+    }),
+    new Promise<THREE.Texture>((resolve, reject) => {
+      textureLoader.load(
+        '/bot1/bot1_shorts.png',
+        (texture) => {
+          texture.colorSpace = THREE.SRGBColorSpace
+          resolve(texture)
+        },
+        undefined,
+        reject
+      )
+    })
+  ])
+  
+  // Apply scale
+  playerModel.scale.setScalar(0.02)
+  
+  // Apply materials to all meshes
+  playerModel.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      // Create materials using helper function
+      const materials = createMainCharacterMaterials(baseTexture, overlayTexture, 1)
+      
+      // Apply materials to mesh
+      child.material = materials.base
+      
+      // Enable shadows
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+  
+  // Create animation mixer and load appropriate animation
+  const mixer = new THREE.AnimationMixer(playerModel)
+  mixers.push(mixer)
+  
+  // Load animation based on goalkeeper status
+  const animationPath = isGoalkeeper 
+    ? '/bot1/Goalkeeper Idle.fbx' 
+    : '/bot1/Soccer Idle.fbx'
+  
+  await loadAnimation(mixer, animationPath)
+  
+  return playerModel
 }
 
 // Load ball

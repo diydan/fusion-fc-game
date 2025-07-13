@@ -262,6 +262,7 @@ import { useBallPhysics } from '@/composables/useBallPhysics'
 import { useAudio } from '@/composables/useAudio'
 import { useMobileOptimization } from '@/composables/useMobileOptimization'
 import { useCoinPhysics } from '@/composables/useCoinPhysics'
+import { createLayeredMeshGroup } from '@/utils/materialHelpers'
 
 // Mobile-specific state
 const showPerformanceWarning = ref(false)
@@ -883,26 +884,11 @@ const loadGoalkeeper = async () => {
         
         // Apply the same material setup as the main character
         if (child.material instanceof THREE.MeshPhongMaterial && materials.base && materials.overlay) {
-          // Create a group with base and overlay meshes
-          const group = new THREE.Group()
+          // Create layered mesh group using helper function
+          const layeredGroup = createLayeredMeshGroup(child, { base: materials.base, overlay: materials.overlay })
           
-          // Base mesh with shared base material
-          const baseMesh = child.clone()
-          baseMesh.material = materials.base
-          baseMesh.castShadow = true
-          baseMesh.receiveShadow = false
-          
-          // Overlay mesh with shared overlay material
-          const overlayMesh = child.clone()
-          overlayMesh.material = materials.overlay
-          overlayMesh.castShadow = false
-          overlayMesh.receiveShadow = false
-          
-          group.add(baseMesh)
-          group.add(overlayMesh)
-          
-          // Replace the original child with the group
-          child.parent?.add(group)
+          // Replace the original child with the layered group
+          child.parent?.add(layeredGroup)
           child.parent?.remove(child)
           
           }

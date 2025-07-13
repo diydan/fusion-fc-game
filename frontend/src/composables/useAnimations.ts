@@ -2,6 +2,7 @@ import { ref, reactive, shallowRef } from 'vue'
 import { FBXLoader } from 'three-stdlib'
 import * as THREE from 'three'
 import type { AnimationState, AnimationConfig, AnimationTiming, SceneRefs, MaterialSettings } from '@/types/scene'
+import { createMainCharacterMaterials, createLayeredMeshGroup, type MaterialPair } from '@/utils/materialHelpers'
 
 export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSettings) {
   const arcreactorMeshRef = shallowRef<THREE.Mesh | null>(null);
@@ -94,8 +95,12 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
         }
       })
       
+      // Create materials using helper function
+      const materialPair = createMainCharacterMaterials(baseTexture, overlayTexture, materialSettings.brightness)
+      materials.base = materialPair.base
+      materials.overlay = materialPair.overlay
+      
       // Convert materials to MeshStandardMaterial
-      let overlayMaterialCreated = false
       characterModel.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           if (child.name.toLowerCase().includes('arcreactor') && child.material) {
@@ -113,73 +118,12 @@ export function useAnimations(sceneRefs: SceneRefs, materialSettings: MaterialSe
           if (child.material && (child.material instanceof THREE.MeshPhongMaterial || 
               child.material instanceof THREE.MeshBasicMaterial || 
               child.material instanceof THREE.MeshStandardMaterial)) {
-            // Create base material
-            const baseMaterial = new THREE.MeshStandardMaterial({
-              map: baseTexture,
-              normalMap: (child.material as any).normalMap || null,
-              aoMap: (child.material as any).aoMap || null,
-              aoMapIntensity: 1,
-              metalness: 0.3,  // Reduced from 0.6 for less metallic look
-              roughness: 0.3,  // Increased from 0.1 for softer reflections
-              emissive: 0x666666,  // Brighter emissive color
-              emissiveIntensity: 0.4,  // Increased from 0.2
-              envMapIntensity: 1,
-              transparent: true,
-              opacity: 1,
-              side: THREE.DoubleSide
-            })
-            baseMaterial.color.setScalar(materialSettings.brightness)
             
-            // Only set base material once
-            if (!materials.base) {
-              materials.base = baseMaterial
-              if (materials.base) {
-                materials.base.userData.defaultEmissive = materials.base.emissive.clone();
-                materials.base.userData.defaultEmissiveIntensity = materials.base.emissiveIntensity;
-              }
-            }
-
-            // Create overlay material
-            const overlayMaterial = new THREE.MeshStandardMaterial({
-              map: overlayTexture,
-              normalMap: (child.material as any).normalMap || null,
-              aoMap: (child.material as any).aoMap || null,
-              aoMapIntensity: 1,
-              metalness: 0,
-              roughness: 0.8,
-              emissive: 0x44444,
-              emissiveIntensity: 0.2,
-              envMapIntensity: 0.2,
-              transparent: true,
-              opacity: 1,
-              side: THREE.DoubleSide
-            })
+            // Create layered mesh group using helper function
+            const layeredGroup = createLayeredMeshGroup(child, materialPair)
             
-            // Set initial color to specified blue
-            overlayMaterial.color.setHSL(218/360, 1, 0.5) // Hue: 218, Saturation: 100%, Lightness: 50%
-            
-            // Only set overlay material once
-            if (!overlayMaterialCreated) {
-              materials.overlay = overlayMaterial
-              overlayMaterialCreated = true
-            }
-            
-            // Create a group for the mesh and its overlay
-            const group = new THREE.Group()
-            const baseMesh = child.clone()
-            baseMesh.material = baseMaterial
-            baseMesh.castShadow = true
-            baseMesh.receiveShadow = false
-            const overlayMesh = child.clone()
-            overlayMesh.material = overlayMaterial
-            overlayMesh.castShadow = false
-            overlayMesh.receiveShadow = false
-            
-            group.add(baseMesh)
-            group.add(overlayMesh)
-            
-            // Replace the original mesh with the group
-            child.parent?.add(group)
+            // Replace the original mesh with the layered group
+            child.parent?.add(layeredGroup)
             child.parent?.remove(child)
           }
           child.castShadow = true
