@@ -12,7 +12,7 @@ const glowMaterial = new THREE.MeshStandardMaterial({
 // Create a shared glow light
 const glowLight = new THREE.PointLight(0x00ffff, 2, 5)
 
-export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, triggerPowerUpFlash?: (target: 'character' | 'torus') => void, playCoinSpin?: () => void, playCoinHitTorusSound?: () => void, playPowerUpAnimation?: () => void) {
+export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, triggerPowerUpFlash?: (target: 'character' | 'torus') => void, playCoinSpin?: () => void, playCoinHitTorusSound?: () => void, playPowerUpAnimation?: () => void, playVictorySound?: () => void) {
   const shootCoin = () => {
     if (playCoinSpin) {
       playCoinSpin();
@@ -155,12 +155,17 @@ export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, tri
         shouldRemoveCoin = true
         hitTargetType = 'torus'
         if (triggerPowerUpFlash) {
-          triggerPowerUpFlash('character'); 
+          triggerPowerUpFlash('character');
           triggerPowerUpFlash('torus');
           comboFlashTriggeredByHit = true;
         }
         if (playCoinHitTorusSound) {
           playCoinHitTorusSound();
+        }
+        if (playVictorySound) {
+          setTimeout(() => {
+            playVictorySound();
+          }, 2000); // 2 second delay
         }
       } else if (hitCharacter) {
         shouldRemoveCoin = true
@@ -170,8 +175,12 @@ export function useCoinPhysics(sceneRefs: SceneRefs, cameraPositionRef: any, tri
         }
         if (playPowerUpAnimation) {
           playPowerUpAnimation();
-        } else {
-          }
+        }
+        if (playVictorySound) {
+          setTimeout(() => {
+            playVictorySound();
+          }, 2000); // 2 second delay
+        }
       } else if (elapsedLifetime > coinMaxLifetime) {
         shouldRemoveCoin = true
         hitTargetType = 'lifetime_exceeded'

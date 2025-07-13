@@ -56,7 +56,7 @@
     </div>
 
     <!-- Price -->
-    <div class="price-section">
+    <div v-if="showPrice" class="price-section">
       <span class="price">{{ formattedPrice }}</span>
     </div>
 
@@ -118,6 +118,10 @@ const props = defineProps({
   isSelected: {
     type: Boolean,
     default: false
+  },
+  showPrice: {
+    type: Boolean,
+    default: true
   }
 })
 

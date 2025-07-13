@@ -160,7 +160,7 @@ onMounted(() => {
   color: white;
   font-weight: 300;
   letter-spacing: 0.05em;
-  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
+  text-shadow: 2px 2px 8px #010224;
 }
 
 /* Transitions */

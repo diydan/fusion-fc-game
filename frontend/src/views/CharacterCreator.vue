@@ -114,7 +114,7 @@
 
             <!-- Shorts Color Slider -->
             <div class="color-slider-section">
-http://localhost:3003/auto-battler
+              Shorts
               <div class="color-slider-container">
                 <input
                   type="range"
@@ -134,7 +134,7 @@ http://localhost:3003/auto-battler
 
             <!-- Torus Color Slider -->
             <div class="color-slider-section">
-              <label class="color-label">Power-up Reactor Color</label>
+              <label class="color-label">#010224</label>
               <div class="color-slider-container">
                 <input
                   type="range"
@@ -161,6 +161,7 @@ http://localhost:3003/auto-battler
               v-if="currentPlayerData"
               :player="currentPlayerData"
               :is-selected="false"
+              :show-price="false"
               @click="handlePlayerCardClick"
               @compare="handlePlayerCompare"
               @recruit="handlePlayerRecruit"
@@ -247,22 +248,30 @@ const sceneCanvas = ref()
 // Current player data for PlayerCardV3 - computed based on selected token
 const currentPlayerData = computed(() => {
   if (!currentPelletPack.value) {
+    // Base amateur stats without any powerup
+    const baseStats = {
+      pace: 45,
+      shooting: 46,
+      passing: 46,
+      defense: 35,
+      physical: 42,
+      dribbling: 46
+    }
+
+    const baseOverall = Math.round(
+      (baseStats.pace + baseStats.shooting + baseStats.passing +
+       baseStats.defense + baseStats.physical + baseStats.dribbling) / 6
+    )
+
     return {
       id: 1,
       name: 'Gen 1 DanBot',
       position: 'FW',
       nationality: 'Digital',
-      overall: 51,
+      overall: baseOverall, // ~43
       tier: 'amateur',
-      price: 51 * 50000,
-      stats: {
-        pace: 50,
-        shooting: 51,
-        passing: 51,
-        defense: 39,
-        physical: 46,
-        dribbling: 51
-      },
+      price: baseOverall * 50000,
+      stats: baseStats,
       bot: { name: 'DanBot', model: '/bot1/soccer_player.fbx' }
     }
   }
@@ -270,26 +279,61 @@ const currentPlayerData = computed(() => {
   const tokenData = getTeamByToken(currentPelletPack.value.tokenSymbol)
   const tokenSymbol = currentPelletPack.value.tokenSymbol
 
-  // Map token attributes to player card stats - scaled down to amateur level
-  // Scale factor to bring high-level team stats (80-90) down to amateur level (45-55)
-  const scaleToAmateur = (value: number) => Math.round(value * 0.57) // Scales 90 to ~51, 89 to ~51, etc.
+  // Debug logging
+  console.log('🎮 Player Card Update:', {
+    tokenSymbol,
+    teamData: tokenData,
+    teamAttack: tokenData?.attack,
+    teamSpeed: tokenData?.speed
+  })
+
+  // Base amateur stats (without any powerup boost)
+  const baseStats = {
+    pace: 45,
+    shooting: 46,
+    passing: 46,
+    defense: 35,
+    physical: 42,
+    dribbling: 46
+  }
+
+  // Calculate powerup boost based on team's relative strength
+  // Teams with higher stats give bigger boosts to the player
+  const calculateBoost = (teamStat: number, baseStat: number) => {
+    // More aggressive boost formula for visible differences
+    // Team stat 90 gives +15 boost, team stat 70 gives +5 boost, etc.
+    const boostMultiplier = Math.max(0, (teamStat - 50) / 10) // 0-4 range for stats 50-90
+    const boost = Math.round(boostMultiplier * 4) // 0-16 boost range
+    console.log(`📊 Boost calc: teamStat=${teamStat}, baseStat=${baseStat}, boost=${boost}, final=${baseStat + boost}`)
+    return baseStat + boost
+  }
+
+  const boostedStats = {
+    pace: calculateBoost(tokenData?.speed || 75, baseStats.pace),
+    shooting: calculateBoost(tokenData?.attack || 75, baseStats.shooting),
+    passing: calculateBoost(tokenData?.skill || 75, baseStats.passing),
+    defense: calculateBoost(tokenData?.defense || 75, baseStats.defense),
+    physical: calculateBoost(tokenData?.physical || 75, baseStats.physical),
+    dribbling: calculateBoost(tokenData?.mental || 75, baseStats.dribbling)
+  }
+
+  console.log('🚀 Final boosted stats:', boostedStats)
+
+  // Calculate overall based on boosted stats
+  const calculatedOverall = Math.round(
+    (boostedStats.pace + boostedStats.shooting + boostedStats.passing +
+     boostedStats.defense + boostedStats.physical + boostedStats.dribbling) / 6
+  )
 
   return {
     id: 1,
     name: 'Gen 1 DanBot',
     position: 'FW',
-    nationality: tokenData?.team || 'Digital',
-    overall: 51, // Fixed at 51 for amateur level
+    nationality: 'Digital',
+    overall: calculatedOverall,
     tier: 'amateur',
-    price: 51 * 50000, // Based on overall
-    stats: {
-      pace: scaleToAmateur(tokenData?.speed || 75),      // PSG: 87 → ~50
-      shooting: scaleToAmateur(tokenData?.attack || 75), // PSG: 89 → ~51
-      passing: scaleToAmateur(tokenData?.skill || 75),   // PSG: 89 → ~51
-      defense: scaleToAmateur(tokenData?.defense || 75), // PSG: 68 → ~39
-      physical: scaleToAmateur(tokenData?.physical || 75), // PSG: 81 → ~46
-      dribbling: scaleToAmateur(tokenData?.mental || 75)  // PSG: 89 → ~51
-    },
+    price: calculatedOverall * 50000,
+    stats: boostedStats,
     bot: { name: 'DanBot', model: '/bot1/soccer_player.fbx' }
   }
 })
@@ -400,6 +444,7 @@ const getTokenTeamName = (tokenSymbol: string) => {
 
 // Handle pellet pack selection
 const onPelletPackSelected = (pack: PelletPack) => {
+  console.log('🔄 Powerup changed to:', pack.tokenSymbol, pack)
   currentPelletPack.value = pack
   showPelletSelector.value = false
 
@@ -407,6 +452,8 @@ const onPelletPackSelected = (pack: PelletPack) => {
   if (sceneCanvas.value) {
     sceneCanvas.value.updateCurrentPelletPack(pack)
   }
+
+  console.log('✅ Current pellet pack updated:', currentPelletPack.value)
 }
 
 // Color update functions
@@ -729,7 +776,7 @@ watch(() => sceneCanvas.value?.currentPelletPack, (newPack) => {
 }
 
 .attributes-content {
-  background: rgba(0, 0, 0, 0.9);
+  background: #010224;
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
@@ -752,11 +799,11 @@ watch(() => sceneCanvas.value?.currentPelletPack, (newPack) => {
 
 /* Color Controls Panel */
 .color-controls-panel {
-  background: rgb(8 13 8) !important;
+  background: rgb(1 2 36);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
-  padding: 20px ;
+  padding: 20px;
   margin-top: 10px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }

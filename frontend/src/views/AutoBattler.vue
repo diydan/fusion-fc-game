@@ -42,6 +42,7 @@
           ref="sceneCanvas"
           :lock-camera="false"
           :hide-ui-elements="true"
+          :show-triangle-formation="true"
         />
 
         <!-- Touch Control Hints -->

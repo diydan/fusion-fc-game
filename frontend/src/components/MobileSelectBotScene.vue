@@ -66,8 +66,26 @@
       </TresMesh>
 
       <!-- Character Group -->
-      <TresGroup :position="[props.showDanceBot ? -1.55 : 0, sceneOffsetY, props.showDanceBot ? -0.8 : 0]">
+      <TresGroup v-if="!props.showTriangleFormation" :position="[props.showDanceBot ? -1.55 : 0, sceneOffsetY, props.showDanceBot ? -0.8 : 0]">
         <TresGroup ref="modelGroup" :scale="characterScale" />
+      </TresGroup>
+      
+      <!-- Triangle Formation Characters -->
+      <TresGroup v-if="props.showTriangleFormation">
+        <!-- Front Character -->
+        <TresGroup :position="[0, sceneOffsetY, 2]">
+          <TresGroup ref="modelGroup" :scale="characterScale" />
+        </TresGroup>
+        
+        <!-- Back Left Character -->
+        <TresGroup :position="[-2, sceneOffsetY, -1]">
+          <TresGroup ref="modelGroup2" :scale="characterScale" />
+        </TresGroup>
+        
+        <!-- Back Right Character -->
+        <TresGroup :position="[2, sceneOffsetY, -1]">
+          <TresGroup ref="modelGroup3" :scale="characterScale" />
+        </TresGroup>
       </TresGroup>
 
       <!-- Jamie Bot Group (only visible on dance page) -->
@@ -236,12 +254,14 @@ interface Props {
   hideUiElements?: boolean
   lockCamera?: boolean
   showDanceBot?: boolean
+  showTriangleFormation?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   hideUiElements: false,
   lockCamera: false,
-  showDanceBot: false
+  showDanceBot: false,
+  showTriangleFormation: false
 })
 
 // Components
@@ -262,7 +282,7 @@ import { useBallPhysics } from '@/composables/useBallPhysics'
 import { useAudio } from '@/composables/useAudio'
 import { useMobileOptimization } from '@/composables/useMobileOptimization'
 import { useCoinPhysics } from '@/composables/useCoinPhysics'
-import { createLayeredMeshGroup } from '@/utils/materialHelpers'
+import { createLayeredMeshGroup, createMainCharacterMaterials } from '@/utils/materialHelpers'
 import { useTeamsData } from '@/composables/useTeamsData'
 
 // Mobile-specific state
@@ -328,8 +348,8 @@ const mobileLightingSettings = computed(() => ({
 
 const { animationState, loadCharacterModel, updateAnimations, getCurrentAnimation, materials, triggerPowerUpFlash, playWaveAnimation, playPowerUpAnimation, updateOverlayColor: updateOverlayColorFromAnimation, updateArcreactorColor } = useAnimations(sceneRefs, materialSettings)
 const { ballState, loadBallModel, updateBallPhysics, animateBallToPosition, animateBallWithPhysics, stopBallAnimation } = useBallPhysics(sceneRefs, 0.1, cameraPosition)
-const { audioState, toggleBackgroundMusic, stopMusic, playBallKick, playCoinSpin, playCoinHitTorusSound, nextTrack, previousTrack } = useAudio()
-const { shootCoin } = useCoinPhysics(sceneRefs, cameraPosition, triggerPowerUpFlash, playCoinSpin, playCoinHitTorusSound, playPowerUpAnimation)
+const { audioState, toggleBackgroundMusic, stopMusic, playBallKick, playCoinSpin, playCoinHitTorusSound, playVictorySound, nextTrack, previousTrack } = useAudio()
+const { shootCoin } = useCoinPhysics(sceneRefs, cameraPosition, triggerPowerUpFlash, playCoinSpin, playCoinHitTorusSound, playPowerUpAnimation, playVictorySound)
 
 // Mobile optimization composable
 const { 
@@ -342,6 +362,8 @@ const {
 // Template refs
 const backgroundVideo = ref<HTMLVideoElement>()
 const modelGroup = ref()
+const modelGroup2 = ref()
+const modelGroup3 = ref()
 const goalkeeperGroup = ref()
 const ballModelGroup = ref()
 const danceBotGroup = ref()
@@ -809,6 +831,92 @@ const loadCansuBot = async () => {
     startSynchronizedDance()
   } catch (error) {
     console.error('Error loading cansu bot:', error)
+  }
+}
+
+// Load character copy for triangle formation
+const loadCharacterCopy = async (targetGroup: any) => {
+  try {
+    // Load textures
+    const textureLoader = new THREE.TextureLoader()
+    const [baseTexture, overlayTexture] = await Promise.all([
+      new Promise<THREE.Texture>((resolve, reject) => {
+        textureLoader.load(
+          '/bot1/bot1_original.png',
+          (texture) => {
+            texture.colorSpace = THREE.SRGBColorSpace
+            resolve(texture)
+          },
+          undefined,
+          reject
+        )
+      }),
+      new Promise<THREE.Texture>((resolve, reject) => {
+        textureLoader.load(
+          '/bot1/bot1_shorts.png',
+          (texture) => {
+            texture.colorSpace = THREE.SRGBColorSpace
+            resolve(texture)
+          },
+          undefined,
+          reject
+        )
+      })
+    ])
+
+    // Load character model
+    const loader = new FBXLoader()
+    const characterModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture2.fbx')
+    
+    characterModel.scale.setScalar(1)
+    
+    // Create materials using helper function
+    const materialPair = createMainCharacterMaterials(baseTexture, overlayTexture, materialSettings.brightness)
+    
+    // Apply materials and setup shadows
+    characterModel.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = true
+        child.receiveShadow = true
+        
+        // Apply the same material setup as the main character
+        if (child.material && (child.material instanceof THREE.MeshPhongMaterial || 
+            child.material instanceof THREE.MeshBasicMaterial || 
+            child.material instanceof THREE.MeshStandardMaterial)) {
+          
+          // Create layered mesh group using helper function
+          const layeredGroup = createLayeredMeshGroup(child, materialPair)
+          
+          // Replace the original mesh with the layered group
+          child.parent?.add(layeredGroup)
+          child.parent?.remove(child)
+        }
+      }
+    })
+    
+    // Add to target group
+    targetGroup.clear()
+    targetGroup.add(characterModel)
+    
+    // Create animation mixer for this character
+    const mixer = new THREE.AnimationMixer(characterModel)
+    
+    // Load idle animation
+    const idleAnimation = await loader.loadAsync('/bot1/Soccer Idle.fbx')
+    if (idleAnimation.animations.length > 0) {
+      const action = mixer.clipAction(idleAnimation.animations[0])
+      action.play()
+      
+      // Store mixer in array for updates
+      if (!sceneRefs.additionalMixers) {
+        sceneRefs.additionalMixers = []
+      }
+      sceneRefs.additionalMixers.push(mixer)
+    }
+    
+    console.log('Character copy loaded successfully')
+  } catch (error) {
+    console.error('Error loading character copy:', error)
   }
 }
 
@@ -1480,6 +1588,11 @@ const animationLoop = () => {
     sceneRefs.cansuBotMixer.update(deltaTime)
   }
   
+  // Update additional character mixers (triangle formation)
+  if (sceneRefs.additionalMixers) {
+    sceneRefs.additionalMixers.forEach(mixer => mixer.update(deltaTime))
+  }
+  
   // Update label positions to follow head bones
   updateLabelPositions()
   
@@ -1565,6 +1678,22 @@ watch(modelGroup, (newModelGroup) => {
         startSynchronizedDance()
       }
     })
+  }
+}, { once: true })
+
+// Watch for modelGroup2 (triangle formation)
+watch(modelGroup2, (newModelGroup) => {
+  if (newModelGroup && props.showTriangleFormation) {
+    // Load the second character copy
+    loadCharacterCopy(newModelGroup)
+  }
+}, { once: true })
+
+// Watch for modelGroup3 (triangle formation)
+watch(modelGroup3, (newModelGroup) => {
+  if (newModelGroup && props.showTriangleFormation) {
+    // Load the third character copy
+    loadCharacterCopy(newModelGroup)
   }
 }, { once: true })
 
@@ -1796,7 +1925,7 @@ defineExpose({
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.9);
+  background: #010224;
   z-index: 2000;
   display: flex;
   align-items: center;

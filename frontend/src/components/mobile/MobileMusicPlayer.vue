@@ -102,7 +102,7 @@ const formatTime = (seconds: number): string => {
   align-items: center;
   gap: 12px;
   padding: 12px 20px;
-  background: rgba(0, 0, 0, 0.9);
+  background: #010224;
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);

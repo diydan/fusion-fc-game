@@ -2355,7 +2355,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   position: absolute;
   bottom: 85px;
   left: 0;
-  background: rgba(0, 0, 0, 0.9);
+  background: #010224;
   border: 1px solid rgba(0, 120, 237, 0.5);
   border-radius: 12px;
   padding: 8px;

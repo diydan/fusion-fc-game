@@ -11,6 +11,7 @@ export function useAudio() {
   const ballKickAudio = new Audio('/audio/ball_kick_hit.mp3')
   const coinSpinAudio = new Audio('/audio/Spinning_01.mp3');
   const coinHitTorusAudio = new Audio('/audio/ReactorIgnitionLargeElectricalZaps.mp3');
+  const victoryAudio = new Audio('/audio/Male Saying Victory Yes 2.mp3');
 
   // Setup audio properties for sound effects
   ballBounceAudio.preload = 'auto'
@@ -19,8 +20,10 @@ export function useAudio() {
   ballKickAudio.volume = 0.8
   coinSpinAudio.preload = 'auto';
   coinHitTorusAudio.preload = 'auto';
+  victoryAudio.preload = 'auto';
   coinSpinAudio.volume = 0.3;
   coinHitTorusAudio.volume = 0.5;
+  victoryAudio.volume = 0.8;
 
   // Track definitions
   const tracks = [
@@ -412,6 +415,11 @@ export function useAudio() {
     coinHitTorusAudio.play().catch(e => {});
   }
 
+  const playVictorySound = () => {
+    victoryAudio.currentTime = 0;
+    victoryAudio.play().catch(e => {});
+  }
+
   // Cleanup
   onUnmounted(() => {
     if (audioContext.value) {
@@ -433,6 +441,7 @@ export function useAudio() {
     playBallKick,
     playCoinSpin,
     playCoinHitTorusSound,
+    playVictorySound,
     onMusicStop
   }
 }
