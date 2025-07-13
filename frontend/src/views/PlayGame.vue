@@ -231,6 +231,25 @@
         </div>
       </div>
     </TransitionGroup>
+    
+    <!-- Activity Stream -->
+    <div class="activity-stream" :class="{ collapsed: activityStreamCollapsed }">
+      <div class="activity-header" @click="activityStreamCollapsed = !activityStreamCollapsed">
+        <h3>Activity Stream</h3>
+        <span class="toggle-icon">{{ activityStreamCollapsed ? '▶' : '▼' }}</span>
+      </div>
+      <div class="activity-content" v-if="!activityStreamCollapsed">
+        <div class="activity-list">
+          <TransitionGroup name="activity">
+            <div v-for="event in gameEvents" :key="event.id" class="activity-item" :class="event.type">
+              <span class="event-time">{{ formatEventTime(event.time) }}</span>
+              <span class="event-icon">{{ getEventIcon(event.type) }}</span>
+              <span class="event-text">{{ event.text }}</span>
+            </div>
+          </TransitionGroup>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -299,10 +318,21 @@ const achievements = ref([
 
 const recentAchievements = ref<Array<any>>([])
 
+// Activity Stream
+const activityStreamCollapsed = ref(false)
+const gameEvents = ref<Array<{
+  id: string
+  time: number
+  type: string
+  text: string
+}>>([])
+let eventIdCounter = 0
+
 // Game engine
 let gameEngine: FutsalGameEngine
 let animationId: number | null = null
 let lastTime = 0
+let lastEventCheck = 0
 
 // Computed
 const formattedTime = computed(() => {
@@ -706,6 +736,9 @@ const gameLoop = (currentTime: number) => {
   // Check for achievements
   checkAchievements()
   
+  // Check for game events
+  checkGameEvents()
+  
   if (isPlaying.value) {
     animationId = requestAnimationFrame(gameLoop)
   }
@@ -835,6 +868,11 @@ const render = () => {
   // Draw ball
   if (ball.value) {
     drawBall(ctx, ball.value)
+  }
+  
+  // Draw free kick timer if active
+  if (gameState.value) {
+    drawFreeKickTimer(ctx)
   }
 }
 
@@ -1013,6 +1051,41 @@ const drawPlayer = (ctx: CanvasRenderingContext2D, player: Player) => {
     ctx.lineTo(player.restartTarget.x + 50, player.restartTarget.y + 50)
     ctx.stroke()
     ctx.setLineDash([])
+  }
+}
+
+const drawFreeKickTimer = (ctx: CanvasRenderingContext2D) => {
+  if (!gameState.value?.freeKickTimer || 
+      !gameState.value?.freeKickTimerExpiry || 
+      gameState.value?.restartType !== 'free-kick' ||
+      !gameState.value?.ballOut) {
+    return
+  }
+  
+  const currentTime = Date.now()
+  const timeRemaining = Math.max(0, gameState.value.freeKickTimerExpiry - currentTime)
+  const secondsLeft = Math.ceil(timeRemaining / 1000)
+  
+  // Draw timer near the ball
+  if (ball.value && secondsLeft > 0) {
+    const x = ball.value.x + 50
+    const y = ball.value.y + 50
+    
+    // Timer background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+    ctx.fillRect(x + 20, y - 40, 60, 30)
+    
+    // Timer text
+    ctx.fillStyle = secondsLeft <= 1 ? '#ff6b6b' : '#ffffff'
+    ctx.font = 'bold 16px Arial'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(`${secondsLeft}s`, x + 50, y - 25)
+    
+    // Label
+    ctx.font = '10px Arial'
+    ctx.fillStyle = '#ffffff'
+    ctx.fillText('FREE KICK', x + 50, y - 10)
   }
 }
 
@@ -1245,6 +1318,100 @@ const unlockAchievement = (id: string, player?: string, team?: string) => {
     playGoalSound()
   }
 }
+
+// Activity stream functions
+const addGameEvent = (type: string, text: string) => {
+  const event = {
+    id: `event-${eventIdCounter++}`,
+    time: gameTime.value,
+    type,
+    text
+  }
+  
+  gameEvents.value.unshift(event)
+  
+  // Keep only last 50 events
+  if (gameEvents.value.length > 50) {
+    gameEvents.value = gameEvents.value.slice(0, 50)
+  }
+}
+
+const formatEventTime = (time: number): string => {
+  const totalSeconds = Math.ceil(time / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}'`
+}
+
+const getEventIcon = (type: string): string => {
+  const icons: Record<string, string> = {
+    goal: '⚽',
+    shot: '🥅',
+    pass: '→',
+    foul: '⚠️',
+    yellow: '🟨',
+    red: '🟥',
+    freekick: '🦵',
+    corner: '🏳️',
+    kickin: '↩️',
+    goalkick: '🥅',
+    save: '🧤',
+    tackle: '🦶',
+    possession: '📊',
+    restart: '🏁',
+    whistle: '🎺'
+  }
+  return icons[type] || '•'
+}
+
+// Check for game events
+const checkGameEvents = () => {
+  if (!gameEngine) return
+  
+  const state = gameEngine.getGameState()
+  const stats = gameEngine.getStatistics()
+  
+  // Check for goals
+  const goals = stats?.goals || []
+  if (goals.length > gameEvents.value.filter(e => e.type === 'goal').length) {
+    const newGoal = goals[goals.length - 1]
+    addGameEvent('goal', `GOAL! ${newGoal.scorer} scores for ${newGoal.team}!`)
+  }
+  
+  // Check for fouls
+  const currentFouls = stats?.foulsCommitted?.home + stats?.foulsCommitted?.away || 0
+  if (currentFouls > v1Stats.value.fouls) {
+    addGameEvent('foul', 'Foul committed')
+  }
+  
+  // Check for free kicks
+  if (state.restartType === 'free-kick' && !gameEvents.value.some(e => e.type === 'freekick' && Math.abs(e.time - gameTime.value) < 1000)) {
+    addGameEvent('freekick', `Free kick awarded to ${state.restartTeam}`)
+  }
+  
+  // Check for corners
+  if (state.restartType === 'corner' && !gameEvents.value.some(e => e.type === 'corner' && Math.abs(e.time - gameTime.value) < 1000)) {
+    addGameEvent('corner', `Corner kick for ${state.restartTeam}`)
+  }
+  
+  // Check for kick-ins
+  if (state.restartType === 'kick-in' && !gameEvents.value.some(e => e.type === 'kickin' && Math.abs(e.time - gameTime.value) < 1000)) {
+    addGameEvent('kickin', `Kick-in for ${state.restartTeam}`)
+  }
+  
+  // Check for goal kicks
+  if (state.restartType === 'goal-kick' && !gameEvents.value.some(e => e.type === 'goalkick' && Math.abs(e.time - gameTime.value) < 1000)) {
+    addGameEvent('goalkick', `Goal kick for ${state.restartTeam}`)
+  }
+  
+  // Check for possession changes
+  if (state.possession && state.possession !== lastPossession.value && lastPossession.value) {
+    addGameEvent('possession', `${state.possession} team gains possession`)
+  }
+  lastPossession.value = state.possession
+}
+
+const lastPossession = ref<string | null>(null)
 
 // Initialize on mount
 onMounted(() => {
@@ -1852,5 +2019,154 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 
 .achievement-move {
   transition: transform 0.3s;
+}
+
+/* Activity Stream */
+.activity-stream {
+  position: fixed;
+  right: 0;
+  top: 100px;
+  width: 350px;
+  max-height: 600px;
+  background-color: #2a2a2a;
+  border-radius: 10px 0 0 10px;
+  box-shadow: -4px 0 10px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s ease;
+  z-index: 1000;
+}
+
+.activity-stream.collapsed {
+  transform: translateX(calc(100% - 40px));
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background-color: #1a1a1a;
+  border-radius: 10px 0 0 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.activity-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #4a90e2;
+}
+
+.toggle-icon {
+  font-size: 12px;
+  color: #999;
+  transition: transform 0.3s;
+}
+
+.activity-content {
+  max-height: 550px;
+  overflow-y: auto;
+}
+
+.activity-list {
+  padding: 10px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 5px;
+  background-color: #333;
+  border-radius: 5px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.activity-item:hover {
+  background-color: #3a3a3a;
+}
+
+.event-time {
+  color: #999;
+  font-size: 12px;
+  min-width: 30px;
+}
+
+.event-icon {
+  font-size: 16px;
+}
+
+.event-text {
+  flex: 1;
+  color: #ddd;
+}
+
+/* Event type colors */
+.activity-item.goal {
+  background-color: #2e5a2e;
+  border-left: 3px solid #4caf50;
+}
+
+.activity-item.foul {
+  background-color: #5a3e2e;
+  border-left: 3px solid #ff9800;
+}
+
+.activity-item.yellow {
+  background-color: #5a5a2e;
+  border-left: 3px solid #ffeb3b;
+}
+
+.activity-item.red {
+  background-color: #5a2e2e;
+  border-left: 3px solid #f44336;
+}
+
+.activity-item.freekick {
+  background-color: #2e3e5a;
+  border-left: 3px solid #2196f3;
+}
+
+.activity-item.corner {
+  background-color: #3e2e5a;
+  border-left: 3px solid #9c27b0;
+}
+
+/* Activity animations */
+.activity-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.activity-leave-active {
+  transition: all 0.3s ease-in;
+}
+
+.activity-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.activity-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+/* Scrollbar styling */
+.activity-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.activity-content::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.activity-content::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 3px;
+}
+
+.activity-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 </style>

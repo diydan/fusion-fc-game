@@ -27,7 +27,7 @@
         class="action-btn coin-btn"
       >
         <div class="btn-icon">🪙</div>
-        <div class="btn-label">Coin</div>
+        <div class="btn-label">PowerUp</div>
       </button>
 
       <button

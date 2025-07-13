@@ -143,6 +143,8 @@ export interface GameState {
   lastGoal?: Goal
   goalCelebration?: { active: boolean; startTime: number }
   advantagesPlayed?: number
+  freeKickTimer?: number
+  freeKickTimerExpiry?: number
 }
 
 export interface FormationLayout {
@@ -3435,6 +3437,9 @@ export class FutsalGameEngine {
   private setupFreeKick(): void {
     if (!this.gameState.restartPosition || !this.gameState.restartTeam) return
     
+    // Set free kick timer - 2 seconds to take the kick
+    this.gameState.freeKickTimer = Date.now()
+    this.gameState.freeKickTimerExpiry = Date.now() + 2000 // 2 seconds
     
     // Place ball at free kick position
     this.ball.x = this.gameState.restartPosition.x
@@ -3695,6 +3700,76 @@ export class FutsalGameEngine {
     
   }
 
+  // Check if free kick timer has expired
+  private checkFreeKickTimer(): void {
+    // Only check if we have a free kick in progress
+    if (!this.gameState.freeKickTimer || 
+        !this.gameState.freeKickTimerExpiry || 
+        this.gameState.restartType !== 'free-kick' ||
+        !this.gameState.ballOut) {
+      return
+    }
+    
+    const currentTime = Date.now()
+    if (currentTime >= this.gameState.freeKickTimerExpiry) {
+      // Timer expired - find the designated kicker or closest player
+      const kickerTeam = this.gameState.restartTeam
+      if (!kickerTeam) return
+      
+      const teamPlayers = this.players.filter(p => 
+        p.team === kickerTeam && 
+        !p.isSentOff && 
+        p.restartRole === 'taker'
+      )
+      
+      let kicker = teamPlayers[0]
+      
+      // If no designated taker, find closest player
+      if (!kicker) {
+        const eligiblePlayers = this.players.filter(p => 
+          p.team === kickerTeam && !p.isSentOff
+        )
+        
+        kicker = eligiblePlayers.sort((a, b) => {
+          const aDist = Math.hypot(a.x - this.ball.x, a.y - this.ball.y)
+          const bDist = Math.hypot(b.x - this.ball.x, b.y - this.ball.y)
+          return aDist - bDist
+        })[0]
+      }
+      
+      if (kicker) {
+        // Force the kick
+        this.ball.possessor = kicker
+        this.ball.lastKicker = kicker
+        this.ball.isStationary = false
+        this.gameState.possession = kicker.team
+        
+        // Track the free kick attempt
+        this.gameState.matchStats.freeKicksAttempted[kicker.team]++
+        this.lastFreeKickTaker = kicker
+        
+        // Execute automatic shot
+        this.executeAutomaticShot(kicker)
+        
+        // Clear restart state
+        this.gameState.ballOut = false
+        this.gameState.restartType = null
+        this.gameState.restartTeam = null
+        this.gameState.freeKickTimer = undefined
+        this.gameState.freeKickTimerExpiry = undefined
+        this.ballStationaryTime = 0
+        this.freeKickStartTime = null
+        
+        // Clear restart movement for all players
+        this.players.forEach(player => {
+          player.isMovingToRestart = false
+          player.restartTarget = undefined
+          player.restartRole = 'normal'
+        })
+      }
+    }
+  }
+
   // Goal detection
   private checkGoals(): void {
     const goalY = (this.config.fieldHeight - this.config.goalWidth) / 2
@@ -3855,6 +3930,9 @@ export class FutsalGameEngine {
     // Check for goals
     this.checkGoals()
     
+    // Check free kick timer expiry
+    this.checkFreeKickTimer()
+    
     // Update possession tracking
     this.updatePossessionStats(deltaTime)
     
@@ -3962,6 +4040,8 @@ export class FutsalGameEngine {
     this.lastPassTarget = null
     this.lastPassTime = null
     this.lastFreeKickTaker = null
+    this.gameState.freeKickTimer = undefined
+    this.gameState.freeKickTimerExpiry = undefined
     
     this.ball.x = this.config.fieldWidth / 2
     this.ball.y = this.config.fieldHeight / 2

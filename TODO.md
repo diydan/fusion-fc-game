@@ -29,5 +29,9 @@ click on compliment, provoke,
 use the
 
 
+Fuso coin, in game currency mint
+
+howe
+
 increase buttom blur bloom radius
 om mobile eplace nomr butins with scene buttons + back button
