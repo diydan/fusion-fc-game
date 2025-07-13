@@ -69,16 +69,26 @@
         <div class="token-attributes-panel">
           <div v-if="currentPelletPack" class="attributes-content">
             <div class="attributes-header">
-              <img 
-                v-if="currentPelletPack.logoURI" 
-                :src="currentPelletPack.logoURI" 
+              <img
+                v-if="currentPelletPack?.logoURI"
+                :src="currentPelletPack.logoURI"
                 :alt="currentPelletPack.tokenSymbol"
                 class="token-logo"
               />
               <div class="token-info">
-                <span class="token-name">{{ currentPelletPack.tokenSymbol }}</span>
-                <span class="token-team">{{ getTokenTeamName(currentPelletPack.tokenSymbol) }}</span>
+                <span class="token-name">{{ currentPelletPack?.tokenSymbol }}</span>
+                <span class="token-team">{{ currentPelletPack ? getTokenTeamName(currentPelletPack.tokenSymbol) : 'Select Powerup' }}</span>
               </div>
+              <v-btn
+                size="small"
+                color="primary"
+                variant="outlined"
+                @click="showPelletSelector = true"
+                class="change-powerup-btn"
+              >
+                <v-icon start size="16">mdi-swap-horizontal</v-icon>
+                Change
+              </v-btn>
             </div>
             
             <div class="attributes-breakdown">
@@ -94,6 +104,51 @@
                   ></div>
                 </div>
                 <span class="attr-value" :style="{ color: getAttributeColor(attr.value) }">{{ attr.value }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Color Controls Section -->
+          <div class="color-controls-panel">
+            <h3 class="color-controls-title">Colors</h3>
+
+            <!-- Shorts Color Slider -->
+            <div class="color-slider-section">
+              <label class="color-label">Shorts Color</label>
+              <div class="color-slider-container">
+                <input
+                  type="range"
+                  v-model="shortColorHue"
+                  min="0"
+                  max="360"
+                  step="1"
+                  class="color-slider"
+                  @input="updateShortsColor"
+                />
+                <div
+                  class="color-preview"
+                  :style="{ backgroundColor: `hsl(${shortColorHue}, 70%, 50%)` }"
+                ></div>
+              </div>
+            </div>
+
+            <!-- Torus Color Slider -->
+            <div class="color-slider-section">
+              <label class="color-label">Power-up Reactor Color</label>
+              <div class="color-slider-container">
+                <input
+                  type="range"
+                  v-model="torusColorHue"
+                  min="0"
+                  max="360"
+                  step="1"
+                  class="color-slider"
+                  @input="updateTorusColor"
+                />
+                <div
+                  class="color-preview"
+                  :style="{ backgroundColor: `hsl(${torusColorHue}, 70%, 50%)` }"
+                ></div>
               </div>
             </div>
           </div>
@@ -116,6 +171,15 @@
       </div>
     </v-main>
 
+    <!-- Pellet Pack Selector Modal -->
+    <PelletPackSelector
+      v-if="showPelletSelector"
+      :available-packs="availablePelletPacks"
+      :selected-pack="currentPelletPack"
+      @select="onPelletPackSelected"
+      @close="showPelletSelector = false"
+    />
+
   </v-app>
 </template>
 
@@ -124,9 +188,22 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import MobileSelectBotScene from "@/components/MobileSelectBotScene.vue"
 import PlayerCardV3 from '@/components/recruit/PlayerCardV3.vue'
+import PelletPackSelector from '@/components/ui/PelletPackSelector.vue'
 import { useAudio } from '@/composables/useAudio'
 import { useTeamsData } from '@/composables/useTeamsData'
 import { useWallet } from '@/composables/useWallet'
+
+// PelletPack interface
+interface PelletPack {
+  tokenSymbol: string
+  tokenBalance: number
+  currentPellets: number
+  maxPellets: number
+  color: string
+  logoURI?: string
+  powerMultiplier: number
+  refillCost: number
+}
 
 // Vuetify composables
 const { mobile } = useDisplay()
@@ -150,6 +227,9 @@ const qualityOptions = [
 // Simple scene state
 const isScreenShaking = ref(false)
 const activePanel = ref(['performance'])
+
+// Pellet pack selector state
+const showPelletSelector = ref(false)
 
 // Color controls state
 const shortColorHue = ref(218) // Default blue-ish
@@ -315,20 +395,70 @@ const getTokenTeamName = (tokenSymbol: string) => {
   return getTeamName(tokenSymbol)
 }
 
+// Handle pellet pack selection
+const onPelletPackSelected = (pack: PelletPack) => {
+  currentPelletPack.value = pack
+  showPelletSelector.value = false
+
+  // Update the scene with the new pack
+  if (sceneCanvas.value) {
+    sceneCanvas.value.updateCurrentPelletPack(pack)
+  }
+}
+
+// Color update functions
+const updateShortsColor = () => {
+  if (sceneCanvas.value) {
+    const hslColor = `hsl(${shortColorHue.value}, 70%, 50%)`
+    sceneCanvas.value.updateOverlayColor(hslColor)
+  }
+}
+
+const updateTorusColor = () => {
+  if (sceneCanvas.value) {
+    const hslColor = `hsl(${torusColorHue.value}, 70%, 50%)`
+    sceneCanvas.value.updateTorusEmission(hslColor)
+  }
+}
+
 // Use shared teams data
 const { getTeamByToken, getTeamAttributes, getTeamName } = useTeamsData()
 
-// Current pellet pack (mock data)
-const currentPelletPack = ref({
-  tokenSymbol: 'PSG',
-  tokenBalance: 50,
-  currentPellets: 8,
-  maxPellets: 8,
-  color: '#FF0000',
-  powerMultiplier: 1.5,
-  refillCost: 8,
-  logoURI: '/team-logos/psg.png'
+// Function to get team-specific colors
+const getTeamColor = (tokenSymbol: string) => {
+  const colors = {
+    'PSG': '#004170',
+    'BAR': '#A50044',
+    'CITY': '#6CABDD',
+    'JUV': '#000000'
+  }
+  return colors[tokenSymbol] || '#FF6B35'
+}
+
+// Available pellet packs based on teams data
+const availablePelletPacks = computed(() => {
+  const { getAllTeams } = useTeamsData()
+  return getAllTeams.value.map(team => ({
+    tokenSymbol: team.token.replace('$', ''),
+    tokenBalance: Math.floor(Math.random() * 100) + 20, // Mock balance
+    currentPellets: Math.floor(Math.random() * 8) + 1, // Mock pellets
+    maxPellets: 8,
+    color: getTeamColor(team.token.replace('$', '')),
+    powerMultiplier: 1 + (team.overall - 50) / 100, // Based on team overall
+    refillCost: 8,
+    logoURI: team.logo
+  }))
 })
+
+// Current pellet pack - starts with first available pack
+const currentPelletPack = ref<PelletPack | null>(null)
+
+// Initialize with first pack when available
+watch(availablePelletPacks, (packs) => {
+  if (packs.length > 0 && !currentPelletPack.value) {
+    currentPelletPack.value = packs[0]
+  }
+}, { immediate: true })
 
 // Computed token attributes
 const currentTokenAttributes = computed(() => {
@@ -611,6 +741,106 @@ watch(() => sceneCanvas.value?.currentPelletPack, (newPack) => {
   margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.change-powerup-btn {
+  margin-left: auto;
+}
+
+/* Color Controls Panel */
+.color-controls-panel {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.color-controls-title {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.color-slider-section {
+  margin-bottom: 20px;
+}
+
+.color-slider-section:last-child {
+  margin-bottom: 0;
+}
+
+.color-label {
+  display: block;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.color-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.color-slider {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(
+    to right,
+    hsl(0, 70%, 50%),
+    hsl(60, 70%, 50%),
+    hsl(120, 70%, 50%),
+    hsl(180, 70%, 50%),
+    hsl(240, 70%, 50%),
+    hsl(300, 70%, 50%),
+    hsl(360, 70%, 50%)
+  );
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.color-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.color-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.color-preview {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
 }
 
 .token-logo {

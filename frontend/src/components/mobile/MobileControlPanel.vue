@@ -2,14 +2,7 @@
   <div class="mobile-control-panel">
     <!-- Main Action Buttons -->
     <div class="main-actions">
-      <button
-        @click="$emit('open-powerup-selector')"
-        :disabled="!isReady"
-        class="action-btn powerup-select-btn"
-      >
-        <div class="btn-icon">🔋</div>
-        <div class="btn-label">Choose Power Ups</div>
-      </button>
+ 
 
       <button
         @click="$emit('shoot-coin')"
