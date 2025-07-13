@@ -112,7 +112,7 @@ export function useBallPhysics(sceneRefs: SceneRefs, BALL_RADIUS: number, camera
       
       // Scale the ball model to match the desired radius
       // The original ball model is quite large, so we scale it down
-      ballModel.scale.setScalar(BALL_RADIUS * 4) // Scale based on ball radius
+      ballModel.scale.setScalar(BALL_RADIUS * 2) // Reduced scale for proper size
       ballModel.position.set(0, 0, 0)
       
       // Apply shadows to all meshes

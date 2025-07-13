@@ -191,7 +191,7 @@
       <!-- Ball Group -->
       <TresGroup
         ref="ballModelGroup"
-        :position="ballState?.position || [0, 0.1, 0]"
+        :position="ballState?.position || [0, 0.2, 0]"
         :rotation="ballState?.rotation || [0, 0, 0]"
         :visible="ballState ? !ballState.hidden : true"
       />
@@ -199,7 +199,7 @@
 
     <!-- Mobile Control Panel - Now positioned at top with high z-index -->
     <MobileControlPanel
-      v-if="!props.hideUiElements"
+      v-if="!props.hideUiElements && !props.showTriangleFormation"
       :is-ready="isReady"
       :loading-status="loadingStatus"
       :is-strike-sequence-active="animationState.isStrikeSequenceActive"
@@ -208,21 +208,40 @@
       @shoot-coin="shootCoinWithPellets"
     />
     
-    <!-- Camera Controls Button (for auto-battler) -->
-    <div v-if="props.showTriangleFormation && !props.hideUiElements" class="camera-controls-container">
-      <button @click="saveCameraSettings" class="camera-control-btn save-btn">
-        <span class="btn-icon">💾</span>
-        Save Camera
-      </button>
-      <button @click="resetCameraSettings" class="camera-control-btn reset-btn">
-        <span class="btn-icon">🔄</span>
-        Reset Camera
-      </button>
-      <button @click="showCameraData" class="camera-control-btn info-btn">
-        <span class="btn-icon">📷</span>
-        Show Camera
+    <!-- Auto-Battler Control Panel -->
+    <div v-if="!props.hideUiElements && props.showTriangleFormation" class="auto-battler-controls">
+      <button @click="startGame" class="start-game-btn">
+        <span class="btn-icon">🎮</span>
+        Start Game
       </button>
     </div>
+    
+    <!-- Settings Cog Button (for auto-battler) -->
+    <button 
+      v-if="props.showTriangleFormation && !props.hideUiElements" 
+      @click="showCameraControls = !showCameraControls"
+      class="settings-cog-btn"
+      :class="{ 'active': showCameraControls }">
+      <span class="cog-icon">⚙️</span>
+    </button>
+    
+    <!-- Camera Controls (shown when cog is clicked) -->
+    <transition name="slide-fade">
+      <div v-if="props.showTriangleFormation && !props.hideUiElements && showCameraControls" class="camera-controls-container">
+        <button @click="saveCameraSettings" class="camera-control-btn save-btn">
+          <span class="btn-icon">💾</span>
+          Save Camera
+        </button>
+        <button @click="resetCameraSettings" class="camera-control-btn reset-btn">
+          <span class="btn-icon">🔄</span>
+          Reset Camera
+        </button>
+        <button @click="showCameraData" class="camera-control-btn info-btn">
+          <span class="btn-icon">📷</span>
+          Show Camera
+        </button>
+      </div>
+    </transition>
     
     <!-- Camera Data Display -->
     <div v-if="showCameraDataPanel" class="camera-data-panel">
@@ -274,7 +293,7 @@
 
     <!-- Pellet Bar for PowerUp Fuel -->
     <PelletBar
-      v-if="!props.hideUiElements"
+      v-if="!props.hideUiElements && !props.showTriangleFormation"
       :current-pellets="currentPelletPack?.currentPellets || 0"
       :max-pellets="currentPelletPack?.maxPellets || 10"
       :current-pack="currentPelletPack"
@@ -314,6 +333,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import * as THREE from 'three'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
 
@@ -334,6 +354,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Emits
 const emit = defineEmits(['coin-collected'])
+
+// Router
+const router = useRouter()
 
 // Components
 import SceneCanvas from './scene/SceneCanvas.vue'
@@ -378,8 +401,14 @@ const mobileCameraBloom = ref(0.3) // Reduced intensity
 const mobileFogEnabled = ref(true)
 const mobileFogDensity = ref(0.01) // Lighter fog
 const mobileCameraFov = ref(42) // Same FOV as desktop
-// Zoom in 20% by moving camera closer (reduce Z distance by 20%) + move scene down 20%
-const mobileCameraPosition = ref<[number, number, number]>([-1.331, 1.805 * 0.8, 11.576 * 0.6]) // 20% closer for zoom + 20% lower Y position
+// Default camera position for normal mode
+const defaultCameraPosition = ref<[number, number, number]>([-1.331, 1.805 * 0.8, 11.576 * 0.6])
+// Auto-battler specific camera position
+const autoBattlerCameraPosition = ref<[number, number, number]>([-29.594, 7.146, -2.400])
+// Use auto-battler camera if in triangle formation
+const mobileCameraPosition = computed(() => 
+  props.showTriangleFormation ? autoBattlerCameraPosition.value : defaultCameraPosition.value
+)
 
 // Setup composables with mobile optimizations
 const {
@@ -458,6 +487,7 @@ const availablePelletPacks = ref<PelletPack[]>([])
 // Camera data display
 const showCameraDataPanel = ref(false)
 const cameraDataDisplay = ref('')
+const showCameraControls = ref(false)
 
 // Use shared teams data
 const { getTeamByToken, getTeamAttributes } = useTeamsData()
@@ -954,12 +984,6 @@ const loadCharacterCopy = async (targetGroup: any, animationDelay: number = 0, i
     
     characterModel.scale.setScalar(1)
     
-    // Position off-screen if walk-out is enabled
-    if (props.enableWalkOut && props.showTriangleFormation) {
-      const tunnelPos = isOpposingTeam ? tunnelPositions.away[playerIndex] : tunnelPositions.home[playerIndex]
-      characterModel.position.set(tunnelPos.x, 0, tunnelPos.z)
-    }
-    
     // Create materials using helper function
     const materialPair = createMainCharacterMaterials(baseTexture, overlayTexture, materialSettings.brightness)
     
@@ -1022,141 +1046,11 @@ const loadCharacterCopy = async (targetGroup: any, animationDelay: number = 0, i
     }
     
     console.log('Character copy loaded successfully')
-    
-    // Store character reference for walk-out animation
-    if (props.enableWalkOut && props.showTriangleFormation) {
-      if (!sceneRefs.characterModels) {
-        sceneRefs.characterModels = { home: [], away: [] }
-      }
-      const team = isOpposingTeam ? 'away' : 'home'
-      sceneRefs.characterModels[team][playerIndex] = characterModel
-    }
   } catch (error) {
     console.error('Error loading character copy:', error)
   }
 }
 
-// Start walk-out sequence
-const startWalkOutSequence = () => {
-  if (!props.enableWalkOut || !props.showTriangleFormation) return
-  
-  walkOutState.value.isActive = true
-  
-  // Start with home team walk-out
-  animateTeamWalkOut('home', () => {
-    walkOutState.value.homeTeamReady = true
-    // Then away team
-    animateTeamWalkOut('away', () => {
-      walkOutState.value.awayTeamReady = true
-      // Start warm-up animations
-      startWarmUpAnimations()
-    })
-  })
-}
-
-// Animate team walk-out
-const animateTeamWalkOut = (team: 'home' | 'away', onComplete: () => void) => {
-  const players = sceneRefs.characterModels?.[team]
-  if (!players) return
-  
-  let completedCount = 0
-  
-  players.forEach((player, index) => {
-    if (!player) return
-    
-    // Delay each player
-    setTimeout(() => {
-      // First walk to center
-      animatePlayerWalk(player, entryPoint, () => {
-        // Then to final position
-        const finalPos = finalPositions[team][index]
-        animatePlayerWalk(player, finalPos, () => {
-          completedCount++
-          if (completedCount === players.length) {
-            onComplete()
-          }
-        }, true) // Run to position
-      })
-    }, index * 800) // Stagger by 800ms
-  })
-}
-
-// Animate individual player walk
-const animatePlayerWalk = (player: THREE.Object3D, target: { x: number, z: number }, onComplete: () => void, isRunning: boolean = false) => {
-  const startPos = player.position.clone()
-  const endPos = new THREE.Vector3(target.x, 0, target.z)
-  const duration = isRunning ? 2000 : 3000
-  const startTime = Date.now()
-  
-  // Face the target direction
-  const direction = new THREE.Vector3().subVectors(endPos, startPos).normalize()
-  const angle = Math.atan2(direction.x, direction.z)
-  player.rotation.y = angle
-  
-  const animate = () => {
-    const elapsed = Date.now() - startTime
-    const progress = Math.min(elapsed / duration, 1)
-    
-    // Smooth easing
-    const eased = 1 - Math.pow(1 - progress, 3)
-    
-    player.position.lerpVectors(startPos, endPos, eased)
-    
-    if (progress < 1) {
-      requestAnimationFrame(animate)
-    } else {
-      onComplete()
-    }
-  }
-  
-  animate()
-}
-
-// Start warm-up animations
-const startWarmUpAnimations = () => {
-  walkOutState.value.isActive = false
-  
-  // Load different warm-up animations for variety
-  const warmUpAnimations = [
-    '/bot1/Soccer Idle.fbx',
-    '/bot1/jog backward.fbx',
-    '/bot1/jog forward.fbx',
-    '/bot1/jog strafe left.fbx',
-    '/bot1/jog strafe right.fbx',
-    '/bot1/header soccerball.fbx',
-    '/bot1/Running.fbx',
-    '/bot1/Strike Foward Jog.fbx',
-    '/bot1/jog forward diagonal.fbx',
-    '/bot1/jog backward diagonal.fbx'
-  ]
-  
-  // Apply random warm-up animation to each player
-  if (sceneRefs.additionalMixers) {
-    sceneRefs.additionalMixers.forEach((mixer, index) => {
-      const animFile = warmUpAnimations[index % warmUpAnimations.length]
-      loadWarmUpAnimation(mixer, animFile)
-    })
-  }
-}
-
-// Load warm-up animation
-const loadWarmUpAnimation = async (mixer: THREE.AnimationMixer, animationFile: string) => {
-  try {
-    const loader = new FBXLoader()
-    const animFbx = await loader.loadAsync(animationFile)
-    
-    if (animFbx.animations.length > 0) {
-      // Stop current animation
-      mixer.stopAllAction()
-      
-      // Play warm-up animation
-      const action = mixer.clipAction(animFbx.animations[0])
-      action.play()
-    }
-  } catch (error) {
-    console.error('Error loading warm-up animation:', error)
-  }
-}
 
 // Load goalkeeper (same character asset)
 const loadGoalkeeper = async () => {
@@ -1742,6 +1636,11 @@ const copyCameraData = () => {
   })
 }
 
+// Navigate to play game
+const startGame = () => {
+  router.push('/play-game')
+}
+
 // Camera settings storage
 const saveCameraSettings = () => {
   if (sceneRefs.camera && sceneRefs.scene) {
@@ -1779,8 +1678,16 @@ const resetCameraSettings = () => {
   
   // Reset to default position
   if (sceneRefs.camera) {
-    sceneRefs.camera.position.set(...mobileCameraPosition.value)
-    sceneRefs.camera.fov = mobileCameraFov.value
+    if (props.showTriangleFormation) {
+      // Auto-battler specific defaults
+      sceneRefs.camera.position.set(-29.594, 7.146, -2.400)
+      sceneRefs.camera.rotation.set(-1.536, -1.302, -1.535)
+      sceneRefs.camera.fov = 42
+    } else {
+      // Normal mode defaults
+      sceneRefs.camera.position.set(...mobileCameraPosition.value)
+      sceneRefs.camera.fov = mobileCameraFov.value
+    }
     sceneRefs.camera.updateProjectionMatrix()
     
     // Reset controls target if available
@@ -1869,9 +1776,26 @@ const onSceneReady = (event: any) => {
   if (sceneRefs.scene && sceneRefs.camera && sceneRefs.renderer) {
     loadingStatus.value = 'Ready'
     
-    // Load saved camera settings for auto-battler
+    // Set auto-battler camera configuration
     if (props.showTriangleFormation) {
       setTimeout(() => {
+        // Set camera position
+        sceneRefs.camera.position.set(-29.594, 7.146, -2.400)
+        
+        // Set camera rotation
+        sceneRefs.camera.rotation.set(-1.536, -1.302, -1.535)
+        
+        // Set FOV
+        sceneRefs.camera.fov = 42
+        sceneRefs.camera.updateProjectionMatrix()
+        
+        // Set controls target
+        if (sceneRefs.scene.userData.controls) {
+          sceneRefs.scene.userData.controls.target.set(0, 0, 0)
+          sceneRefs.scene.userData.controls.update()
+        }
+        
+        // Then load any saved settings if they exist
         loadSavedCameraSettings()
       }, 100)
     }
@@ -1987,13 +1911,6 @@ onMounted(async () => {
   
   // Detect device performance
   const performanceLevel = await detectPerformanceLevel()
-  
-  // Auto-start walk-out sequence after a delay
-  if (props.enableWalkOut && props.showTriangleFormation) {
-    setTimeout(() => {
-      startWalkOutSequence()
-    }, 5000) // Wait 5 seconds for all players to load
-  }
   // Apply optimal settings based on device
   const optimalSettings = getOptimalSettings(performanceLevel)
   Object.assign({
@@ -2061,17 +1978,6 @@ watch(modelGroup, (newModelGroup) => {
         startSynchronizedDance()
       }
       
-      // Store main character for walk-out if enabled
-      if (props.enableWalkOut && props.showTriangleFormation && sceneRefs.model) {
-        if (!sceneRefs.characterModels) {
-          sceneRefs.characterModels = { home: [], away: [] }
-        }
-        sceneRefs.characterModels.home[0] = sceneRefs.model
-        
-        // Position off-screen for walk-out
-        const tunnelPos = tunnelPositions.home[0]
-        sceneRefs.model.position.set(tunnelPos.x, 0, tunnelPos.z)
-      }
     })
   }
 }, { once: true })
@@ -2157,7 +2063,7 @@ watch(ballModelGroup, (newBallGroup) => {
     loadBallModel().then(() => {
       // Position ball at center for triangle formation
       if (props.showTriangleFormation && ballState) {
-        ballState.position = [0, 0.3, 0]
+        ballState.position = [0, 0.2, 0]
         ballState.hidden = false
       }
     })
@@ -2560,15 +2466,72 @@ defineExpose({
   }
 }
 
+/* Settings Cog Button */
+.settings-cog-btn {
+  position: fixed;
+  bottom: 120px;
+  right: 20px;
+  z-index: 1101;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.settings-cog-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.settings-cog-btn.active {
+  background: rgba(0, 122, 255, 0.3);
+  border-color: rgba(0, 122, 255, 0.6);
+}
+
+.settings-cog-btn.active .cog-icon {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Camera Controls */
 .camera-controls-container {
   position: fixed;
-  bottom: 120px;
+  bottom: 190px;
   right: 20px;
   z-index: 1100;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* Slide Fade Transition */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-fade-enter-from {
+  transform: translateX(20px);
+  opacity: 0;
+}
+
+.slide-fade-leave-to {
+  transform: translateX(20px);
+  opacity: 0;
 }
 
 .camera-control-btn {
@@ -2734,5 +2697,53 @@ defineExpose({
   0% { transform: translateY(0); }
   50% { transform: translateY(-2px); }
   100% { transform: translateY(0); }
+}
+
+/* Auto-Battler Controls */
+.auto-battler-controls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1100;
+}
+
+.start-game-btn {
+  background: linear-gradient(135deg, #10B981, #34D399);
+  border: none;
+  border-radius: 16px;
+  padding: 16px 32px;
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 
+    0 4px 0 0 #059669,
+    0 8px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.start-game-btn:hover {
+  background: linear-gradient(135deg, #34D399, #6EE7B7);
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 
+    0 6px 0 0 #059669,
+    0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+.start-game-btn:active {
+  transform: translateX(-50%) translateY(2px);
+  box-shadow: 
+    0 2px 0 0 #059669,
+    0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.start-game-btn .btn-icon {
+  font-size: 24px;
 }
 </style>

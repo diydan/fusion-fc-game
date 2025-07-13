@@ -251,26 +251,29 @@ const sceneCanvas = ref()
 // Current player data for PlayerCardV3 - computed based on selected token
 const currentPlayerData = computed(() => {
   if (!currentPelletPack.value) {
-    // Base amateur stats without any powerup
+    // Base amateur stats without any powerup (matching PlayerCardV3 format)
     const baseStats = {
-      overall: 43,
-      attack: 46,
-      speed: 45,
-      skill: 46,
+      pace: 45,
+      shooting: 46,
+      passing: 46,
       defense: 35,
       physical: 42,
-      mental: 46,
-      aggression: 44
+      dribbling: 46
     }
+
+    const baseOverall = Math.round(
+      (baseStats.pace + baseStats.shooting + baseStats.passing +
+       baseStats.defense + baseStats.physical + baseStats.dribbling) / 6
+    )
 
     return {
       id: 1,
       name: 'Gen 1 DanBot',
       position: 'FW',
       nationality: 'Digital',
-      overall: baseStats.overall,
+      overall: baseOverall,
       tier: 'amateur',
-      price: baseStats.overall * 50000,
+      price: baseOverall * 50000,
       stats: baseStats,
       bot: { name: 'DanBot', model: '/bot1/soccer_player.fbx' }
     }
@@ -287,16 +290,14 @@ const currentPlayerData = computed(() => {
     teamSpeed: tokenData?.speed
   })
 
-  // Base amateur stats (without any powerup boost)
+  // Base amateur stats (without any powerup boost) - matching PlayerCardV3 format
   const baseStats = {
-    overall: 43,
-    attack: 46,
-    speed: 45,
-    skill: 46,
+    pace: 45,
+    shooting: 46,
+    passing: 46,
     defense: 35,
     physical: 42,
-    mental: 46,
-    aggression: 44
+    dribbling: 46
   }
 
   // Calculate powerup boost based on team's relative strength
@@ -314,36 +315,31 @@ const currentPlayerData = computed(() => {
   const coinBonus = Math.floor(coinsCollected.value * 0.1) // +0.1 per coin collected
 
   const boostedStats = {
-    overall: calculateBoost(tokenData?.overall || 75, baseStats.overall) + coinBonus,
-    attack: calculateBoost(tokenData?.attack || 75, baseStats.attack) + coinBonus,
-    speed: calculateBoost(tokenData?.speed || 75, baseStats.speed) + coinBonus,
-    skill: calculateBoost(tokenData?.skill || 75, baseStats.skill) + coinBonus,
+    pace: calculateBoost(tokenData?.speed || 75, baseStats.pace) + coinBonus,
+    shooting: calculateBoost(tokenData?.attack || 75, baseStats.shooting) + coinBonus,
+    passing: calculateBoost(tokenData?.skill || 75, baseStats.passing) + coinBonus,
     defense: calculateBoost(tokenData?.defense || 75, baseStats.defense) + coinBonus,
     physical: calculateBoost(tokenData?.physical || 75, baseStats.physical) + coinBonus,
-    mental: calculateBoost(tokenData?.mental || 75, baseStats.mental) + coinBonus,
-    aggression: calculateBoost(tokenData?.aggression || 75, baseStats.aggression) + coinBonus
+    dribbling: calculateBoost(tokenData?.mental || 75, baseStats.dribbling) + coinBonus
   }
 
   console.log('🚀 Final boosted stats:', boostedStats)
+
+  // Calculate overall from boosted stats
+  const calculatedOverall = Math.round(
+    (boostedStats.pace + boostedStats.shooting + boostedStats.passing +
+     boostedStats.defense + boostedStats.physical + boostedStats.dribbling) / 6
+  )
 
   return {
     id: 1,
     name: 'Gen 1 DanBot',
     position: 'FW',
     nationality: 'Digital',
-    overall: boostedStats.overall,
+    overall: calculatedOverall,
     tier: 'amateur',
-    price: boostedStats.overall * 50000,
-    stats: {
-      overall: boostedStats.overall,
-      attack: boostedStats.attack,
-      speed: boostedStats.speed,
-      skill: boostedStats.skill,
-      defense: boostedStats.defense,
-      physical: boostedStats.physical,
-      mental: boostedStats.mental,
-      aggression: boostedStats.aggression
-    },
+    price: calculatedOverall * 50000,
+    stats: boostedStats,
     bot: { name: 'DanBot', model: '/bot1/soccer_player.fbx' }
   }
 })

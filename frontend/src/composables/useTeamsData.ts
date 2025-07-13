@@ -106,32 +106,28 @@ export function useTeamsData() {
   // Get all teams
   const getAllTeams = computed(() => teamsData.value)
 
-  // Get team attributes formatted for display
+  // Get team attributes formatted for display (matching PlayerCardV3 format)
   const getTeamAttributes = (tokenSymbol: string) => {
     const team = getTeamByToken(tokenSymbol)
     if (!team) {
       // Default attributes for unknown tokens
       return [
-        { key: 'overall', label: 'Overall', value: 50 },
-        { key: 'attack', label: 'Attack', value: 50 },
-        { key: 'speed', label: 'Speed', value: 50 },
-        { key: 'skill', label: 'Skill', value: 50 },
-        { key: 'defense', label: 'Defense', value: 50 },
-        { key: 'physical', label: 'Physical', value: 50 },
-        { key: 'mental', label: 'Mental', value: 50 },
-        { key: 'aggression', label: 'Aggression', value: 50 }
+        { key: 'pace', label: 'PAC', value: 50 },
+        { key: 'shooting', label: 'SHO', value: 50 },
+        { key: 'passing', label: 'PAS', value: 50 },
+        { key: 'defense', label: 'DEF', value: 50 },
+        { key: 'physical', label: 'PHY', value: 50 },
+        { key: 'dribbling', label: 'DRI', value: 50 }
       ]
     }
 
     return [
-      { key: 'overall', label: 'Overall', value: team.overall },
-      { key: 'attack', label: 'Attack', value: team.attack },
-      { key: 'speed', label: 'Speed', value: team.speed },
-      { key: 'skill', label: 'Skill', value: team.skill },
-      { key: 'defense', label: 'Defense', value: team.defense },
-      { key: 'physical', label: 'Physical', value: team.physical },
-      { key: 'mental', label: 'Mental', value: team.mental },
-      { key: 'aggression', label: 'Aggression', value: team.aggression }
+      { key: 'pace', label: 'PAC', value: team.speed },
+      { key: 'shooting', label: 'SHO', value: team.attack },
+      { key: 'passing', label: 'PAS', value: team.skill },
+      { key: 'defense', label: 'DEF', value: team.defense },
+      { key: 'physical', label: 'PHY', value: team.physical },
+      { key: 'dribbling', label: 'DRI', value: team.mental }
     ]
   }
 
