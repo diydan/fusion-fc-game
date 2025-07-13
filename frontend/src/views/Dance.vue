@@ -19,11 +19,12 @@
         </video>
       </div>
 
-      <!-- 3D Scene Canvas without UI elements and locked camera -->
+      <!-- 3D Scene Canvas without UI elements, locked camera, and dance bot -->
       <MobileSelectBotScene 
         ref="sceneCanvas" 
         :hide-ui-elements="true"
         :lock-camera="true"
+        :show-dance-bot="true"
       />
 
       <!-- Effects overlay -->
@@ -61,7 +62,7 @@
             </span>
           </div>
           <div v-else class="lyric-text">
-            {{ audioState.currentLyric || 'No lyrics available' }}
+            {{ audioState.currentLyric || '' }}
           </div>
         </div>
         
@@ -218,6 +219,13 @@ onUnmounted(() => {
   border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
+/* Hide lyrics in the music footer on dance page */
+.music-player-footer :deep(.lyrics-center),
+.music-player-footer :deep(.lyrics-stack),
+.music-player-footer :deep(.karaoke-lyrics) {
+  display: none !important;
+}
+
 /* Also override mobile positioning */
 @media (max-width: 768px) {
   .music-player-footer :deep(.global-music-footer) {
@@ -269,7 +277,7 @@ onUnmounted(() => {
 /* Karaoke Display Styles */
 .karaoke-display {
   position: fixed;
-  bottom: 120px; /* Position above music player */
+  bottom: 60px; /* Position above music player - moved down 20px */
   left: 0;
   right: 0;
   z-index: 90;
@@ -358,7 +366,7 @@ onUnmounted(() => {
 /* Mobile adjustments */
 @media (max-width: 768px) {
   .karaoke-display {
-    bottom: 100px; /* Adjust for mobile music player height */
+    bottom: 80px; /* Adjust for mobile music player height - moved down 20px */
   }
   
   .lyrics-container {

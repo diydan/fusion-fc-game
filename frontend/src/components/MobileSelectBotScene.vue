@@ -66,8 +66,24 @@
       </TresMesh>
 
       <!-- Character Group -->
-      <TresGroup :position="[0, sceneOffsetY, 0]">
+      <TresGroup :position="[props.showDanceBot ? -0.75 : 0, sceneOffsetY, 0]">
         <TresGroup ref="modelGroup" :scale="characterScale" />
+      </TresGroup>
+
+      <!-- Jamie Bot Group (only visible on dance page) -->
+      <TresGroup 
+        v-if="props.showDanceBot"
+        :position="[-0.6, sceneOffsetY, 1.6]"
+        :rotation="[0, 0, 0]">
+        <TresGroup ref="danceBotGroup" :scale="characterScale * 0.18" />
+      </TresGroup>
+
+      <!-- Cansu Bot Group (only visible on dance page) -->
+      <TresGroup 
+        v-if="props.showDanceBot"
+        :position="[-0.5, sceneOffsetY, 0]"
+        :rotation="[0, 0.3, 0]">
+        <TresGroup ref="cansuBotGroup" :scale="characterScale * 0.72" />
       </TresGroup>
 
       <!-- Goalkeeper Group -->
@@ -155,11 +171,13 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
 interface Props {
   hideUiElements?: boolean
   lockCamera?: boolean
+  showDanceBot?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   hideUiElements: false,
-  lockCamera: false
+  lockCamera: false,
+  showDanceBot: false
 })
 
 // Components
@@ -247,6 +265,8 @@ const backgroundVideo = ref<HTMLVideoElement>()
 const modelGroup = ref()
 const goalkeeperGroup = ref()
 const ballModelGroup = ref()
+const danceBotGroup = ref()
+const cansuBotGroup = ref()
 const overlayColorHue = ref(218)
 const torusEmissionHue = ref(195)
 
@@ -294,6 +314,122 @@ const playGoalkeeperAnimation = async (animationFile: string) => {
     }
   } catch (error) {
     }
+}
+
+// Load dance bot (JamieBot)
+const loadDanceBot = async () => {
+  if (!props.showDanceBot || !danceBotGroup.value) return
+  
+  try {
+    const loader = new FBXLoader()
+    const danceBotModel = await loader.loadAsync('/dance-bots/JamieBot.fbx')
+    
+    // Scale to match character
+    danceBotModel.scale.setScalar(1)
+    
+    // Apply materials and shadows
+    danceBotModel.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = true
+        child.receiveShadow = true
+        
+        // Keep original materials for dance bot
+        if (child.material) {
+          child.material.metalness = 0.3
+          child.material.roughness = 0.7
+        }
+      }
+    })
+    
+    // Add to dance bot group
+    danceBotGroup.value.clear()
+    danceBotGroup.value.add(danceBotModel)
+    
+    // Create animation mixer for dance bot
+    const mixer = new THREE.AnimationMixer(danceBotModel)
+    sceneRefs.danceBotMixer = mixer
+    
+    // Play the bot's own animations if available
+    if (danceBotModel.animations && danceBotModel.animations.length > 0) {
+      // Play the first animation found in the FBX file
+      const action = mixer.clipAction(danceBotModel.animations[0])
+      action.play()
+      console.log(`Playing JamieBot animation: ${danceBotModel.animations[0].name}`)
+    } else {
+      // Fallback to idle animation if no animations in the model
+      try {
+        const idleAnimation = await loader.loadAsync('/bot1/Idle.fbx')
+        if (idleAnimation.animations.length > 0) {
+          const action = mixer.clipAction(idleAnimation.animations[0])
+          action.play()
+        }
+      } catch (error) {
+        console.log('Could not load idle animation for dance bot')
+      }
+    }
+    
+    console.log('Dance bot loaded successfully')
+  } catch (error) {
+    console.error('Error loading dance bot:', error)
+  }
+}
+
+// Load Cansu Bot
+const loadCansuBot = async () => {
+  if (!props.showDanceBot || !cansuBotGroup.value) return
+  
+  try {
+    const loader = new FBXLoader()
+    const cansuBotModel = await loader.loadAsync('/dance-bots/CansuBot.fbx')
+    
+    // Scale to match character
+    cansuBotModel.scale.setScalar(1)
+    
+    // Apply materials and shadows
+    cansuBotModel.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = true
+        child.receiveShadow = true
+        
+        // Keep original materials for dance bot
+        if (child.material) {
+          child.material.metalness = 0.3
+          child.material.roughness = 0.7
+        }
+      }
+    })
+    
+    // Add to cansu bot group
+    cansuBotGroup.value.clear()
+    cansuBotGroup.value.add(cansuBotModel)
+    
+    // Create animation mixer for cansu bot
+    const mixer = new THREE.AnimationMixer(cansuBotModel)
+    sceneRefs.cansuBotMixer = mixer
+    
+    // Play the bot's own animations if available
+    if (cansuBotModel.animations && cansuBotModel.animations.length > 0) {
+      // Play the first animation found in the FBX file
+      const action = mixer.clipAction(cansuBotModel.animations[0])
+      action.play()
+      console.log(`Playing CansuBot animation: ${cansuBotModel.animations[0].name}`)
+    } else {
+      // Fallback to idle animation if no animations in the model
+      try {
+        const idleAnimation = await loader.loadAsync('/bot1/Idle.fbx')
+        if (idleAnimation.animations.length > 0) {
+          const action = mixer.clipAction(idleAnimation.animations[0])
+          action.play()
+        }
+      } catch (error) {
+        console.log('Could not load idle animation for cansu bot')
+      }
+    }
+    
+    console.log('Cansu bot loaded successfully')
+  } catch (error) {
+    console.error('Error loading cansu bot:', error)
+  }
 }
 
 // Load goalkeeper (same character asset)
@@ -909,6 +1045,16 @@ const animationLoop = () => {
     sceneRefs.goalkeeperMixer.update(deltaTime)
   }
   
+  // Update dance bot animation
+  if (sceneRefs.danceBotMixer) {
+    sceneRefs.danceBotMixer.update(deltaTime)
+  }
+  
+  // Update cansu bot animation
+  if (sceneRefs.cansuBotMixer) {
+    sceneRefs.cansuBotMixer.update(deltaTime)
+  }
+  
   requestAnimationFrame(animationLoop)
 }
 
@@ -986,6 +1132,18 @@ watch(ballModelGroup, (newBallGroup) => {
     sceneRefs.ballModelGroup = newBallGroup
     // Ball model will be loaded after character loads
     loadBallModel()
+  }
+}, { once: true })
+
+watch(danceBotGroup, (newDanceBotGroup) => {
+  if (newDanceBotGroup && props.showDanceBot) {
+    loadDanceBot()
+  }
+}, { once: true })
+
+watch(cansuBotGroup, (newCansuBotGroup) => {
+  if (newCansuBotGroup && props.showDanceBot) {
+    loadCansuBot()
   }
 }, { once: true })
 

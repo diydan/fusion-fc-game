@@ -1668,9 +1668,9 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 .engine-controls {
   background: rgba(30, 41, 59, 0.9);
   backdrop-filter: blur(10px);
-  padding: 24px;
+  padding: 0;
   border-radius: 12px;
-  margin: 20px 0;
+  margin: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1683,7 +1683,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 .stats-content {
   padding: 20px;
-  height: 400px;
+  flex: 1;
   overflow-y: auto;
 }
 .stats-header h3,
@@ -2097,6 +2097,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   gap: 20px;
   margin: 20px 0;
   align-items: stretch;
+  height: 500px;
 }
 
 /* Activity Stream */
@@ -2107,6 +2108,9 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 
@@ -2130,13 +2134,13 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 
 
 .activity-content {
-  height: 400px;
+  flex: 1;
   overflow-y: auto;
   padding: 20px;
 }
 
 .activity-list {
-  padding: 10px;
+  padding: 0;
 }
 
 .activity-item {
