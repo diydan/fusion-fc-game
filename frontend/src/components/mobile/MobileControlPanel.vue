@@ -7,7 +7,7 @@
         :disabled="!isReady"
         class="action-btn powerup-select-btn"
       >
-        <div class="btn-icon">⚡</div>
+        <div class="btn-icon">🔋</div>
         <div class="btn-label">Choose Power Ups</div>
       </button>
 
@@ -16,7 +16,7 @@
         :disabled="isStrikeSequenceActive || !isReady"
         class="action-btn charge-btn"
       >
-        <div class="btn-icon">🚀</div>
+        <div class="btn-icon">⚡</div>
         <div class="btn-label">Charge</div>
       </button>
     </div>

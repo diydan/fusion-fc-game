@@ -227,6 +227,7 @@ defineEmits(['click', 'compare', 'recruit', 'select-bot'])
   background: rgba(0, 0, 0, 0.3);
   padding: 4px 8px;
   border-radius: 8px;
+  margin-top: 20px;
 }
 
 .radar-section {

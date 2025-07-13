@@ -22,7 +22,7 @@
     >
       <!-- Camera -->
       <SceneCamera 
-        :camera-position="[0, 8, 20]" 
+        :camera-position="[0, 16, 40]" 
         :fov="45"
         :enable-controls="true" 
       />
@@ -34,7 +34,7 @@
       />
       
       <!-- Lighting -->
-      <SceneLighting />
+      <SceneLighting :lighting-settings="lightingSettings" />
       
       <!-- Football Field -->
       <TresMesh 
@@ -42,7 +42,7 @@
         :rotation="[-Math.PI / 2, 0, 0]" 
         :receive-shadow="true"
       >
-        <TresPlaneGeometry :args="[30, 20]" />
+        <TresPlaneGeometry :args="[60, 40]" />
         <TresMeshStandardMaterial :color="'#2d5016'" :roughness="0.8" />
       </TresMesh>
       
@@ -50,47 +50,47 @@
       <TresGroup ref="fieldLinesGroup" />
       
       <!-- Team 1 (Blue) - 4-4-2 Formation -->
-      <TresGroup :position="[0, 0, -5]">
+      <TresGroup :position="[0, 0, -10]">
         <!-- Goalkeeper -->
-        <TresGroup ref="team1Goalkeeper" :position="[0, 0, -7]" />
+        <TresGroup ref="team1Goalkeeper" :position="[0, 0, -14]" />
         
         <!-- Defenders (4) -->
-        <TresGroup ref="team1Defender1" :position="[-6, 0, -3]" />
-        <TresGroup ref="team1Defender2" :position="[-2, 0, -3]" />
-        <TresGroup ref="team1Defender3" :position="[2, 0, -3]" />
-        <TresGroup ref="team1Defender4" :position="[6, 0, -3]" />
+        <TresGroup ref="team1Defender1" :position="[-12, 0, -6]" />
+        <TresGroup ref="team1Defender2" :position="[-4, 0, -6]" />
+        <TresGroup ref="team1Defender3" :position="[4, 0, -6]" />
+        <TresGroup ref="team1Defender4" :position="[12, 0, -6]" />
         
         <!-- Midfielders (4) -->
-        <TresGroup ref="team1Midfielder1" :position="[-6, 0, 0]" />
-        <TresGroup ref="team1Midfielder2" :position="[-2, 0, 0]" />
-        <TresGroup ref="team1Midfielder3" :position="[2, 0, 0]" />
-        <TresGroup ref="team1Midfielder4" :position="[6, 0, 0]" />
+        <TresGroup ref="team1Midfielder1" :position="[-12, 0, 0]" />
+        <TresGroup ref="team1Midfielder2" :position="[-4, 0, 0]" />
+        <TresGroup ref="team1Midfielder3" :position="[4, 0, 0]" />
+        <TresGroup ref="team1Midfielder4" :position="[12, 0, 0]" />
         
         <!-- Forwards (2) -->
-        <TresGroup ref="team1Forward1" :position="[-3, 0, 3]" />
-        <TresGroup ref="team1Forward2" :position="[3, 0, 3]" />
+        <TresGroup ref="team1Forward1" :position="[-6, 0, 6]" />
+        <TresGroup ref="team1Forward2" :position="[6, 0, 6]" />
       </TresGroup>
       
       <!-- Team 2 (Red) - 4-4-2 Formation (mirrored) -->
-      <TresGroup :position="[0, 0, 5]">
+      <TresGroup :position="[0, 0, 10]">
         <!-- Goalkeeper -->
-        <TresGroup ref="team2Goalkeeper" :position="[0, 0, 7]" />
+        <TresGroup ref="team2Goalkeeper" :position="[0, 0, 14]" />
         
         <!-- Defenders (4) -->
-        <TresGroup ref="team2Defender1" :position="[-6, 0, 3]" />
-        <TresGroup ref="team2Defender2" :position="[-2, 0, 3]" />
-        <TresGroup ref="team2Defender3" :position="[2, 0, 3]" />
-        <TresGroup ref="team2Defender4" :position="[6, 0, 3]" />
+        <TresGroup ref="team2Defender1" :position="[-12, 0, 6]" />
+        <TresGroup ref="team2Defender2" :position="[-4, 0, 6]" />
+        <TresGroup ref="team2Defender3" :position="[4, 0, 6]" />
+        <TresGroup ref="team2Defender4" :position="[12, 0, 6]" />
         
         <!-- Midfielders (4) -->
-        <TresGroup ref="team2Midfielder1" :position="[-6, 0, 0]" />
-        <TresGroup ref="team2Midfielder2" :position="[-2, 0, 0]" />
-        <TresGroup ref="team2Midfielder3" :position="[2, 0, 0]" />
-        <TresGroup ref="team2Midfielder4" :position="[6, 0, 0]" />
+        <TresGroup ref="team2Midfielder1" :position="[-12, 0, 0]" />
+        <TresGroup ref="team2Midfielder2" :position="[-4, 0, 0]" />
+        <TresGroup ref="team2Midfielder3" :position="[4, 0, 0]" />
+        <TresGroup ref="team2Midfielder4" :position="[12, 0, 0]" />
         
         <!-- Forwards (2) -->
-        <TresGroup ref="team2Forward1" :position="[-3, 0, -3]" />
-        <TresGroup ref="team2Forward2" :position="[3, 0, -3]" />
+        <TresGroup ref="team2Forward1" :position="[-6, 0, -6]" />
+        <TresGroup ref="team2Forward2" :position="[6, 0, -6]" />
       </TresGroup>
       
       <!-- Ball -->
@@ -168,6 +168,15 @@ const fieldLinesGroup = ref<THREE.Group>()
 // Animation mixers
 const mixers: THREE.AnimationMixer[] = []
 
+// Lighting settings
+const lightingSettings = {
+  keyLightIntensity: 1.2,
+  fillLightIntensity: 0.6,
+  rimLightIntensity: 0.8,
+  ambientIntensity: 0.4,
+  shadowEnabled: true
+}
+
 // Scene ready handler
 const onSceneCreated = () => {
   console.log('Auto-battler scene created')
@@ -192,9 +201,9 @@ const createFieldLines = () => {
   for (let i = 0; i <= 64; i++) {
     const angle = (i / 64) * Math.PI * 2
     centerCirclePoints.push(new THREE.Vector3(
-      Math.cos(angle) * 3,
+      Math.cos(angle) * 6,
       0.01,
-      Math.sin(angle) * 3
+      Math.sin(angle) * 6
     ))
   }
   centerCircleGeometry.setFromPoints(centerCirclePoints)
@@ -204,8 +213,8 @@ const createFieldLines = () => {
   // Center line
   const centerLineGeometry = new THREE.BufferGeometry()
   centerLineGeometry.setFromPoints([
-    new THREE.Vector3(-15, 0.01, 0),
-    new THREE.Vector3(15, 0.01, 0)
+    new THREE.Vector3(-30, 0.01, 0),
+    new THREE.Vector3(30, 0.01, 0)
   ])
   const centerLine = new THREE.Line(centerLineGeometry, lineMaterial)
   fieldLinesGroup.value.add(centerLine)
@@ -213,11 +222,11 @@ const createFieldLines = () => {
   // Field boundary
   const boundaryGeometry = new THREE.BufferGeometry()
   boundaryGeometry.setFromPoints([
-    new THREE.Vector3(-15, 0.01, -10),
-    new THREE.Vector3(15, 0.01, -10),
-    new THREE.Vector3(15, 0.01, 10),
-    new THREE.Vector3(-15, 0.01, 10),
-    new THREE.Vector3(-15, 0.01, -10)
+    new THREE.Vector3(-30, 0.01, -20),
+    new THREE.Vector3(30, 0.01, -20),
+    new THREE.Vector3(30, 0.01, 20),
+    new THREE.Vector3(-30, 0.01, 20),
+    new THREE.Vector3(-30, 0.01, -20)
   ])
   const boundary = new THREE.Line(boundaryGeometry, lineMaterial)
   fieldLinesGroup.value.add(boundary)
@@ -228,12 +237,12 @@ const loadAllPlayers = async () => {
   const loader = new FBXLoader()
   
   // Load player model
-  const playerModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture1.fbx')
+  const playerModel = await loader.loadAsync('/bot1/soccer_player_humanoid__texture.fbx')
   
   // Function to create a player instance
   const createPlayer = (group: THREE.Group, color: string, isGoalkeeper = false) => {
     const player = playerModel.clone()
-    player.scale.setScalar(0.01)
+    player.scale.setScalar(0.02) // Same scale as original main character
     
     // Set team color
     player.traverse((child) => {
@@ -265,7 +274,7 @@ const loadAllPlayers = async () => {
     mixers.push(mixer)
     
     // Load idle animation
-    loadAnimation(mixer, '/bot1/Idle.fbx')
+    loadAnimation(mixer, isGoalkeeper ? '/bot1/Goalkeeper Idle.fbx' : '/bot1/Soccer Idle.fbx')
     
     return player
   }
@@ -390,8 +399,8 @@ const startBattle = () => {
     // Move ball randomly
     if (ballGroup.value) {
       const time = Date.now() * 0.001
-      ballGroup.value.position.x = Math.sin(time * 2) * 5
-      ballGroup.value.position.z = Math.cos(time * 1.5) * 5
+      ballGroup.value.position.x = Math.sin(time * 2) * 10
+      ballGroup.value.position.z = Math.cos(time * 1.5) * 10
     }
     
     if (battleTime >= battleDuration) {

@@ -37,8 +37,12 @@
           :style="{ backgroundImage: 'url(/textures/stadium_bg_mobile.jpg)' }">
         </div>
 
-        <!-- Auto Battler 3D Scene -->
-        <AutoBattlerScene ref="sceneCanvas" />
+        <!-- Original 3D Scene Canvas with locked camera and hidden UI -->
+        <MobileSelectBotScene 
+          ref="sceneCanvas" 
+          :lock-camera="true" 
+          :hide-ui-elements="true"
+        />
 
         <!-- Touch Control Hints -->
         <div v-if="showTouchHints" class="touch-hints">
@@ -64,6 +68,7 @@
             </v-card-text>
           </v-card>
         </div>
+        
       </div>
     </v-main>
 
@@ -73,7 +78,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useDisplay } from 'vuetify'
-import AutoBattlerScene from "@/components/AutoBattlerScene.vue"
+import MobileSelectBotScene from "@/components/MobileSelectBotScene.vue"
 import { useAudio } from '@/composables/useAudio'
 import { useWallet } from '@/composables/useWallet'
 
@@ -107,11 +112,12 @@ const torusColorHue = ref(195) // Default blue-ish
 // Audio system - get toggle function for play button, global footer handles full controls
 const { audioState, toggleBackgroundMusic } = useAudio()
 
-// Wallet integration
-const { tokens, isConnected, connectWallet, fetchTokens } = useWallet()
+// Wallet integration (minimal usage for auto-battler)
+const { tokens } = useWallet()
 
 // Scene reference
 const sceneCanvas = ref()
+
 
 // Computed properties
 const fpsColor = computed(() => {
@@ -212,6 +218,7 @@ const getBackgroundStyle = () => {
   }
 }
 
+
 // Set initial quality based on device
 onMounted(async () => {
   if (isMobile.value) {
@@ -224,28 +231,22 @@ onMounted(async () => {
     showTouchHints.value = false
   }
   
-  // Try to fetch wallet tokens if connected
-  try {
-    if (isConnected.value) {
-      await fetchTokens()
-    }
-  } catch (error) {
-    console.log('Failed to fetch tokens:', error)
-  }
 })
 
 // Watch for token changes and update scene
 watch(tokens, (newTokens) => {
   if (sceneCanvas.value && newTokens.length > 0) {
-    // Format tokens for pellet packs
+    // Format tokens for scene
     const formattedTokens = newTokens.map(token => ({
       symbol: token.symbol,
       balance: parseFloat(token.balance),
       logoURI: token.logoURI
     }))
     
-    // Update pellet packs in the scene
-    sceneCanvas.value.updateTokenBalances(formattedTokens)
+    // Update scene with token data if needed
+    if (sceneCanvas.value.updateTokenBalances) {
+      sceneCanvas.value.updateTokenBalances(formattedTokens)
+    }
   }
 }, { deep: true })
 </script>
@@ -412,4 +413,5 @@ watch(tokens, (newTokens) => {
 .scene-container {
   height: 100vh;
 }
+
 </style>

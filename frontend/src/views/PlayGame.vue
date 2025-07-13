@@ -221,7 +221,7 @@
         </label>
       </div>
       <div class="speed-control">
-        <label>Speed: {{ gameSpeed }}x</label>
+        <label>Speed: {{ gameSpeed.toFixed(1) }}x</label>
         <input type="range" v-model="gameSpeed" min="0.5" max="3" step="0.5" />
       </div>
     </div>
@@ -247,7 +247,7 @@
                 <div class="attr-bar-mini">
                   <div class="attr-fill-mini" :style="{ width: value + '%' }"></div>
                 </div>
-                <span class="attr-value-mini">{{ value }}</span>
+                <span class="attr-value-mini">{{ value.toFixed(1) }}</span>
               </div>
             </div>
           </div>
@@ -337,7 +337,7 @@
         </div>
         <div class="stat-row">
           <span class="stat-label">Pass Accuracy:</span>
-          <span class="stat-value">Home {{ matchStats?.passCompletionRate?.home || 0 }}% - {{ matchStats?.passCompletionRate?.away || 0 }}% Away</span>
+          <span class="stat-value">Home {{ (matchStats?.passCompletionRate?.home || 0).toFixed(1) }}% - {{ (matchStats?.passCompletionRate?.away || 0).toFixed(1) }}% Away</span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Fouls:</span>
@@ -370,7 +370,7 @@
             <div class="attr-bar">
               <div class="attr-fill" :style="{ width: value + '%' }"></div>
             </div>
-            <span class="attr-value">{{ value }}</span>
+            <span class="attr-value">{{ value.toFixed(1) }}</span>
           </div>
         </div>
         <canvas ref="singlePlayerChart" width="250" height="250" class="spider-chart"></canvas>
@@ -384,7 +384,7 @@
             <div class="attr-bar">
               <div class="attr-fill away" :style="{ width: value + '%' }"></div>
             </div>
-            <span class="attr-value">{{ value }}</span>
+            <span class="attr-value">{{ value.toFixed(1) }}</span>
           </div>
         </div>
       </div>
@@ -658,10 +658,10 @@ const matchStats = computed(() => {
 
 const possessionStats = computed(() => {
   const stats = matchStats.value
-  if (!stats?.possession) return { home: 50, away: 50 }
+  if (!stats?.possession) return { home: 50.0, away: 50.0 }
   return {
-    home: Math.round(stats.possession.home),
-    away: Math.round(stats.possession.away)
+    home: parseFloat(stats.possession.home.toFixed(1)),
+    away: parseFloat(stats.possession.away.toFixed(1))
   }
 })
 
@@ -2771,12 +2771,17 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   grid-template-columns: 1fr 1fr;
   gap: 20px;
   margin: 20px 0;
+  position: relative;
+  z-index: 2000;
 }
 
 .player-stats-container {
-  background-color: #2a2a2a;
+  background-color: rgba(42, 42, 42, 0.95);
+  backdrop-filter: blur(10px);
   padding: 20px;
   border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 120, 237, 0.3);
 }
 
 .player-stats-container h3 {
@@ -2838,11 +2843,13 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background-color: #2a2a2a;
+  background-color: rgba(42, 42, 42, 0.98);
+  backdrop-filter: blur(20px);
   padding: 30px;
   border-radius: 10px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-  z-index: 1000;
+  z-index: 3000;
+  border: 1px solid rgba(0, 120, 237, 0.3);
 }
 
 .team-selector {
