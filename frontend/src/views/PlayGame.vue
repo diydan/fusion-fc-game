@@ -147,7 +147,7 @@
       
       <!-- Team Avatars -->
       <div class="team-avatar home-avatar" @click="toggleManagerMenu">
-        <div class="avatar-circle manager-clickable">
+        <div class="avatar-circle manager-clickable" :class="getHomeManagerClass()">
           <img src="/sim/demo-manger-left.png" alt="Home Manager" class="manager-image" />
         </div>
         
@@ -175,7 +175,7 @@
       </div>
       
       <div class="team-avatar away-avatar">
-        <div class="avatar-circle">
+        <div class="avatar-circle" :class="getAwayManagerClass()">
           <img src="/sim/demo-manger-right.png" alt="Away Manager" class="manager-image" />
         </div>
       </div>
@@ -185,6 +185,13 @@
         <div v-if="managerSpeech" class="manager-speech-bubble" :class="{ 'home-speech': managerSpeech.team === 'home' }">
           <div class="speech-content">{{ managerSpeech.text }}</div>
           <div class="speech-tail"></div>
+        </div>
+      </transition>
+      
+      <!-- Game Countdown -->
+      <transition name="countdown">
+        <div v-if="gameCountdown" class="game-countdown">
+          {{ gameCountdown }}
         </div>
       </transition>
     </div>
@@ -223,6 +230,29 @@
     <div class="stats-activity-container">
       <!-- Activity Stream (Left) -->
       <div class="activity-stream">
+        <!-- Selected Player Card -->
+        <div v-if="selectedHomePlayer" class="player-card-section">
+          <div class="player-card-header">
+            <h3>Player Card</h3>
+          </div>
+          <div class="player-card-content">
+            <div class="player-card-info">
+              <div class="player-name">{{ selectedHomePlayer.name }}</div>
+              <div class="player-number">#{{ selectedHomePlayer.number }}</div>
+              <div class="player-role">{{ selectedHomePlayer.role.toUpperCase() }}</div>
+            </div>
+            <div class="player-attributes">
+              <div class="attribute-row" v-for="(value, key) in getDisplayAttributes(selectedHomePlayer.attributes)" :key="key">
+                <span class="attr-label">{{ formatAttributeName(key) }}</span>
+                <div class="attr-bar-mini">
+                  <div class="attr-fill-mini" :style="{ width: value + '%' }"></div>
+                </div>
+                <span class="attr-value-mini">{{ value }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <!-- My Team Configuration -->
         <div class="my-team-section">
           <div class="my-team-header">
@@ -284,14 +314,18 @@
           <h3>Match Statistics</h3>
         </div>
         <div class="stats-content">
-          <div class="stat-row">
+          <div class="stat-row possession-row">
           <span class="stat-label">Possession:</span>
-          <span class="stat-value">
-            <span class="possession-bar">
-              <span class="possession-home" :style="{ width: possessionStats.home + '%' }">{{ possessionStats.home }}%</span>
-              <span class="possession-away" :style="{ width: possessionStats.away + '%' }">{{ possessionStats.away }}%</span>
-            </span>
-          </span>
+          <div class="possession-container">
+            <div class="possession-bar">
+              <div class="possession-home" :style="{ width: possessionStats.home + '%' }">
+                <span v-if="possessionStats.home >= 20">{{ possessionStats.home }}%</span>
+              </div>
+              <div class="possession-away" :style="{ width: possessionStats.away + '%' }">
+                <span v-if="possessionStats.away >= 20">{{ possessionStats.away }}%</span>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="stat-row">
           <span class="stat-label">Shots:</span>
@@ -428,6 +462,7 @@ const playerWon = ref(false)
 const showStrategyModal = ref(false)
 const showManagerMenu = ref(false)
 const managerSpeech = ref<{ text: string; team: string } | null>(null)
+const gameCountdown = ref<number | null>(null)
 
 // Sound effects
 const soundEnabled = ref(true)
@@ -762,8 +797,7 @@ const makeChoice = (choice: 'Heads' | 'Tails') => {
   playerWon.value = choice === coinResult.value
   kickoffTeam.value = playerWon.value ? 'Home' : 'Away'
   
-  // Play whistle sound for result
-  playWhistleSound()
+  // Don't play whistle here - wait for actual game start
   
   // Set kickoff formation immediately
   setKickoffFormation()
@@ -780,18 +814,43 @@ const startGame = () => {
   showStrategyModal.value = false
   gameStarted.value = true
   
-  // Play kickoff whistle
-  playWhistleSound()
+  // Start countdown
+  gameCountdown.value = 3
   
-  // Start the game (formation already set after coin flip)
-  if (gameEngine) {
-    console.log('Starting game with kickoff team:', kickoffTeam.value)
-    console.log('Engine instance type:', gameEngine.constructor.name)
-    console.log('Engine object:', gameEngine)
-    
-    // Actually start the game! (ball starts at center with zero velocity)
-    togglePlay()
-  }
+  // Show a countdown in activity stream
+  addGameEvent({
+    type: 'info',
+    text: 'Match starting in 3 seconds...'
+  })
+  
+  // Countdown interval
+  const countdownInterval = setInterval(() => {
+    if (gameCountdown.value && gameCountdown.value > 1) {
+      gameCountdown.value--
+    } else {
+      clearInterval(countdownInterval)
+      gameCountdown.value = null
+      
+      // Play kickoff whistle
+      playWhistleSound()
+      
+      // Start the game (formation already set after coin flip)
+      if (gameEngine) {
+        console.log('Starting game with kickoff team:', kickoffTeam.value)
+        console.log('Engine instance type:', gameEngine.constructor.name)
+        console.log('Engine object:', gameEngine)
+        
+        // Add kickoff event
+        addGameEvent({
+          type: 'kickoff',
+          text: `Kickoff! ${kickoffTeam.value} team starts the match!`
+        })
+        
+        // Actually start the game! (ball starts at center with zero velocity)
+        togglePlay()
+      }
+    }
+  }, 1000)
 }
 
 // Set realistic kickoff formation
@@ -1104,6 +1163,10 @@ const handleCanvasClick = (event: MouseEvent) => {
     } else {
       selectedAwayPlayer.value = selectedAwayPlayer.value?.number === clickedPlayer.number ? null : clickedPlayer
     }
+  } else {
+    // Clicked on empty space - deselect all players
+    selectedHomePlayer.value = null
+    selectedAwayPlayer.value = null
   }
 }
 
@@ -1135,6 +1198,9 @@ const handleCanvasLeave = () => {
 // Manager functions
 const toggleManagerMenu = () => {
   showManagerMenu.value = !showManagerMenu.value
+  // Hide player card when interacting with manager
+  selectedHomePlayer.value = null
+  selectedAwayPlayer.value = null
 }
 
 const managerAction = (action: 'encourage' | 'belittle' | 'provoke' | 'swear') => {
@@ -1610,6 +1676,25 @@ const drawSinglePlayerChart = () => {
   ctx.stroke()
 }
 
+// Manager state functions
+const getHomeManagerClass = () => {
+  const scoreDiff = homeScore.value - awayScore.value
+  if (scoreDiff >= 2) return 'manager-very-happy'
+  if (scoreDiff === 1) return 'manager-happy'
+  if (scoreDiff === 0) return 'manager-neutral'
+  if (scoreDiff === -1) return 'manager-worried'
+  return 'manager-angry'
+}
+
+const getAwayManagerClass = () => {
+  const scoreDiff = awayScore.value - homeScore.value
+  if (scoreDiff >= 2) return 'manager-very-happy'
+  if (scoreDiff === 1) return 'manager-happy'
+  if (scoreDiff === 0) return 'manager-neutral'
+  if (scoreDiff === -1) return 'manager-worried'
+  return 'manager-angry'
+}
+
 // Achievement checking
 const checkAchievements = () => {
   if (!gameEngine) return
@@ -1845,7 +1930,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   align-items: center;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
-  padding: 15px 30px;
+  padding: 10px 25px;
   border-radius: 15px;
   margin-bottom: 20px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
@@ -1859,8 +1944,8 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .team-logo-small {
-  width: 65px;
-  height: 65px;
+  width: 91px;
+  height: 91px;
   object-fit: cover;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.3);
@@ -2009,6 +2094,120 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 
 /* Team logos now integrated into scoreboard */
 
+/* Player Card Section */
+.player-card-section {
+  border-bottom: 1px solid rgba(0, 120, 237, 0.3);
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  animation: slideIn 0.3s ease-out;
+  position: relative;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  margin-top: -5px;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.player-card-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(0, 120, 237, 0.3);
+}
+
+.player-card-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #00b4d8;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.player-card-content {
+  padding: 15px 20px;
+}
+
+.player-card-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.player-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  flex: 1;
+}
+
+.player-number {
+  font-size: 24px;
+  font-weight: 800;
+  color: #00b4d8;
+}
+
+.player-role {
+  font-size: 12px;
+  font-weight: 600;
+  color: #999;
+  letter-spacing: 1px;
+  padding: 4px 8px;
+  background: rgba(0, 120, 237, 0.2);
+  border-radius: 4px;
+}
+
+.player-attributes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attribute-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attr-label {
+  flex: 0 0 60px;
+  font-size: 11px;
+  color: #999;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.attr-bar-mini {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.attr-fill-mini {
+  height: 100%;
+  background: linear-gradient(90deg, #0078ed 0%, #00b4d8 100%);
+  transition: width 0.3s ease;
+}
+
+.attr-value-mini {
+  flex: 0 0 30px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  color: #00b4d8;
+}
+
 /* My Team Section in Activity Stream */
 .my-team-section {
   border-bottom: 1px solid rgba(0, 120, 237, 0.3);
@@ -2024,7 +2223,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 .my-team-header h3 {
   margin: 0;
   font-size: 16px;
-  color: #3366FF;
+  color: #00b4d8;
   font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -2092,11 +2291,63 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 /* Manager Clickable Avatar */
 .manager-clickable {
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 0.2s, border-color 0.5s, box-shadow 0.5s;
 }
 
 .manager-clickable:hover {
   transform: scale(1.1);
+}
+
+/* Manager mood states */
+.manager-very-happy {
+  border-color: #4ade80 !important;
+  box-shadow: 0 4px 20px rgba(74, 222, 128, 0.4) !important;
+  animation: bounce-happy 2s ease-in-out infinite;
+}
+
+.manager-happy {
+  border-color: #22c55e !important;
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3) !important;
+  animation: bounce-happy 3s ease-in-out infinite;
+}
+
+.manager-neutral {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.manager-worried {
+  border-color: #fbbf24 !important;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.3) !important;
+  animation: shake-worried 1.5s ease-in-out infinite;
+}
+
+.manager-angry {
+  border-color: #ef4444 !important;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4) !important;
+  animation: shake-angry 0.8s ease-in-out infinite;
+}
+
+/* Manager animations */
+@keyframes bounce-happy {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-8px); }
+  75% { transform: translateY(4px); }
+}
+
+@keyframes shake-worried {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+@keyframes shake-angry {
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-6px) rotate(-2deg); }
+  20% { transform: translateX(6px) rotate(2deg); }
+  30% { transform: translateX(-6px) rotate(-2deg); }
+  40% { transform: translateX(6px) rotate(2deg); }
+  50% { transform: translateX(0); }
 }
 
 /* Manager Menu Popover */
@@ -2202,6 +2453,54 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 .speech-bubble-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+/* Game Countdown */
+.game-countdown {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 120px;
+  font-weight: 800;
+  color: white;
+  text-shadow: 0 0 30px rgba(0, 120, 237, 0.8), 0 0 60px rgba(0, 120, 237, 0.4);
+  z-index: 1000;
+  animation: countdown-pulse 1s ease-in-out;
+}
+
+@keyframes countdown-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.8;
+  }
+}
+
+/* Countdown transition */
+.countdown-enter-active {
+  transition: all 0.3s ease;
+}
+
+.countdown-leave-active {
+  transition: all 0.5s ease;
+}
+
+.countdown-enter-from {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.5);
+}
+
+.countdown-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(1.5);
 }
 
 .controls {
@@ -2388,6 +2687,15 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   color: #fff;
 }
 
+.possession-row {
+  flex-wrap: wrap;
+}
+
+.possession-container {
+  width: 100%;
+  margin-top: 8px;
+}
+
 .card-indicator {
   display: inline-block;
   padding: 2px 8px;
@@ -2415,10 +2723,12 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 .possession-bar {
   display: flex;
   width: 100%;
-  height: 20px;
-  background-color: #1a1a1a;
-  border-radius: 10px;
+  height: 24px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
 }
 
 .possession-home {
@@ -2427,9 +2737,12 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: bold;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  transition: width 0.5s ease;
+  position: relative;
+  min-width: 0;
 }
 
 .possession-away {
@@ -2438,9 +2751,18 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: bold;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  transition: width 0.5s ease;
+  position: relative;
+  min-width: 0;
+}
+
+.possession-home span,
+.possession-away span {
+  padding: 0 4px;
+  white-space: nowrap;
 }
 
 /* Player display */
@@ -2882,7 +3204,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 /* Achievement notifications */
 .achievement-container {
   position: fixed;
-  top: 80px;
+  top: 300px;
   right: 20px;
   z-index: 1500;
 }
@@ -3000,62 +3322,102 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
-  margin-bottom: 5px;
-  background-color: #333;
-  border-radius: 5px;
-  font-size: 14px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  background-color: rgba(0, 120, 237, 0.1);
+  border-radius: 8px;
+  font-size: 13px;
   transition: all 0.3s;
+  border: 1px solid rgba(0, 120, 237, 0.2);
 }
 
 .activity-item:hover {
-  background-color: #3a3a3a;
+  background-color: rgba(0, 120, 237, 0.15);
+  border-color: rgba(0, 120, 237, 0.3);
+  transform: translateX(2px);
 }
 
 .event-time {
-  color: #999;
-  font-size: 12px;
-  min-width: 30px;
+  color: #00b4d8;
+  font-size: 11px;
+  min-width: 35px;
+  font-weight: 600;
 }
 
 .event-icon {
   font-size: 16px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .event-text {
   flex: 1;
-  color: #ddd;
+  color: #e0e0e0;
+  font-weight: 500;
 }
 
 /* Event type colors */
 .activity-item.goal {
-  background-color: #2e5a2e;
-  border-left: 3px solid #4caf50;
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(76, 175, 80, 0.1) 100%);
+  border-left: 4px solid #4caf50;
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.activity-item.goal .event-text {
+  color: #81c784;
+  font-weight: 600;
 }
 
 .activity-item.foul {
-  background-color: #5a3e2e;
-  border-left: 3px solid #ff9800;
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 152, 0, 0.08) 100%);
+  border-left: 4px solid #ff9800;
+  border-color: rgba(255, 152, 0, 0.3);
 }
 
 .activity-item.yellow {
-  background-color: #5a5a2e;
-  border-left: 3px solid #ffeb3b;
+  background: linear-gradient(135deg, rgba(255, 235, 59, 0.15) 0%, rgba(255, 235, 59, 0.08) 100%);
+  border-left: 4px solid #ffeb3b;
+  border-color: rgba(255, 235, 59, 0.3);
 }
 
 .activity-item.red {
-  background-color: #5a2e2e;
-  border-left: 3px solid #f44336;
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.2) 0%, rgba(244, 67, 54, 0.1) 100%);
+  border-left: 4px solid #f44336;
+  border-color: rgba(244, 67, 54, 0.3);
 }
 
-.activity-item.freekick {
-  background-color: #2e3e5a;
-  border-left: 3px solid #2196f3;
+.activity-item.red .event-text {
+  color: #ff8a80;
 }
 
-.activity-item.corner {
-  background-color: #3e2e5a;
-  border-left: 3px solid #9c27b0;
+.activity-item.freekick,
+.activity-item.kickoff {
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.08) 100%);
+  border-left: 4px solid #2196f3;
+  border-color: rgba(33, 150, 243, 0.3);
+}
+
+.activity-item.corner,
+.activity-item.goalkick {
+  background: linear-gradient(135deg, rgba(156, 39, 176, 0.15) 0%, rgba(156, 39, 176, 0.08) 100%);
+  border-left: 4px solid #9c27b0;
+  border-color: rgba(156, 39, 176, 0.3);
+}
+
+.activity-item.manager {
+  background: linear-gradient(135deg, rgba(255, 140, 66, 0.15) 0%, rgba(255, 140, 66, 0.08) 100%);
+  border-left: 4px solid #FF8C42;
+  border-color: rgba(255, 140, 66, 0.3);
+}
+
+.activity-item.manager .event-text {
+  font-style: italic;
+  color: #ffb74d;
+}
+
+.activity-item.info {
+  background: linear-gradient(135deg, rgba(0, 180, 216, 0.15) 0%, rgba(0, 180, 216, 0.08) 100%);
+  border-left: 4px solid #00b4d8;
+  border-color: rgba(0, 180, 216, 0.3);
 }
 
 /* Activity animations */
@@ -3083,15 +3445,16 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .activity-content::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
 }
 
 .activity-content::-webkit-scrollbar-thumb {
-  background: #444;
+  background: rgba(0, 120, 237, 0.5);
   border-radius: 3px;
 }
 
 .activity-content::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: rgba(0, 120, 237, 0.7);
 }
 </style>

@@ -66,14 +66,14 @@
       </TresMesh>
 
       <!-- Character Group -->
-      <TresGroup :position="[props.showDanceBot ? -1.55 : 0, sceneOffsetY, props.showDanceBot ? -0.4 : 0]">
+      <TresGroup :position="[props.showDanceBot ? -1.55 : 0, sceneOffsetY, props.showDanceBot ? -0.8 : 0]">
         <TresGroup ref="modelGroup" :scale="characterScale" />
       </TresGroup>
 
       <!-- Jamie Bot Group (only visible on dance page) -->
       <TresGroup 
         v-if="props.showDanceBot"
-        :position="[-0.6, sceneOffsetY, 1.2]"
+        :position="[-0.6, sceneOffsetY, 0.8]"
         :rotation="[0, 0, 0]">
         <TresGroup ref="danceBotGroup" :scale="characterScale * 0.18" />
       </TresGroup>
@@ -81,7 +81,7 @@
       <!-- Cansu Bot Group (only visible on dance page) -->
       <TresGroup 
         v-if="props.showDanceBot"
-        :position="[0.6, sceneOffsetY, -0.4]"
+        :position="[0.6, sceneOffsetY, -0.8]"
         :rotation="[0, 0.3, 0]">
         <TresGroup ref="cansuBotGroup" :scale="[characterScale * 0.459 * 0.9, characterScale * 0.459, characterScale * 0.459]" />
       </TresGroup>
@@ -153,8 +153,27 @@
       @shoot-coin="shootCoinWithPellets"
     />
 
-    <!-- Color Controls in top left corner -->
-    <div v-if="!props.hideUiElements" class="color-controls-top-left">
+    <!-- Token Attributes Display in top left corner -->
+    <div v-if="!props.hideUiElements && currentPelletPack" class="token-attributes-display">
+      <div class="attributes-header">
+        <img 
+          v-if="currentPelletPack.logoURI" 
+          :src="currentPelletPack.logoURI" 
+          :alt="currentPelletPack.tokenSymbol"
+          class="token-logo"
+        />
+        <span class="token-name">{{ currentPelletPack.tokenSymbol }}</span>
+      </div>
+      <div class="attributes-grid">
+        <div class="attribute-item" v-for="attr in currentTokenAttributes" :key="attr.key">
+          <span class="attr-label">{{ attr.label }}</span>
+          <span class="attr-value" :style="{ color: getAttributeColor(attr.value) }">{{ attr.value }}</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Color Controls in top left corner (hidden for now) -->
+    <div v-if="!props.hideUiElements && false" class="color-controls-top-left">
       <MobileColorSlider
         label="Shirt"
         :initial-hue="overlayColorHue"
@@ -333,6 +352,93 @@ const showPelletSelector = ref(false)
 const currentPelletPack = ref<PelletPack | null>(null)
 const availablePelletPacks = ref<PelletPack[]>([])
 
+// Token team attributes data
+const tokenTeamData: Record<string, any> = {
+  PSG: {
+    team: 'Paris Saint-Germain',
+    overall: 90,
+    attack: 89,
+    speed: 87,
+    skill: 89,
+    defense: 68,
+    physical: 81,
+    mental: 89,
+    aggression: 84
+  },
+  BAR: {
+    team: 'FC Barcelona',
+    overall: 89,
+    attack: 88,
+    speed: 85,
+    skill: 90,
+    defense: 70,
+    physical: 78,
+    mental: 88,
+    aggression: 76
+  },
+  JUV: {
+    team: 'Juventus',
+    overall: 86,
+    attack: 84,
+    speed: 82,
+    skill: 85,
+    defense: 87,
+    physical: 85,
+    mental: 87,
+    aggression: 82
+  },
+  MCI: {
+    team: 'Manchester City',
+    overall: 91,
+    attack: 90,
+    speed: 86,
+    skill: 91,
+    defense: 85,
+    physical: 84,
+    mental: 92,
+    aggression: 78
+  }
+}
+
+// Computed token attributes
+const currentTokenAttributes = computed(() => {
+  if (!currentPelletPack.value) return []
+  
+  const tokenData = tokenTeamData[currentPelletPack.value.tokenSymbol]
+  if (!tokenData) {
+    // Default attributes for unknown tokens
+    return [
+      { key: 'overall', label: 'OVR', value: 75 },
+      { key: 'attack', label: 'ATK', value: 75 },
+      { key: 'speed', label: 'SPD', value: 75 },
+      { key: 'skill', label: 'SKL', value: 75 },
+      { key: 'defense', label: 'DEF', value: 75 },
+      { key: 'physical', label: 'PHY', value: 75 },
+      { key: 'mental', label: 'MEN', value: 75 },
+      { key: 'aggression', label: 'AGG', value: 75 }
+    ]
+  }
+  
+  return [
+    { key: 'overall', label: 'OVR', value: tokenData.overall },
+    { key: 'attack', label: 'ATK', value: tokenData.attack },
+    { key: 'speed', label: 'SPD', value: tokenData.speed },
+    { key: 'skill', label: 'SKL', value: tokenData.skill },
+    { key: 'defense', label: 'DEF', value: tokenData.defense },
+    { key: 'physical', label: 'PHY', value: tokenData.physical },
+    { key: 'mental', label: 'MEN', value: tokenData.mental },
+    { key: 'aggression', label: 'AGG', value: tokenData.aggression }
+  ]
+})
+
+// Get color based on attribute value
+const getAttributeColor = (value: number): string => {
+  if (value >= 90) return '#10b981' // Green for excellent
+  if (value >= 80) return '#3b82f6' // Blue for good
+  if (value >= 70) return '#f59e0b' // Orange for average
+  return '#ef4444' // Red for poor
+}
+
 // Initialize default pellet packs (will be updated with real token data)
 const initializePelletPacks = () => {
   // Default packs - these will be replaced with actual token data
@@ -383,6 +489,42 @@ const initializePelletPacks = () => {
 const selectPelletPack = (pack: PelletPack) => {
   currentPelletPack.value = pack
   showPelletSelector.value = false
+  
+  // Update torus emission color to match pellet pack color
+  if (pack.color) {
+    // Convert hex color to HSL for the torus
+    const hexToHsl = (hex: string) => {
+      // Remove # if present
+      hex = hex.replace('#', '')
+      
+      // Convert to RGB
+      const r = parseInt(hex.substr(0, 2), 16) / 255
+      const g = parseInt(hex.substr(2, 2), 16) / 255
+      const b = parseInt(hex.substr(4, 2), 16) / 255
+      
+      const max = Math.max(r, g, b)
+      const min = Math.min(r, g, b)
+      let h = 0
+      const s = 0.8 // Fixed saturation for emission
+      const l = (max + min) / 2
+      
+      if (max !== min) {
+        const d = max - min
+        if (max === r) {
+          h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+        } else if (max === g) {
+          h = ((b - r) / d + 2) / 6
+        } else {
+          h = ((r - g) / d + 4) / 6
+        }
+      }
+      
+      return { h: h * 360, s: s * 100, l: l * 100 }
+    }
+    
+    const hsl = hexToHsl(pack.color)
+    updateTorusEmission(`hsl(${hsl.h}, ${hsl.s}%, 50%)`)
+  }
 }
 
 // Handle pellet depletion
@@ -455,7 +597,7 @@ const updateTokenBalances = (tokens: Array<{ symbol: string, balance: number, lo
   
   // If no current pack selected, select the first one
   if (!currentPelletPack.value && availablePelletPacks.value.length > 0) {
-    currentPelletPack.value = availablePelletPacks.value[0]
+    selectPelletPack(availablePelletPacks.value[0])
   }
 }
 
@@ -1801,6 +1943,106 @@ defineExpose({
   .secondary-btn {
     min-height: 48px;
     font-size: 16px;
+  }
+}
+
+/* Token Attributes Display */
+.token-attributes-display {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  min-width: 200px;
+  max-width: 250px;
+}
+
+.attributes-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.attributes-header .token-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.attributes-header .token-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.attributes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.attribute-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.attr-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.attr-value {
+  font-size: 20px;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Mobile adjustments for attributes display */
+@media (max-width: 768px) {
+  .token-attributes-display {
+    top: 10px;
+    left: 10px;
+    padding: 12px;
+    min-width: 180px;
+  }
+  
+  .attributes-header .token-logo {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .attributes-header .token-name {
+    font-size: 16px;
+  }
+  
+  .attributes-grid {
+    gap: 8px;
+  }
+  
+  .attribute-item {
+    padding: 6px;
+  }
+  
+  .attr-value {
+    font-size: 18px;
   }
 }
 </style>

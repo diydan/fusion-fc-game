@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <v-container @click="handleContainerClick">
     <v-row>
       <v-col cols="12">
         <h1 class="text-h4 text-md-h3 font-weight-bold mb-6">My Team</h1>
@@ -195,73 +195,41 @@
                   v-for="player in squad" 
                   :key="player.id"
                   cols="12" 
-                  md="6" 
-                  lg="4"
+                  sm="6" 
+                  md="4"
+                  lg="3"
                 >
-                  <v-card 
-                    :class="{ 'player-damaged': player.condition < 30 }"
-                    variant="outlined"
+                  <div class="player-card-wrapper" :class="{ 'card-selected': selectedPlayers.includes(player.id) }">
+                    <PlayerCardV3
+                      :player="player"
+                      :is-selected="selectedPlayers.includes(player.id)"
+                      @click.stop="togglePlayerSelection(player.id)"
+                      @compare="togglePlayerSelection(player.id)"
+                      @recruit="handlePlayerAction(player)"
+                      @select-bot="selectBotForPlayer(player)"
+                    />
+                  </div>
+                  
+                  <!-- Condition Warning for Damaged Players -->
+                  <v-alert
+                    v-if="player.condition && player.condition < 30"
+                    type="error"
+                    density="compact"
+                    variant="tonal"
+                    class="mt-2"
                   >
-                    <v-card-text>
-                      <div class="d-flex align-center justify-space-between mb-2">
-                        <div class="d-flex align-center gap-2">
-                          <v-avatar size="40">
-                            <v-img 
-                              v-if="player.bot?.model" 
-                              :src="player.bot.model"
-                              :alt="player.name"
-                            />
-                            <v-icon v-else>mdi-account</v-icon>
-                          </v-avatar>
-                          <div>
-                            <h4 class="text-subtitle-1">{{ player.name }}</h4>
-                            <p class="text-caption text-medium-emphasis">
-                              {{ player.position }}
-                              <v-chip v-if="player.bot" size="x-small" color="info" class="ml-1">
-                                <v-icon size="x-small" start>mdi-robot</v-icon>
-                                {{ player.bot.name }}
-                              </v-chip>
-                            </p>
-                          </div>
-                        </div>
-                        <v-avatar size="40" :color="getPlayerConditionColor(player.condition)">
-                          <span class="text-caption font-weight-bold">
-                            {{ player.condition }}
-                          </span>
-                        </v-avatar>
-                      </div>
-
-                      <v-progress-linear
-                        :model-value="player.condition"
-                        :color="getPlayerConditionColor(player.condition)"
-                        height="6"
-                        rounded
-                        class="mb-2"
-                      />
-
-                      <div class="d-flex justify-space-between align-center">
-                        <div class="d-flex gap-1">
-                          <v-chip size="x-small" variant="outlined">
-                            SPD {{ player.stats.speed }}
-                          </v-chip>
-                          <v-chip size="x-small" variant="outlined">
-                            STR {{ player.stats.strength }}
-                          </v-chip>
-                        </div>
-                        
-                        <v-btn
-                          v-if="player.condition < 30"
-                          color="error"
-                          variant="text"
-                          size="small"
-                          prepend-icon="mdi-delete"
-                          @click="sendToJunkYard(player)"
-                        >
-                          Junk Yard
-                        </v-btn>
-                      </div>
-                    </v-card-text>
-                  </v-card>
+                    <v-icon size="small">mdi-alert</v-icon>
+                    Low condition - Consider sending to junk yard
+                    <v-btn
+                      color="error"
+                      variant="text"
+                      size="x-small"
+                      class="ml-2"
+                      @click="sendToJunkYard(player)"
+                    >
+                      Send to Junk Yard
+                    </v-btn>
+                  </v-alert>
                 </v-col>
               </v-row>
 
@@ -290,6 +258,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import PlayerCardV3 from '@/components/recruit/PlayerCardV3.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -299,29 +268,66 @@ const selectedCountry = ref('')
 const selectedTeam = ref('')
 const loadingTeams = ref(false)
 const scouting = ref(false)
+const selectedPlayers = ref([])
 
-// Sample squad data (replace with real data from database)
+// Sample squad data with PlayerCardV3 format
 const squad = ref([
   {
     id: 1,
     name: 'Marcus Silva',
-    position: 'Forward',
+    position: 'FW',
+    nationality: 'Brazil',
+    overall: 85,
     condition: 85,
-    stats: { speed: 82, strength: 75 }
+    tier: 'pro',
+    price: 2500000,
+    stats: {
+      pace: 82,
+      shooting: 78,
+      passing: 75,
+      defense: 45,
+      physical: 75,
+      dribbling: 80
+    },
+    bot: null
   },
   {
     id: 2,
     name: 'David Chen',
-    position: 'Midfielder',
+    position: 'MF',
+    nationality: 'China',
+    overall: 72,
     condition: 25,
-    stats: { speed: 70, strength: 68 }
+    tier: 'semi-pro',
+    price: 800000,
+    stats: {
+      pace: 70,
+      shooting: 60,
+      passing: 75,
+      defense: 68,
+      physical: 68,
+      dribbling: 72
+    },
+    bot: { name: 'DanBot', model: '/bot1/soccer_player.fbx' }
   },
   {
     id: 3,
     name: 'Alex Rodriguez',
-    position: 'Defender',
+    position: 'DF',
+    nationality: 'Spain',
+    overall: 78,
     condition: 60,
-    stats: { speed: 65, strength: 85 }
+    tier: 'pro',
+    price: 1500000,
+    stats: {
+      pace: 65,
+      shooting: 45,
+      passing: 70,
+      defense: 85,
+      physical: 85,
+      dribbling: 60
+    },
+    bot: null
   }
 ])
 
@@ -509,6 +515,39 @@ const goToRecruitPage = () => {
   router.push('/recruit')
 }
 
+// Toggle player selection for comparison
+const togglePlayerSelection = (playerId) => {
+  const index = selectedPlayers.value.indexOf(playerId)
+  if (index > -1) {
+    selectedPlayers.value.splice(index, 1)
+  } else {
+    // Clear other selections and select only this player
+    selectedPlayers.value = [playerId]
+  }
+}
+
+// Handle clicking outside of cards
+const handleContainerClick = (event) => {
+  // If clicking on the container background (not on a card)
+  if (event.target === event.currentTarget || 
+      event.target.closest('.v-container') && 
+      !event.target.closest('.player-card-wrapper')) {
+    selectedPlayers.value = []
+  }
+}
+
+// Handle player action (could be trade, sell, etc)
+const handlePlayerAction = (player) => {
+  console.log('Player action:', player)
+  // TODO: Implement player management actions
+}
+
+// Select bot for player
+const selectBotForPlayer = (player) => {
+  console.log('Select bot for player:', player)
+  router.push(`/character-creator?playerId=${player.id}`)
+}
+
 // Lifecycle
 onMounted(() => {
   // Load user profile if not already loaded
@@ -526,5 +565,47 @@ onMounted(() => {
 
 .player-damaged :deep(.v-card-text) {
   opacity: 0.8;
+}
+
+/* Player card wrapper for proper z-index management */
+.player-card-wrapper {
+  position: relative;
+  z-index: 1;
+  transition: z-index 0.2s ease;
+}
+
+.player-card-wrapper:hover {
+  z-index: 100;
+}
+
+.player-card-wrapper.card-selected {
+  z-index: 200;
+}
+
+/* Ensure the player card itself uses the wrapper's z-index */
+.player-card-wrapper :deep(.player-card) {
+  position: relative;
+}
+
+/* Ensure alerts don't overlap cards */
+.v-alert {
+  position: relative;
+  z-index: 0;
+}
+
+/* Manager profile and other sections should stay below selected cards */
+.v-card {
+  position: relative;
+  z-index: 1;
+}
+
+/* Squad section should allow cards to overlap when selected */
+.v-row {
+  position: relative;
+}
+
+/* Prevent container from creating stacking context that limits z-index */
+.v-container {
+  position: relative;
 }
 </style>

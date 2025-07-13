@@ -7,7 +7,7 @@
         :disabled="!isReady"
         class="action-btn powerup-select-btn"
       >
-        <div class="btn-icon">🎯</div>
+        <div class="btn-icon">⚡</div>
         <div class="btn-label">Choose Power Ups</div>
       </button>
 
@@ -16,18 +16,8 @@
         :disabled="isStrikeSequenceActive || !isReady"
         class="action-btn charge-btn"
       >
-        <div class="btn-icon">⚡</div>
+        <div class="btn-icon">🚀</div>
         <div class="btn-label">Charge</div>
-      </button>
-    </div>
-
-    <!-- Secondary Actions -->
-    <div class="secondary-actions">
-      <button 
-        @click="$emit('toggle-settings')"
-        class="secondary-btn settings-btn"
-      >
-        <div class="btn-icon">⚙️</div>
       </button>
     </div>
 
@@ -61,7 +51,6 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'open-powerup-selector': []
   'shoot-coin': []
-  'toggle-settings': []
 }>()
 
 const statusClass = computed(() => {
@@ -111,45 +100,105 @@ const statusText = computed(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 120px;
-  height: 60px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
+  width: 140px;
+  height: 56px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: none;
+  border-radius: 12px;
+  border: none;
+  position: relative;
   color: white;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transform: translateY(-4px);
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
 
 .action-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
-  transform: translateY(-2px);
+  transform: translateY(-6px);
 }
 
 .action-btn:active:not(:disabled) {
-  transform: translateY(0);
-  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.08s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .action-btn:disabled {
-  opacity: 0.5;
+  transform: translateY(0);
+  opacity: 0.6;
   cursor: not-allowed;
-  background: rgba(255, 255, 255, 0.05);
+}
+
+.powerup-select-btn {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  box-shadow:
+    0 4px 0 0 #FF8C00,
+    0 5px 0 0 #FF8C00,
+    0 6px 0 0 #FF8C00,
+    0 7px 0 0 #FF8C00,
+    0 8px 0 0 #FF8C00,
+    0 8px 8px rgba(255, 140, 0, 0.4),
+    0 8px 16px rgba(255, 140, 0, 0.3);
 }
 
 .powerup-select-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #9C27B0, #E91E63);
-  border-color: #E91E63;
+  background: linear-gradient(135deg, #FFE033, #FFB347);
+  box-shadow:
+    0 6px 0 0 #FF8C00,
+    0 7px 0 0 #FF8C00,
+    0 8px 0 0 #FF8C00,
+    0 9px 0 0 #FF8C00,
+    0 10px 0 0 #FF8C00,
+    0 10px 10px rgba(255, 140, 0, 0.4),
+    0 10px 20px rgba(255, 140, 0, 0.3);
+}
+
+.powerup-select-btn:active:not(:disabled) {
+  box-shadow:
+    0 2px 0 0 #FF8C00,
+    0 3px 0 0 #FF8C00,
+    0 4px 0 0 #FF8C00,
+    0 4px 4px rgba(255, 140, 0, 0.4),
+    0 4px 8px rgba(255, 140, 0, 0.3);
+}
+
+.charge-btn {
+  background: linear-gradient(135deg, #10B981, #34D399);
+  box-shadow:
+    0 4px 0 0 #059669,
+    0 5px 0 0 #059669,
+    0 6px 0 0 #059669,
+    0 7px 0 0 #059669,
+    0 8px 0 0 #059669,
+    0 8px 8px rgba(5, 150, 105, 0.4),
+    0 8px 16px rgba(5, 150, 105, 0.3);
 }
 
 .charge-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #FFD700, #FFA500);
-  border-color: #FFD700;
+  background: linear-gradient(135deg, #34D399, #6EE7B7);
   animation: pulse 1s ease-in-out infinite;
+  box-shadow:
+    0 6px 0 0 #059669,
+    0 7px 0 0 #059669,
+    0 8px 0 0 #059669,
+    0 9px 0 0 #059669,
+    0 10px 0 0 #059669,
+    0 10px 10px rgba(5, 150, 105, 0.4),
+    0 10px 20px rgba(5, 150, 105, 0.3);
+}
+
+.charge-btn:active:not(:disabled) {
+  box-shadow:
+    0 2px 0 0 #059669,
+    0 3px 0 0 #059669,
+    0 4px 0 0 #059669,
+    0 4px 4px rgba(5, 150, 105, 0.4),
+    0 4px 8px rgba(5, 150, 105, 0.3);
 }
 
 .charge-btn:active:not(:disabled) {
@@ -170,47 +219,6 @@ const statusText = computed(() => {
   line-height: 1;
 }
 
-.secondary-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  position: absolute;
-  right: 20px;
-}
-
-.secondary-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  color: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.secondary-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.secondary-btn:active {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.settings-btn:hover {
-  background: linear-gradient(135deg, #607D8B, #90A4AE);
-  border-color: #607D8B;
-}
-
-.secondary-btn .btn-icon {
-  font-size: 20px;
-}
 
 .status-indicator {
   display: none; /* Hidden in bottom menu layout to save space */
@@ -279,9 +287,9 @@ const statusText = computed(() => {
   }
 
   .action-btn {
-    width: 100px;
+    width: 120px;
     height: 48px;
-    border-radius: 12px;
+    border-radius: 10px;
   }
 
   .btn-icon {
@@ -292,19 +300,6 @@ const statusText = computed(() => {
     font-size: 9px;
   }
 
-  .secondary-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-  }
-
-  .secondary-btn .btn-icon {
-    font-size: 18px;
-  }
-
-  .secondary-actions {
-    right: 16px;
-  }
 }
 
 /* Landscape orientation adjustments */
@@ -326,13 +321,5 @@ const statusText = computed(() => {
     font-size: 8px;
   }
 
-  .secondary-btn {
-    width: 40px;
-    height: 40px;
-  }
-
-  .secondary-btn .btn-icon {
-    font-size: 16px;
-  }
 }
 </style>

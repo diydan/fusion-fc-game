@@ -178,6 +178,12 @@ const router = createRouter({
       
     },
     {
+      path: '/auto-battler',
+      name: 'auto-battler',
+      component: () => import('@/views/AutoBattler.vue'),
+      
+    },
+    {
       path: '/intro',
       name: 'intro',
       component: () => import('@/views/Intro.vue'),
