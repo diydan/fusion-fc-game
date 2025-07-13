@@ -66,8 +66,12 @@
       </TresMesh>
 
       <!-- Character Group -->
-      <TresGroup :position="[props.showDanceBot ? -0.75 : 0, sceneOffsetY, 0]">
+      <TresGroup :position="[props.showDanceBot ? -1.35 : 0, sceneOffsetY, 0]">
         <TresGroup ref="modelGroup" :scale="characterScale" />
+        <!-- Main Character Label -->
+        <TresSprite v-if="props.showDanceBot" ref="mainCharacterLabel" :position="[0, 2.2, 0]" :scale="[1.2, 0.3, 1]">
+          <TresSpriteMaterial :map="mainCharacterLabelTexture" :depthTest="false" />
+        </TresSprite>
       </TresGroup>
 
       <!-- Jamie Bot Group (only visible on dance page) -->
@@ -76,14 +80,22 @@
         :position="[-0.6, sceneOffsetY, 1.6]"
         :rotation="[0, 0, 0]">
         <TresGroup ref="danceBotGroup" :scale="characterScale * 0.18" />
+        <!-- Jamie Bot Label -->
+        <TresSprite ref="jamieBotLabel" :position="[0, 0.4, 0]" :scale="[1.2, 0.3, 1]">
+          <TresSpriteMaterial :map="jamieBotLabelTexture" :depthTest="false" />
+        </TresSprite>
       </TresGroup>
 
       <!-- Cansu Bot Group (only visible on dance page) -->
       <TresGroup 
         v-if="props.showDanceBot"
-        :position="[-0.5, sceneOffsetY, 0]"
+        :position="[0.4, sceneOffsetY, 0]"
         :rotation="[0, 0.3, 0]">
-        <TresGroup ref="cansuBotGroup" :scale="characterScale * 0.72" />
+        <TresGroup ref="cansuBotGroup" :scale="[characterScale * 0.459 * 0.9, characterScale * 0.459, characterScale * 0.459]" />
+        <!-- Cansu Bot Label -->
+        <TresSprite ref="cansuBotLabel" :position="[0, 0.8, 0]" :scale="[1.2, 0.3, 1]">
+          <TresSpriteMaterial :map="cansuBotLabelTexture" :depthTest="false" />
+        </TresSprite>
       </TresGroup>
 
       <!-- Goalkeeper Group -->
@@ -201,6 +213,16 @@ const showPerformanceWarning = ref(false)
 const isPowerSaveMode = ref(false)
 const showGoalkeeper = ref(false)
 
+// Dance page loading state
+const danceBotLoaded = ref(false)
+const cansuBotLoaded = ref(false)
+const mainCharacterLoaded = ref(false)
+
+// Label textures
+const mainCharacterLabelTexture = ref<THREE.Texture | null>(null)
+const jamieBotLabelTexture = ref<THREE.Texture | null>(null)
+const cansuBotLabelTexture = ref<THREE.Texture | null>(null)
+
 // Mobile-optimized settings - now using same camera as desktop
 const mobilePowerPreference = ref<'high-performance' | 'low-power' | 'default'>('default')
 const mobileBloomEnabled = ref(false) // Disabled by default on mobile
@@ -270,6 +292,18 @@ const cansuBotGroup = ref()
 const overlayColorHue = ref(218)
 const torusEmissionHue = ref(195)
 
+// Label refs
+const mainCharacterLabel = ref()
+const jamieBotLabel = ref()
+const cansuBotLabel = ref()
+
+// Head bone tracking
+const headBones = ref({
+  mainCharacter: null as THREE.Bone | null,
+  jamieBot: null as THREE.Bone | null,
+  cansuBot: null as THREE.Bone | null
+})
+
 // Play goalkeeper animation based on shot direction
 const playGoalkeeperAnimation = async (animationFile: string) => {
   if (!goalkeeperGroup.value || !sceneRefs.goalkeeperMixer) {
@@ -314,6 +348,80 @@ const playGoalkeeperAnimation = async (animationFile: string) => {
     }
   } catch (error) {
     }
+}
+
+// Create label texture
+const createLabelTexture = (text: string): THREE.Texture => {
+  const canvas = document.createElement('canvas')
+  const context = canvas.getContext('2d')
+  
+  if (!context) {
+    return new THREE.Texture()
+  }
+  
+  // Set canvas size
+  canvas.width = 256
+  canvas.height = 64
+  
+  // Draw background
+  context.fillStyle = 'rgba(0, 0, 0, 0.5)'
+  context.roundRect(0, 0, canvas.width, canvas.height, 20)
+  context.fill()
+  
+  // Draw border
+  context.strokeStyle = 'rgba(255, 255, 255, 0.2)'
+  context.lineWidth = 2
+  context.roundRect(1, 1, canvas.width - 2, canvas.height - 2, 19)
+  context.stroke()
+  
+  // Draw text
+  context.fillStyle = 'white'
+  context.font = 'bold 24px Arial'
+  context.textAlign = 'center'
+  context.textBaseline = 'middle'
+  context.shadowColor = 'rgba(0, 0, 0, 0.5)'
+  context.shadowBlur = 3
+  context.shadowOffsetY = 1
+  context.fillText(text, canvas.width / 2, canvas.height / 2)
+  
+  // Create texture from canvas
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.needsUpdate = true
+  
+  return texture
+}
+
+// Initialize label textures
+const initializeLabelTextures = () => {
+  mainCharacterLabelTexture.value = createLabelTexture('Main Player')
+  jamieBotLabelTexture.value = createLabelTexture('JamieBot')
+  cansuBotLabelTexture.value = createLabelTexture('CansuBot')
+}
+
+// Start synchronized dance animations
+const startSynchronizedDance = () => {
+  if (props.showDanceBot && danceBotLoaded.value && cansuBotLoaded.value && mainCharacterLoaded.value) {
+    console.log('Starting synchronized dance animations!')
+    
+    // Play main character samba animation
+    playWaveAnimation()
+    
+    // Play dance bot animations if they have them
+    if (sceneRefs.danceBotMixer) {
+      sceneRefs.danceBotMixer.stopAllAction()
+      if (sceneRefs.danceBotMixer._actions && sceneRefs.danceBotMixer._actions.length > 0) {
+        sceneRefs.danceBotMixer._actions[0].reset().play()
+      }
+    }
+    
+    // Play cansu bot animations if they have them
+    if (sceneRefs.cansuBotMixer) {
+      sceneRefs.cansuBotMixer.stopAllAction()
+      if (sceneRefs.cansuBotMixer._actions && sceneRefs.cansuBotMixer._actions.length > 0) {
+        sceneRefs.cansuBotMixer._actions[0].reset().play()
+      }
+    }
+  }
 }
 
 // Load dance bot (JamieBot)
@@ -369,6 +477,13 @@ const loadDanceBot = async () => {
     }
     
     console.log('Dance bot loaded successfully')
+    danceBotLoaded.value = true
+    
+    // Find head bone for dance bot
+    headBones.value.jamieBot = findHeadBone(danceBotModel)
+    console.log('Jamie bot head bone found:', headBones.value.jamieBot)
+    
+    startSynchronizedDance()
   } catch (error) {
     console.error('Error loading dance bot:', error)
   }
@@ -427,6 +542,13 @@ const loadCansuBot = async () => {
     }
     
     console.log('Cansu bot loaded successfully')
+    cansuBotLoaded.value = true
+    
+    // Find head bone for cansu bot
+    headBones.value.cansuBot = findHeadBone(cansuBotModel)
+    console.log('Cansu bot head bone found:', headBones.value.cansuBot)
+    
+    startSynchronizedDance()
   } catch (error) {
     console.error('Error loading cansu bot:', error)
   }
@@ -1035,6 +1157,57 @@ const onSceneRender = (event: any) => {
   }
 }
 
+// Find head bone in model
+const findHeadBone = (model: THREE.Object3D): THREE.Bone | null => {
+  let headBone: THREE.Bone | null = null
+  
+  model.traverse((child) => {
+    if (child instanceof THREE.Bone) {
+      const name = child.name.toLowerCase()
+      if (name.includes('head') || name.includes('cabeza') || name.includes('tete')) {
+        headBone = child
+      }
+    }
+  })
+  
+  return headBone
+}
+
+// Update label positions to follow head bones
+const updateLabelPositions = () => {
+  if (!props.showDanceBot) return
+  
+  // Update main character label
+  if (headBones.value.mainCharacter && mainCharacterLabel.value) {
+    const headWorldPos = new THREE.Vector3()
+    headBones.value.mainCharacter.getWorldPosition(headWorldPos)
+    
+    // Convert to local position relative to character group
+    const localPos = modelGroup.value.worldToLocal(headWorldPos.clone())
+    mainCharacterLabel.value.position.set(localPos.x, localPos.y + 0.5, localPos.z)
+  }
+  
+  // Update Jamie bot label
+  if (headBones.value.jamieBot && jamieBotLabel.value) {
+    const headWorldPos = new THREE.Vector3()
+    headBones.value.jamieBot.getWorldPosition(headWorldPos)
+    
+    // Convert to local position relative to bot group
+    const localPos = danceBotGroup.value.worldToLocal(headWorldPos.clone())
+    jamieBotLabel.value.position.set(localPos.x, localPos.y + 0.1, localPos.z)
+  }
+  
+  // Update Cansu bot label
+  if (headBones.value.cansuBot && cansuBotLabel.value) {
+    const headWorldPos = new THREE.Vector3()
+    headBones.value.cansuBot.getWorldPosition(headWorldPos)
+    
+    // Convert to local position relative to bot group
+    const localPos = cansuBotGroup.value.worldToLocal(headWorldPos.clone())
+    cansuBotLabel.value.position.set(localPos.x, localPos.y + 0.2, localPos.z)
+  }
+}
+
 // Animation loop
 const animationLoop = () => {
   const deltaTime = updateAnimations()
@@ -1055,11 +1228,19 @@ const animationLoop = () => {
     sceneRefs.cansuBotMixer.update(deltaTime)
   }
   
+  // Update label positions to follow head bones
+  updateLabelPositions()
+  
   requestAnimationFrame(animationLoop)
 }
 
 // Performance detection on mount
 onMounted(async () => {
+  // Initialize label textures for dance page
+  if (props.showDanceBot) {
+    initializeLabelTextures()
+  }
+  
   // Detect device performance
   const performanceLevel = await detectPerformanceLevel()
   // Apply optimal settings based on device
@@ -1117,6 +1298,17 @@ watch(modelGroup, (newModelGroup) => {
       // Mark as ready
       isReady.value = true
       loadingStatus.value = 'Ready'
+      
+      // Mark main character as loaded and check for synchronized dance
+      if (props.showDanceBot) {
+        mainCharacterLoaded.value = true
+        // Find head bone for main character
+        if (sceneRefs.modelGroup) {
+          headBones.value.mainCharacter = findHeadBone(sceneRefs.modelGroup)
+          console.log('Main character head bone found:', headBones.value.mainCharacter)
+        }
+        startSynchronizedDance()
+      }
     })
   }
 }, { once: true })

@@ -6,7 +6,9 @@
       "Bash(firebase projects:list:*)",
       "Bash(npm run deploy:*)",
       "Bash(gcloud run services describe:*)",
-      "Bash(gcloud run services add-iam-policy-binding:*)"
+      "Bash(gcloud run services add-iam-policy-binding:*)",
+      "Bash(curl:*)",
+      "Bash(firebase functions:config:set:*)"
     ],
     "deny": []
   }

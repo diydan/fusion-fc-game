@@ -24,28 +24,50 @@
           <div v-if="!playerChoice" class="choice-phase">
             <p>Choose your call:</p>
             <div class="coin-choices">
-              <button @click="makeChoice('Heads')" class="choice-button heads">
-                <span class="coin-icon">🪙</span>
-                <span>Heads</span>
-              </button>
-              <button @click="makeChoice('Tails')" class="choice-button tails">
-                <span class="coin-icon">🪙</span>
-                <span>Tails</span>
-              </button>
+              <GameButton
+                @click="makeChoice('Heads')"
+                color="primary"
+                label="Heads"
+                prepend-icon="mdi-currency-usd"
+                size="large"
+                click-sound="coin"
+                class="mx-2"
+              />
+              <GameButton
+                @click="makeChoice('Tails')"
+                color="secondary"
+                label="Tails"
+                prepend-icon="mdi-currency-usd"
+                size="large"
+                click-sound="coin"
+                class="mx-2"
+              />
             </div>
           </div>
 
           <div v-else-if="coinResult" class="result-phase">
             <p>You chose: <strong>{{ playerChoice }}</strong></p>
-            <div class="coin-result">
-              <div class="coin-face">{{ coinResult }}</div>
-            </div>
-            <div class="result-text">
-              <p v-if="playerWon" class="win-text">✅ Correct! You win the toss!</p>
-              <p v-else class="lose-text">❌ Wrong! Computer wins the toss!</p>
-              <p><strong>{{ kickoffTeam }}</strong> team will kick off!</p>
-            </div>
-            <button @click="startGame" class="start-button">Start Game</button>
+            <transition name="fade">
+              <div class="coin-result" v-if="coinResult">
+                <div class="coin-face">{{ coinResult }}</div>
+              </div>
+            </transition>
+            <transition name="fade-delay">
+              <div class="result-text" v-if="coinResult">
+                <p v-if="playerWon" class="win-text">✅ Correct! You win the toss!</p>
+                <p v-else class="lose-text">❌ Wrong! Computer wins the toss!</p>
+                <p><strong>{{ kickoffTeam }}</strong> team will kick off!</p>
+              </div>
+            </transition>
+            <GameButton
+              @click="startGame"
+              color="success"
+              label="Start Game"
+              prepend-icon="mdi-play-circle"
+              size="large"
+              click-sound="success"
+              class="mt-4"
+            />
           </div>
         </div>
       </div>
@@ -126,10 +148,23 @@
     />
     
     <div class="controls">
-      <button @click="togglePlay" :disabled="!gameStarted" class="control-btn">
-        {{ isPlaying ? 'Pause' : 'Play' }}
-      </button>
-      <button @click="resetGame" class="control-btn">Reset</button>
+      <GameButton
+        @click="togglePlay"
+        :disabled="!gameStarted"
+        color="primary"
+        :label="isPlaying ? 'Pause' : 'Play'"
+        :prepend-icon="isPlaying ? 'mdi-pause' : 'mdi-play'"
+        click-sound="click"
+        class="mr-2"
+      />
+      <GameButton
+        @click="resetGame"
+        color="error"
+        label="Reset"
+        prepend-icon="mdi-restart"
+        click-sound="click"
+        class="mr-4"
+      />
       <div class="sound-toggle">
         <label>
           <input type="checkbox" v-model="soundEnabled" />
@@ -245,8 +280,21 @@
       <div class="team-stats-content">
         <h3>Team Comparison</h3>
         <div class="team-selector">
-          <button @click="selectedTeam = 'home'" :class="{ active: selectedTeam === 'home' }">Home Team</button>
-          <button @click="selectedTeam = 'away'" :class="{ active: selectedTeam === 'away' }">Away Team</button>
+          <GameButton
+            @click="selectedTeam = 'home'"
+            :color="selectedTeam === 'home' ? 'primary' : 'default'"
+            label="Home Team"
+            size="small"
+            :variant="selectedTeam === 'home' ? '3d' : 'flat'"
+            class="mr-2"
+          />
+          <GameButton
+            @click="selectedTeam = 'away'"
+            :color="selectedTeam === 'away' ? 'error' : 'default'"
+            label="Away Team"
+            size="small"
+            :variant="selectedTeam === 'away' ? '3d' : 'flat'"
+          />
         </div>
         <canvas ref="spiderChart" width="300" height="300" class="spider-chart"></canvas>
         <div class="average-stats">
@@ -276,6 +324,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { FutsalGameEngine, type Player, type PlayerAttributes, type Ball, type GameConfig } from '@/game/engine/FutsalGameEngine'
+import GameButton from '@/components/GameButton.vue'
 
 const canvas = ref<HTMLCanvasElement>()
 const spiderChart = ref<HTMLCanvasElement>()
@@ -1448,11 +1497,13 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 
 <style scoped>
 .sim-2d-container {
-  background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
   color: white;
   padding: 20px;
+  padding-top: 0;
+  margin-top: -20px;
   min-height: 100vh;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
 }
 
 .game-header {
@@ -1463,12 +1514,13 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
   padding: 20px 40px;
   border-radius: 15px;
   margin-bottom: 20px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 120, 237, 0.3);
 }
 
 .team-score {
@@ -1603,12 +1655,12 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .team-config {
-  background: rgba(30, 41, 59, 0.9);
+  background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
   padding: 24px;
   border-radius: 12px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 120, 237, 0.3);
 }
 
 .team-config h3 {
@@ -1642,9 +1694,9 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 .config-row select,
 .config-row input[type="range"] {
   flex: 1;
-  background-color: rgba(15, 23, 42, 0.8);
+  background-color: rgba(0, 63, 237, 0.1);
   color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(0, 120, 237, 0.3);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 14px;
@@ -1653,8 +1705,8 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 
 .config-row select:focus {
   outline: none;
-  border-color: #00b4d8;
-  box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.2);
+  border-color: #0078ed;
+  box-shadow: 0 0 0 2px rgba(0, 120, 237, 0.3);
 }
 
 .strategy-label {
@@ -1666,7 +1718,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 
 /* Engine controls */
 .engine-controls {
-  background: rgba(30, 41, 59, 0.9);
+  background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
   padding: 0;
   border-radius: 12px;
@@ -1674,12 +1726,12 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 120, 237, 0.3);
 }
 
 .stats-header {
   padding: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 120, 237, 0.3);
 }
 .stats-content {
   padding: 20px;
@@ -1701,7 +1753,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid rgba(0, 120, 237, 0.2);
 }
 
 .stat-row:last-child {
@@ -1751,7 +1803,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .possession-home {
-  background: linear-gradient(90deg, #00b4d8 0%, #0077b6 100%);
+  background: linear-gradient(90deg, #0078ed 0%, #3366FF 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -1762,7 +1814,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .possession-away {
-  background: linear-gradient(90deg, #ff6b6b 0%, #ff5252 100%);
+  background: linear-gradient(90deg, #FF8C42 0%, #E67E22 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -1897,18 +1949,20 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .coin-flip-modal {
-  background-color: #2a2a2a;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
   padding: 40px;
   border-radius: 20px;
   text-align: center;
   min-width: 400px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 120, 237, 0.3);
 }
 
 .coin-flip-modal h2 {
   margin-bottom: 30px;
   font-size: 32px;
-  color: #4a90e2;
+  color: #3366FF;
 }
 
 .choice-phase p {
@@ -1968,7 +2022,8 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 
 .coin-face {
   font-size: 80px;
-  animation: coinBounce 0.5s ease-out;
+  animation: coinFadeIn 0.5s ease-out;
+  opacity: 1;
 }
 
 .result-text {
@@ -2009,10 +2064,38 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 
 /* Animations */
 
-@keyframes coinBounce {
-  0% { transform: scale(0) rotate(0deg); }
-  50% { transform: scale(1.2) rotate(180deg); }
-  100% { transform: scale(1) rotate(360deg); }
+/* Fade transitions for coin result */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.fade-delay-enter-active {
+  transition: opacity 0.5s ease-out 0.3s, transform 0.5s ease-out 0.3s;
+}
+.fade-delay-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+@keyframes coinFadeIn {
+  0% { 
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.05);
+  }
+  100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes achievementGlow {
@@ -2036,9 +2119,9 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .achievement-notification {
-  background: linear-gradient(135deg, rgba(0, 180, 216, 0.1) 0%, rgba(0, 119, 182, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(0, 120, 237, 0.1) 0%, rgba(51, 102, 255, 0.1) 100%);
   backdrop-filter: blur(10px);
-  border: 2px solid #00b4d8;
+  border: 2px solid #0078ed;
   border-radius: 12px;
   padding: 16px 24px;
   margin-bottom: 12px;
@@ -2046,7 +2129,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   align-items: center;
   gap: 16px;
   min-width: 320px;
-  box-shadow: 0 8px 16px rgba(0, 180, 216, 0.3);
+  box-shadow: 0 8px 16px rgba(0, 120, 237, 0.3);
   animation: achievementGlow 2s ease-in-out;
 }
 
@@ -2057,9 +2140,9 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 .achievement-title {
   font-weight: bold;
   font-size: 16px;
-  color: #00b4d8;
+  color: #3366FF;
   margin-bottom: 4px;
-  text-shadow: 0 0 10px rgba(0, 180, 216, 0.3);
+  text-shadow: 0 0 10px rgba(51, 102, 255, 0.3);
 }
 
 .achievement-desc {
@@ -2102,12 +2185,12 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 
 /* Activity Stream */
 .activity-stream {
-  background: rgba(30, 41, 59, 0.9);
+  background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
   border-radius: 12px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 120, 237, 0.3);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -2120,7 +2203,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 120, 237, 0.3);
 }
 
 .activity-header h3 {

@@ -34,6 +34,7 @@
         </transition>
       </div>
 
+
     </div>
 
     <!-- Karaoke Lyrics Display -->
@@ -146,6 +147,8 @@ onMounted(() => {
   startBeatTracking()
   // Enable lyrics by default on dance page
   audioState.showLyrics = true
+  // Auto-play music on page load immediately
+  toggleBackgroundMusic()
 })
 
 onUnmounted(() => {
@@ -219,11 +222,27 @@ onUnmounted(() => {
   border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Hide lyrics in the music footer on dance page */
-.music-player-footer :deep(.lyrics-center),
+/* Hide only lyrics in the music footer on dance page, keep song title */
 .music-player-footer :deep(.lyrics-stack),
 .music-player-footer :deep(.karaoke-lyrics) {
   display: none !important;
+}
+
+/* Show track info in lyrics center */
+.music-player-footer :deep(.lyrics-center) {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.music-player-footer :deep(.track-info) {
+  display: block !important;
+}
+
+.music-player-footer :deep(.track-name) {
+  display: block !important;
+  color: white !important;
+  font-size: 1rem !important;
 }
 
 /* Also override mobile positioning */
@@ -381,6 +400,76 @@ onUnmounted(() => {
   
   .lyric-line.current {
     font-size: 1.5rem;
+  }
+}
+
+/* Character Labels */
+.character-labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.character-label {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 6px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.label-text {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+
+/* Position labels above each character */
+.main-character-label {
+  top: 35%;
+  left: 25%;
+}
+
+.jamie-bot-label {
+  top: 40%;
+  left: 35%;
+}
+
+.cansu-bot-label {
+  top: 35%;
+  left: 55%;
+}
+
+/* Mobile label adjustments */
+@media (max-width: 768px) {
+  .character-label {
+    padding: 4px 12px;
+  }
+  
+  .label-text {
+    font-size: 12px;
+  }
+  
+  .main-character-label {
+    top: 38%;
+    left: 20%;
+  }
+  
+  .jamie-bot-label {
+    top: 42%;
+    left: 40%;
+  }
+  
+  .cansu-bot-label {
+    top: 38%;
+    left: 60%;
   }
 }
 
