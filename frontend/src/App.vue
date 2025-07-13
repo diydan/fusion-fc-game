@@ -93,9 +93,9 @@
       app
       class="d-none d-md-flex"
       permanent
-      width="240"
+      width="256"
     >
-      <v-list density="compact" class="px-1 mt-2">
+      <v-list density="compact" class="px-2 mt-4">
         <v-list-item
           prepend-icon="mdi-view-dashboard"
           title="Dashboard"
@@ -145,7 +145,7 @@
 
     <v-main :class="isLoginPage ? 'login-main' : 'main-content'">
       <div v-if="!isLoginPage" class="mobile-container">
-        <v-container fluid class="pa-1 pa-md-2 full-width-container">
+        <v-container fluid class="pa-2 pa-md-4 full-width-container">
           <router-view v-slot="{ Component }">
             <transition name="fade" mode="out-in">
               <component :is="Component" />
@@ -394,23 +394,14 @@ const logout = async () => {
     width: 100% !important;
     max-width: 1200px !important;
     margin: 0 auto !important;
-    padding-left: 8px !important;
-    padding-right: 8px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
   }
 
   .v-navigation-drawer {
     background: #010224 !important;
     border-right: 1px solid rgba(83, 52, 131, 0.3) !important;
     backdrop-filter: blur(20px);
-  }
-  
-  .v-main {
-    padding: 8px !important;
-  }
-  
-  /* Reduce padding on desktop for better space utilization */
-  .v-main .v-container {
-    padding: 8px !important;
   }
 }
 </style>

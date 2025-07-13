@@ -149,12 +149,8 @@
       :loading-status="loadingStatus"
       :is-strike-sequence-active="animationState.isStrikeSequenceActive"
       :current-animation="getCurrentAnimation()"
-      @trigger-strike="triggerMobileStrikeSequence"
+      @open-powerup-selector="showPelletSelector = true"
       @shoot-coin="shootCoinWithPellets"
-      @trigger-dance="playWaveAnimation"
-      @reset-character="resetCharacterPosition"
-      @rotate-and-drop="rotateAndDropBall"
-      @trigger-strike2="triggerStrike2"
     />
 
     <!-- Color Controls in top left corner -->
@@ -174,10 +170,20 @@
     <!-- Pellet Bar for PowerUp Fuel -->
     <PelletBar
       v-if="!props.hideUiElements"
-      :current-pellets="currentPellets"
-      :max-pellets="maxPellets"
-      :token-balance="tokenBalance"
+      :current-pellets="currentPelletPack?.currentPellets || 0"
+      :max-pellets="currentPelletPack?.maxPellets || 10"
+      :current-pack="currentPelletPack"
       @pellet-depleted="onPelletDepleted"
+      @open-selector="showPelletSelector = true"
+    />
+
+    <!-- Pellet Pack Selector -->
+    <PelletPackSelector
+      v-if="showPelletSelector && !props.hideUiElements"
+      :available-packs="availablePelletPacks"
+      :selected-pack="currentPelletPack"
+      @select="selectPelletPack"
+      @close="showPelletSelector = false"
     />
 
 
@@ -225,7 +231,9 @@ import SceneCamera from './scene/SceneCamera.vue'
 import SceneLighting from './scene/SceneLighting.vue'
 import MobileControlPanel from './mobile/MobileControlPanel.vue'
 import PelletBar from './ui/PelletBar.vue'
+import PelletPackSelector from './ui/PelletPackSelector.vue'
 import MobileColorSlider from './mobile/MobileColorSlider.vue'
+import type { PelletPack } from './ui/PelletPackSelector.vue'
 
 // Composables (reuse existing ones)
 import { useSceneSetup } from '@/composables/useSceneSetup'
@@ -320,44 +328,134 @@ const overlayColorHue = ref(218)
 const torusEmissionHue = ref(195)
 
 // Pellet management state
-const tokenBalance = ref(10) // Default token balance
-const maxPellets = ref(10) // Maximum pellets based on tokens
-const currentPellets = ref(10) // Current pellets available
+const showPelletSelector = ref(false)
+const currentPelletPack = ref<PelletPack | null>(null)
+const availablePelletPacks = ref<PelletPack[]>([])
+
+// Initialize default pellet packs (will be updated with real token data)
+const initializePelletPacks = () => {
+  // Default packs - these will be replaced with actual token data
+  availablePelletPacks.value = [
+    {
+      tokenSymbol: 'CHZ',
+      tokenBalance: 100,
+      currentPellets: 10,
+      maxPellets: 10,
+      color: '#FFD700',
+      powerMultiplier: 1,
+      refillCost: 10
+    },
+    {
+      tokenSymbol: 'PSG',
+      tokenBalance: 50,
+      currentPellets: 8,
+      maxPellets: 8,
+      color: '#FF0000',
+      powerMultiplier: 1.5,
+      refillCost: 8
+    },
+    {
+      tokenSymbol: 'BAR',
+      tokenBalance: 30,
+      currentPellets: 6,
+      maxPellets: 6,
+      color: '#004D98',
+      powerMultiplier: 2,
+      refillCost: 6
+    },
+    {
+      tokenSymbol: 'JUV',
+      tokenBalance: 20,
+      currentPellets: 5,
+      maxPellets: 5,
+      color: '#000000',
+      powerMultiplier: 2.5,
+      refillCost: 5
+    }
+  ]
+  
+  // Set default pack
+  currentPelletPack.value = availablePelletPacks.value[0]
+}
+
+// Select a pellet pack
+const selectPelletPack = (pack: PelletPack) => {
+  currentPelletPack.value = pack
+  showPelletSelector.value = false
+}
 
 // Handle pellet depletion
 const onPelletDepleted = () => {
-  // Refill pellets when they reach 0
-  if (currentPellets.value === 0 && tokenBalance.value > 0) {
-    const refillAmount = Math.min(tokenBalance.value, maxPellets.value)
-    currentPellets.value = refillAmount
-    tokenBalance.value = Math.max(0, tokenBalance.value - refillAmount)
+  if (currentPelletPack.value) {
+    // Refill pellets when they reach 0
+    if (currentPelletPack.value.currentPellets === 0 && currentPelletPack.value.tokenBalance >= currentPelletPack.value.refillCost) {
+      currentPelletPack.value.tokenBalance -= currentPelletPack.value.refillCost
+      currentPelletPack.value.currentPellets = currentPelletPack.value.maxPellets
+    }
   }
 }
 
 // Modified shoot coin function that consumes pellets
 const shootCoinWithPellets = () => {
-  if (currentPellets.value > 0) {
-    currentPellets.value--
-    shootCoin()
+  if (currentPelletPack.value && currentPelletPack.value.currentPellets > 0) {
+    currentPelletPack.value.currentPellets--
+    
+    // Apply power multiplier effect
+    const powerMultiplier = currentPelletPack.value.powerMultiplier || 1
+    
+    // Shoot coin with power multiplier (you can modify shootCoin to accept power parameter)
+    for (let i = 0; i < powerMultiplier; i++) {
+      setTimeout(() => shootCoin(), i * 100) // Shoot multiple coins for higher power
+    }
   } else {
-    // Optional: Show a message that pellets are depleted
     console.log('No pellets available!')
   }
 }
 
-// Update token balance and pellets (can be called from parent component)
-const updateTokenBalance = (newBalance: number) => {
-  tokenBalance.value = newBalance
-  // If we have no pellets but have tokens, refill
-  if (currentPellets.value === 0 && tokenBalance.value > 0) {
-    onPelletDepleted()
+// Update token balances from external source (wallet integration)
+const updateTokenBalances = (tokens: Array<{ symbol: string, balance: number, logoURI?: string }>) => {
+  // Map tokens to pellet packs
+  availablePelletPacks.value = tokens.map(token => {
+    // Find existing pack to preserve current pellets
+    const existingPack = availablePelletPacks.value.find(p => p.tokenSymbol === token.symbol)
+    
+    // Different pack configurations based on token type
+    let config = { maxPellets: 10, powerMultiplier: 1, refillCost: 10, color: '#FFD700' }
+    
+    // Custom configurations for known tokens
+    switch (token.symbol) {
+      case 'PSG':
+        config = { maxPellets: 8, powerMultiplier: 1.5, refillCost: 8, color: '#FF0000' }
+        break
+      case 'BAR':
+        config = { maxPellets: 6, powerMultiplier: 2, refillCost: 6, color: '#004D98' }
+        break
+      case 'JUV':
+        config = { maxPellets: 5, powerMultiplier: 2.5, refillCost: 5, color: '#000000' }
+        break
+      case 'MCI':
+        config = { maxPellets: 7, powerMultiplier: 1.8, refillCost: 7, color: '#6CABDD' }
+        break
+    }
+    
+    return {
+      tokenSymbol: token.symbol,
+      tokenBalance: token.balance,
+      currentPellets: existingPack?.currentPellets || config.maxPellets,
+      maxPellets: config.maxPellets,
+      color: config.color,
+      logoURI: token.logoURI,
+      powerMultiplier: config.powerMultiplier,
+      refillCost: config.refillCost
+    }
+  })
+  
+  // If no current pack selected, select the first one
+  if (!currentPelletPack.value && availablePelletPacks.value.length > 0) {
+    currentPelletPack.value = availablePelletPacks.value[0]
   }
 }
 
-// Expose method for parent component
-defineExpose({
-  updateTokenBalance
-})
 
 // Label refs
 const mainCharacterLabel = ref()
@@ -1318,6 +1416,9 @@ onMounted(async () => {
     initializeLabelTextures()
   }
   
+  // Initialize pellet packs
+  initializePelletPacks()
+  
   // Detect device performance
   const performanceLevel = await detectPerformanceLevel()
   // Apply optimal settings based on device
@@ -1422,7 +1523,8 @@ onBeforeUnmount(() => {
 // Expose methods for parent component
 defineExpose({
   updateOverlayColor,
-  updateTorusEmission
+  updateTorusEmission,
+  updateTokenBalances
 })
 </script>
 

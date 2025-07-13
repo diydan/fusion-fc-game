@@ -421,10 +421,12 @@
                 </div>
               </v-window-item>
             </v-window>
-            
-            <!-- Bonus Tokens Section -->
-            <div class="bonus-tokens-section mt-6">
-                <h3 class="text-center mb-4">⚡ Performance Boost Tokens</h3>
+          </v-card-text>
+    </v-card>
+    
+    <!-- Bonus Tokens Section -->
+    <div class="bonus-tokens-section mt-6">
+        <h2 class="text-h5 text-center mb-4">⚡ Performance Boost Tokens</h2>
                 <p class="text-center text-grey mb-6">Each token provides 1% bonus to specific attributes (max 100% total)</p>
                 
                 <v-row>
@@ -474,9 +476,7 @@
                     </v-card>
                   </v-col>
                 </v-row>
-            </div>
-          </v-card-text>
-    </v-card>
+    </div>
 
     <!-- Token Details Dialog -->
     <v-dialog v-model="tokenDialog" max-width="500">
@@ -1153,10 +1153,7 @@ onUnmounted(() => {
 
 /* Bonus Tokens Section */
 .bonus-tokens-section {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 2rem;
+  padding: 0;
 }
 
 /* Bonus Cards */

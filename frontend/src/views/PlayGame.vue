@@ -444,6 +444,11 @@ const awayStrategy = ref(4)
 // Game settings
 const gameSpeed = ref(1)
 
+// AI Manager state
+const aiManagerLastAction = ref(0)
+const AI_MANAGER_COOLDOWN = 10000 // 10 seconds between actions
+const aiManagerMood = ref<'neutral' | 'happy' | 'angry' | 'frustrated'>('neutral')
+
 // Manager speech options
 const managerSpeeches = {
   encourage: [
@@ -493,6 +498,66 @@ const managerSpeeches = {
     "Shocking refereeing!",
     "Get some glasses, ref!",
     "Worst decision I've ever seen!"
+  ]
+}
+
+// AI Manager speech options
+const aiManagerSpeeches = {
+  scored: [
+    "YES! That's how we do it!",
+    "Get in! Beautiful goal!",
+    "That's what I'm talking about!",
+    "Brilliant! Keep it up!",
+    "Fantastic finish!"
+  ],
+  conceded: [
+    "Wake up back there!",
+    "What was that defending?!",
+    "Concentrate! Focus!",
+    "Absolutely shocking!",
+    "Get your heads in the game!"
+  ],
+  winning: [
+    "Keep the pressure on!",
+    "Don't get complacent!",
+    "Stay focused, lads!",
+    "Control the game!",
+    "Keep possession!"
+  ],
+  losing: [
+    "We need to push harder!",
+    "Get forward! Attack!",
+    "We're running out of time!",
+    "Show some passion!",
+    "This is embarrassing!"
+  ],
+  foul_for: [
+    "Good, break up their play!",
+    "That's tactical!",
+    "Well done, stop their momentum!",
+    "Smart foul!",
+    "Good decision!"
+  ],
+  foul_against: [
+    "That's never a foul!",
+    "Referee, are you serious?!",
+    "Absolutely ridiculous!",
+    "He dived! Clear dive!",
+    "You're killing the game, ref!"
+  ],
+  miss: [
+    "How did you miss that?!",
+    "You have to score those!",
+    "Unbelievable miss!",
+    "My grandmother could've scored!",
+    "Practice your finishing!"
+  ],
+  save: [
+    "What a save! Unlucky!",
+    "Great effort! Keep shooting!",
+    "So close! Next time!",
+    "Their keeper's having a blinder!",
+    "Keep testing him!"
   ]
 }
 
@@ -956,6 +1021,9 @@ const gameLoop = (currentTime: number) => {
   // Check for game events
   checkGameEvents()
   
+  // AI Manager periodic behavior
+  checkAIManagerBehavior()
+  
   if (isPlaying.value) {
     animationId = requestAnimationFrame(gameLoop)
   }
@@ -1096,6 +1164,63 @@ const managerAction = (action: 'encourage' | 'belittle' | 'provoke' | 'swear') =
   // Play sound effect if enabled
   if (soundEnabled.value) {
     playWhistleSound()
+  }
+}
+
+const aiManagerAction = (situation: keyof typeof aiManagerSpeeches) => {
+  const currentTime = Date.now()
+  
+  // Check cooldown
+  if (currentTime - aiManagerLastAction.value < AI_MANAGER_COOLDOWN) {
+    return
+  }
+  
+  // Get random speech for the situation
+  const speeches = aiManagerSpeeches[situation]
+  const randomSpeech = speeches[Math.floor(Math.random() * speeches.length)]
+  
+  // Show speech bubble
+  managerSpeech.value = {
+    text: randomSpeech,
+    team: 'away'
+  }
+  
+  // Add to activity stream
+  addGameEvent({
+    type: 'manager',
+    text: `Away Manager: "${randomSpeech}"`
+  })
+  
+  // Update last action time
+  aiManagerLastAction.value = currentTime
+  
+  // Hide speech bubble after 3 seconds
+  setTimeout(() => {
+    if (managerSpeech.value?.team === 'away') {
+      managerSpeech.value = null
+    }
+  }, 3000)
+}
+
+// Check AI Manager periodic behavior
+const checkAIManagerBehavior = () => {
+  if (!gameEngine || gameOver.value) return
+  
+  const currentTime = Date.now()
+  
+  // Check cooldown
+  if (currentTime - aiManagerLastAction.value < AI_MANAGER_COOLDOWN) {
+    return
+  }
+  
+  // Random chance for periodic behavior (1% per frame when game is active)
+  if (Math.random() < 0.01) {
+    // Check game state
+    if (awayScore.value > homeScore.value) {
+      aiManagerAction('winning')
+    } else if (awayScore.value < homeScore.value) {
+      aiManagerAction('losing')
+    }
   }
 }
 
@@ -1606,12 +1731,29 @@ const checkGameEvents = () => {
   if (goals.length > gameEvents.value.filter(e => e.type === 'goal').length) {
     const newGoal = goals[goals.length - 1]
     addGameEvent('goal', `GOAL! ${newGoal.scorer} scores for ${newGoal.team}!`)
+    
+    // AI Manager reaction to goal
+    if (newGoal.team === 'away') {
+      aiManagerAction('scored')
+    } else {
+      aiManagerAction('conceded')
+    }
   }
   
   // Check for fouls
   const currentFouls = stats?.foulsCommitted?.home + stats?.foulsCommitted?.away || 0
   if (currentFouls > v1Stats.value.fouls) {
     addGameEvent('foul', 'Foul committed')
+    
+    // AI Manager reaction to fouls (50% chance to react)
+    if (Math.random() < 0.5) {
+      // Determine which team committed the foul based on the restart
+      if (state.restartTeam === 'away') {
+        aiManagerAction('foul_for')
+      } else {
+        aiManagerAction('foul_against')
+      }
+    }
   }
   
   // Check for free kicks
@@ -1717,8 +1859,8 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .team-logo-small {
-  width: 50px;
-  height: 50px;
+  width: 65px;
+  height: 65px;
   object-fit: cover;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.3);
@@ -1810,18 +1952,18 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .home-avatar {
-  bottom: -70px;
-  left: 20px;
+  bottom: -85px;
+  left: 15px;
 }
 
 .away-avatar {
-  bottom: -70px;
-  right: 20px;
+  bottom: -85px;
+  right: 15px;
 }
 
 .avatar-circle {
-  width: 72px;
-  height: 72px;
+  width: 94px;
+  height: 94px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -2011,6 +2153,16 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   left: 100px;
 }
 
+.manager-speech-bubble:not(.home-speech) {
+  left: auto;
+  right: 100px;
+}
+
+.manager-speech-bubble:not(.home-speech) .speech-tail {
+  left: auto;
+  right: 20px;
+}
+
 .speech-content {
   position: relative;
   z-index: 1;
@@ -2057,7 +2209,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   justify-content: center;
   align-items: center;
   gap: 20px;
-  margin-bottom: 80px;
+  margin-bottom: 100px;
   flex-wrap: wrap;
 }
 

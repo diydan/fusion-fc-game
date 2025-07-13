@@ -75,6 +75,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import MobileSelectBotScene from "@/components/MobileSelectBotScene.vue"
 import { useAudio } from '@/composables/useAudio'
+import { useWallet } from '@/composables/useWallet'
 
 // Vuetify composables
 const { mobile } = useDisplay()
@@ -105,6 +106,9 @@ const torusColorHue = ref(195) // Default blue-ish
 
 // Audio system - get toggle function for play button, global footer handles full controls
 const { audioState, toggleBackgroundMusic } = useAudio()
+
+// Wallet integration
+const { tokens, isConnected, connectWallet, fetchTokens } = useWallet()
 
 // Scene reference
 const sceneCanvas = ref()
@@ -209,7 +213,7 @@ const getBackgroundStyle = () => {
 }
 
 // Set initial quality based on device
-onMounted(() => {
+onMounted(async () => {
   if (isMobile.value) {
     // Start with medium quality on mobile
     qualityLevel.value = 'medium'
@@ -220,7 +224,30 @@ onMounted(() => {
     showTouchHints.value = false
   }
   
-  })
+  // Try to fetch wallet tokens if connected
+  try {
+    if (isConnected.value) {
+      await fetchTokens()
+    }
+  } catch (error) {
+    console.log('Failed to fetch tokens:', error)
+  }
+})
+
+// Watch for token changes and update scene
+watch(tokens, (newTokens) => {
+  if (sceneCanvas.value && newTokens.length > 0) {
+    // Format tokens for pellet packs
+    const formattedTokens = newTokens.map(token => ({
+      symbol: token.symbol,
+      balance: parseFloat(token.balance),
+      logoURI: token.logoURI
+    }))
+    
+    // Update pellet packs in the scene
+    sceneCanvas.value.updateTokenBalances(formattedTokens)
+  }
+}, { deep: true })
 </script>
 
 <style scoped>

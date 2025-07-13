@@ -3,58 +3,21 @@
     <!-- Main Action Buttons -->
     <div class="main-actions">
       <button
-        @click="$emit('trigger-strike')"
-        :disabled="isStrikeSequenceActive || !isReady"
-        class="action-btn strike-btn"
-        :class="{ active: isStrikeSequenceActive }"
+        @click="$emit('open-powerup-selector')"
+        :disabled="!isReady"
+        class="action-btn powerup-select-btn"
       >
-        <div class="btn-icon">⚽</div>
-        <div class="btn-label">Strike</div>
-      </button>
-
-      <button
-        @click="$emit('trigger-strike2')"
-        :disabled="isStrikeSequenceActive || !isReady"
-        class="action-btn strike2-btn"
-      >
-        <div class="btn-icon">🥅</div>
-        <div class="btn-label">Goal</div>
+        <div class="btn-icon">🎯</div>
+        <div class="btn-label">Choose Power Ups</div>
       </button>
 
       <button
         @click="$emit('shoot-coin')"
         :disabled="isStrikeSequenceActive || !isReady"
-        class="action-btn coin-btn"
+        class="action-btn charge-btn"
       >
-        <div class="btn-icon">🪙</div>
-        <div class="btn-label">PowerUp</div>
-      </button>
-
-      <button
-        @click="$emit('trigger-dance')"
-        :disabled="isStrikeSequenceActive || !isReady"
-        class="action-btn dance-btn"
-      >
-        <div class="btn-icon">💃</div>
-        <div class="btn-label">Dance</div>
-      </button>
-
-      <button
-        @click="$emit('reset-character')"
-        :disabled="!isReady"
-        class="action-btn reset-btn"
-      >
-        <div class="btn-icon">🔄</div>
-        <div class="btn-label">Reset</div>
-      </button>
-
-      <button
-        @click="$emit('rotate-and-drop')"
-        :disabled="isStrikeSequenceActive || !isReady"
-        class="action-btn rotate-btn"
-      >
-        <div class="btn-icon">↩️</div>
-        <div class="btn-label">Turn</div>
+        <div class="btn-icon">⚡</div>
+        <div class="btn-label">Charge</div>
       </button>
     </div>
 
@@ -96,13 +59,9 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  'trigger-strike': []
-  'trigger-strike2': []
+  'open-powerup-selector': []
   'shoot-coin': []
-  'trigger-dance': []
-  'reset-character': []
   'toggle-settings': []
-  'rotate-and-drop': []
 }>()
 
 const statusClass = computed(() => {
@@ -182,35 +141,19 @@ const statusText = computed(() => {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.strike-btn.active {
-  background: linear-gradient(135deg, #FF6B6B, #FF5722);
-  border-color: #FF5722;
-  animation: pulse 1s ease-in-out infinite;
-}
-
-.strike2-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4CAF50, #2E7D32);
-  border-color: #2E7D32;
-}
-
-.coin-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #FFD700, #FFA500);
-  border-color: #FFD700;
-}
-
-.dance-btn:hover:not(:disabled) {
+.powerup-select-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, #9C27B0, #E91E63);
   border-color: #E91E63;
 }
 
-.reset-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2196F3, #03A9F4);
-  border-color: #03A9F4;
+.charge-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  border-color: #FFD700;
+  animation: pulse 1s ease-in-out infinite;
 }
 
-.rotate-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #00BCD4, #00ACC1);
-  border-color: #00ACC1;
+.charge-btn:active:not(:disabled) {
+  animation: none;
 }
 
 .btn-icon {

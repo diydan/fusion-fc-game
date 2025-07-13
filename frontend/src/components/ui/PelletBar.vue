@@ -1,7 +1,9 @@
 <template>
   <div class="pellet-bar-container">
     <div class="pellet-bar-label">
-      <span class="label-text">PowerUp Fuel</span>
+      <div class="label-left">
+        <span class="label-text">{{ currentPack?.tokenSymbol || 'PowerUp' }} Ammo</span>
+      </div>
       <span class="pellet-count">{{ currentPellets }}/{{ maxPellets }}</span>
     </div>
     <div class="pellet-bar">
@@ -13,29 +15,40 @@
           'filled': index < currentPellets,
           'depleting': index === currentPellets - 1 && isDepletingAnimation
         }"
+        :style="{ 
+          backgroundColor: index < currentPellets ? (currentPack?.color || '#FFD700') : 'rgba(255, 255, 255, 0.1)',
+          boxShadow: index < currentPellets ? `0 2px 8px ${currentPack?.color || '#FFD700'}40` : 'none'
+        }"
       >
         <div class="pellet-glow"></div>
       </div>
+    </div>
+    <div v-if="currentPack?.powerMultiplier && currentPack.powerMultiplier > 1" class="power-indicator">
+      {{ currentPack.powerMultiplier }}x
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import type { PelletPack } from './PelletPackSelector.vue'
 
 interface Props {
   currentPellets: number
   maxPellets?: number
   tokenBalance?: number
+  currentPack?: PelletPack | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   maxPellets: 10,
-  tokenBalance: 0
+  tokenBalance: 0,
+  currentPack: null
 })
 
 const emit = defineEmits<{
   'pelletDepleted': []
+  'openSelector': []
 }>()
 
 const isDepletingAnimation = ref(false)
@@ -64,6 +77,7 @@ watch(() => props.currentPellets, (newVal, oldVal) => {
   border-radius: 16px;
   padding: 12px 20px;
   min-width: 300px;
+  transition: all 0.3s ease;
 }
 
 /* Mobile adjustments */
@@ -81,6 +95,21 @@ watch(() => props.currentPellets, (newVal, oldVal) => {
   align-items: center;
   margin-bottom: 8px;
   color: white;
+}
+
+.label-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.selector-icon {
+  color: rgba(255, 255, 255, 0.6);
+  transition: transform 0.3s ease;
+}
+
+.pellet-bar-container:hover .selector-icon {
+  transform: translateY(2px);
 }
 
 .label-text {
@@ -117,10 +146,7 @@ watch(() => props.currentPellets, (newVal, oldVal) => {
   transition: all 0.3s ease;
 }
 
-.pellet-segment.filled {
-  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
-}
+/* Dynamic coloring handled by inline styles */
 
 .pellet-segment.filled::before {
   content: '';
@@ -156,6 +182,20 @@ watch(() => props.currentPellets, (newVal, oldVal) => {
 @keyframes shimmer {
   0% { left: -100%; }
   100% { left: 200%; }
+}
+
+.power-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: linear-gradient(135deg, #FF6B6B, #FF5722);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 @keyframes deplete {
