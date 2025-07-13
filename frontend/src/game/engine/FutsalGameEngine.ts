@@ -1,7 +1,3 @@
-// FlowAI removed - using original AI only
-import { UtilityAI, type AIContext } from '../ai/UtilityAI'
-import { SteeringBehaviors, type Vector2D } from '../ai/SteeringBehaviors'
-
 export interface PlayerAttributes {
   // Physical
   pace: number
@@ -61,12 +57,6 @@ export interface Player {
   slideEndTime?: number
   yellowCards: number
   isSentOff: boolean
-  // Restart behavior
-  isMovingToRestart?: boolean
-  restartTarget?: { x: number; y: number }
-  restartRole?: 'taker' | 'support' | 'normal'
-  ballTouchTime?: number // Track how long player has had the ball
-  restartCooldown?: number // Time when player can resume chasing ball after restart
 }
 
 export interface Ball {
@@ -82,21 +72,6 @@ export interface Ball {
   lastKicker?: Player | null
   lastTouchTime?: number
   touchCount: number // for tracking consecutive touches
-  // Enhanced 3D physics
-  bounceCount: number // number of bounces since last touch
-  airTime: number // time in air for realistic trajectories
-  lastBounceTime?: number
-  isStationary: boolean // for restart situations
-  // Ball stuck detection
-  lastMovementTime: number // last time ball had significant movement
-  stuckCheckTimer: number // timer for stuck detection
-  // Pass indicators
-  passType?: 'ground' | 'air' | 'through'
-  passDistance?: number
-  isBackPass?: boolean
-  isThroughBall?: boolean
-  // Restart tracking
-  restartTaker?: Player | null // Player who took the restart (cannot touch ball again until another player does)
 }
 
 export interface Goal {
@@ -112,11 +87,6 @@ export interface MatchStats {
   redCards: { home: number; away: number }
   goals: Goal[]
   possessionPercentage: { home: number; away: number }
-  passesAttempted: { home: number; away: number }
-  passesCompleted: { home: number; away: number }
-  passCompletionRate: { home: number; away: number }
-  freeKicksAttempted: { home: number; away: number }
-  freeKicksScored: { home: number; away: number }
 }
 
 export interface GameState {
@@ -142,9 +112,6 @@ export interface GameState {
   matchStats: MatchStats
   lastGoal?: Goal
   goalCelebration?: { active: boolean; startTime: number }
-  advantagesPlayed?: number
-  freeKickTimer?: number
-  freeKickTimerExpiry?: number
 }
 
 export interface FormationLayout {
@@ -165,8 +132,6 @@ export interface GameConfig {
   awayTactic: string
   homeStrategy: number
   awayStrategy: number
-  // Buffer zone around field where players can move but ball is out
-  fieldBuffer?: number
 }
 
 export class FutsalGameEngine {
@@ -180,19 +145,12 @@ export class FutsalGameEngine {
   private ballStationaryTime: number = 0
   private lastBallPosition: { x: number; y: number } = { x: 0, y: 0 }
   private possessionTimer: { home: number; away: number; neutral: number } = { home: 0, away: 0, neutral: 0 }
-  private freeKickStartTime: number | null = null
-  // FlowAI removed - using original AI only
-  
-  // Pass tracking
-  private lastPassTarget: Player | null = null
-  private lastPassTime: number | null = null
-  private lastFreeKickTaker: Player | null = null
 
   constructor(config: GameConfig) {
     this.config = config
     this.gameState = {
       isPlaying: false,
-      gameTime: 90000, // 90 seconds in milliseconds
+      gameTime: 1200000, // 20 minutes per half in milliseconds
       halfTime: 1,
       homeScore: 0,
       awayScore: 0,
@@ -214,14 +172,8 @@ export class FutsalGameEngine {
         yellowCards: { home: 0, away: 0 },
         redCards: { home: 0, away: 0 },
         goals: [],
-        possessionPercentage: { home: 50, away: 50 },
-        passesAttempted: { home: 0, away: 0 },
-        passesCompleted: { home: 0, away: 0 },
-        passCompletionRate: { home: 0, away: 0 },
-        freeKicksAttempted: { home: 0, away: 0 },
-        freeKicksScored: { home: 0, away: 0 }
-      },
-      advantagesPlayed: 0
+        possessionPercentage: { home: 50, away: 50 }
+      }
     }
     
     this.ball = {
@@ -235,17 +187,10 @@ export class FutsalGameEngine {
       radius: 7, // 40% larger than original (5 * 1.4 = 7)
       possessor: null,
       lastKicker: null,
-      touchCount: 0,
-      bounceCount: 0,
-      airTime: 0,
-      isStationary: false,
-      lastMovementTime: 0,
-      stuckCheckTimer: 0
+      touchCount: 0
     }
     
     this.initializePlayers()
-    
-    // FlowAI removed - using original AI only
   }
 
   // Generate random attributes based on position
@@ -313,28 +258,28 @@ export class FutsalGameEngine {
         { role: 'defender', x: 150, y: 0.35 },
         { role: 'defender', x: 150, y: 0.65 },
         { role: 'midfielder', x: 280, y: 0.5 },
-        { role: 'striker', x: 320, y: 0.5 } // Moved back to stay outside center circle
+        { role: 'striker', x: 380, y: 0.5 }
       ],
       '1-1-2-1': [
         { role: 'goalkeeper', x: 40, y: 0.5 },
         { role: 'defender', x: 150, y: 0.5 },
         { role: 'midfielder', x: 280, y: 0.35 },
         { role: 'midfielder', x: 280, y: 0.65 },
-        { role: 'striker', x: 320, y: 0.5 } // Moved back to stay outside center circle
+        { role: 'striker', x: 380, y: 0.5 }
       ],
       '1-3-1': [
         { role: 'goalkeeper', x: 40, y: 0.5 },
         { role: 'defender', x: 180, y: 0.3 },
         { role: 'defender', x: 140, y: 0.5 },
         { role: 'defender', x: 180, y: 0.7 },
-        { role: 'striker', x: 320, y: 0.5 } // Moved back to stay outside center circle
+        { role: 'striker', x: 360, y: 0.5 }
       ],
       '1-2-2': [
         { role: 'goalkeeper', x: 40, y: 0.5 },
         { role: 'defender', x: 150, y: 0.35 },
         { role: 'defender', x: 150, y: 0.65 },
-        { role: 'striker', x: 320, y: 0.35 }, // Moved back to stay outside center circle
-        { role: 'striker', x: 320, y: 0.65 } // Moved back to stay outside center circle
+        { role: 'striker', x: 340, y: 0.35 },
+        { role: 'striker', x: 340, y: 0.65 }
       ]
     }
     
@@ -345,13 +290,6 @@ export class FutsalGameEngine {
   initializePlayers(): void {
     const homeLayout = this.getFormationLayout(this.config.homeFormation)
     const awayLayout = this.getFormationLayout(this.config.awayFormation)
-    
-    console.log('Initializing players with formations:', {
-      home: this.config.homeFormation,
-      away: this.config.awayFormation,
-      homeLayout,
-      awayLayout
-    })
     
     this.players = []
     
@@ -414,173 +352,9 @@ export class FutsalGameEngine {
   private updatePlayerAI(player: Player): void {
     if (player.isSentOff) return
     
-    // FlowAI removed - using original AI only
-    
-    // Priority 1: Handle restart movement
-    if (player.isMovingToRestart && player.restartTarget) {
-      const distToTarget = Math.hypot(player.x - player.restartTarget.x, player.y - player.restartTarget.y)
-      
-      // Always set target position while moving to restart
-      player.targetX = player.restartTarget.x
-      player.targetY = player.restartTarget.y
-      
-      if (distToTarget > 5) {
-        // Still moving to restart position
-        // Calculate movement speed for restart
-        const maxSpeed = 3.0 // Fixed speed for restart movement
-        const accelRate = 0.1
-        this.updatePlayerMovement(player, maxSpeed, accelRate)
-        return
-      } else {
-        // Reached restart position
-        
-        // If this player is the taker and ball is stationary, take the kick
-        if (player.restartRole === 'taker' && this.ball.isStationary && this.gameState.ballOut) {
-          // Don't clear isMovingToRestart until we've taken the kick
-          // Check if player is close enough to the ball
-          const ballDist = Math.hypot(this.ball.x - player.x, this.ball.y - player.y)
-          
-          // For kick-ins, free kicks, and goal kicks, allow larger distance since player might be positioned away
-          const maxDistance = (this.gameState.restartType === 'kick-in' || this.gameState.restartType === 'free-kick' || this.gameState.restartType === 'goal-kick') ? 30 : player.radius + this.ball.radius + 10
-          
-          if (ballDist > maxDistance) {
-            // Still need to get closer to the ball
-            player.targetX = this.ball.x
-            player.targetY = this.ball.y
-            const maxSpeed = 3.0
-            const accelRate = 0.1
-            this.updatePlayerMovement(player, maxSpeed, accelRate)
-            return
-          }
-          
-          // Now we're close enough
-          player.isMovingToRestart = false
-          
-          // Face towards appropriate target
-          let targetAngle: number
-          if (this.gameState.restartType === 'free-kick') {
-            // Face the goal for free kicks
-            const goalX = player.team === 'home' ? this.config.fieldWidth : 0
-            targetAngle = Math.atan2(this.config.fieldHeight / 2 - player.y, goalX - player.x)
-          } else {
-            // Face field center for kick-ins
-            const fieldCenter = { x: this.config.fieldWidth / 2, y: this.config.fieldHeight / 2 }
-            targetAngle = Math.atan2(fieldCenter.y - player.y, fieldCenter.x - player.x)
-          }
-          player.facing = targetAngle
-          
-          // Take the kick immediately (no delay needed)
-          if (this.ball.isStationary && this.gameState.ballOut) {
-            // Store restart type before clearing
-            const restartType = this.gameState.restartType
-            
-            // Mark this player as the restart taker
-            this.ball.restartTaker = player
-            
-            // Set cooldown - player must wait before chasing ball (typical in futsal)
-            player.restartCooldown = Date.now() + 2000 // 2 second cooldown
-            
-            // For free kicks, shoot at goal
-            if (restartType === 'free-kick') {
-              const shotPower = 8
-              this.ball.vx = Math.cos(targetAngle) * shotPower
-              this.ball.vy = Math.sin(targetAngle) * shotPower
-              this.ball.vz = 2 // Add some height
-              this.ball.lastKicker = player
-              this.gameState.possession = player.team
-            } else if (restartType === 'goal-kick') {
-              // For goal kicks, kick upfield with power
-              const targetX = player.team === 'home' ? this.config.fieldWidth * 0.7 : this.config.fieldWidth * 0.3
-              const goalKickAngle = Math.atan2(this.config.fieldHeight / 2 - player.y, targetX - player.x)
-              const kickPower = 5
-              this.ball.vx = Math.cos(goalKickAngle) * kickPower
-              this.ball.vy = Math.sin(goalKickAngle) * kickPower
-              this.ball.vz = 1 // Some height for goal kicks
-              this.ball.lastKicker = player
-              this.gameState.possession = player.team
-            } else {
-              // For kick-ins and corners, make a short pass towards field center
-              const kickPower = 3
-              this.ball.vx = Math.cos(targetAngle) * kickPower
-              this.ball.vy = Math.sin(targetAngle) * kickPower
-              this.ball.vz = 0 // Ground pass
-              this.ball.lastKicker = player
-              this.gameState.possession = player.team
-            }
-            
-            // Clear ball stationary state
-            this.ball.isStationary = false
-            
-            // Clear restart state
-            this.gameState.ballOut = false
-            this.gameState.restartType = null
-            this.gameState.restartTeam = null
-            player.restartRole = undefined
-          }
-        } else {
-          // Not the taker, clear movement state
-          player.isMovingToRestart = false
-        }
-        
-        player.restartTarget = undefined
-      }
-    }
-    
     const ballDist = Math.hypot(this.ball.x - player.x, this.ball.y - player.y)
     const hasBall = this.ball.possessor === player
-    let ballIsLoose = !this.ball.possessor && !this.gameState.ballOut && !this.ball.isStationary
-    
-    // If player is in restart cooldown, stay in position for pass back
-    if (player.restartCooldown && Date.now() < player.restartCooldown) {
-      // Stay in current position, ready for pass back
-      player.targetX = player.x
-      player.targetY = player.y
-      
-      // Still update movement but don't pursue ball
-      const staminaFactor = player.stamina / player.maxStamina
-      const baseSpeed = 2.5 + (player.attributes.pace / 99) * 2.5
-      const maxSpeed = baseSpeed * (0.6 + staminaFactor * 0.4) * (0.8 + (player.attributes.agility / 99) * 0.2)
-      const accelRate = (player.attributes.acceleration / 99) * 0.08 + 0.02
-      this.updatePlayerMovement(player, maxSpeed, accelRate)
-      return
-    }
-    
-    // Don't chase ball during restarts unless you're the designated restart taker
-    if (this.ball.isStationary && player.restartRole !== 'taker') {
-      ballIsLoose = false
-    }
-    
-    // Special handling for kickoff - be more aggressive
-    const isKickoffTime = this.gameState.gameTime > 1200000 - 3000
-    
-    if (!isKickoffTime) {
-      // Prevent clustering: Count teammates near the ball
-      const teammatesNearBall = this.players.filter(p => 
-        p.team === player.team && 
-        p !== player && 
-        !p.isSentOff &&
-        Math.hypot(this.ball.x - p.x, this.ball.y - p.y) < 60
-      ).length
-      
-      // If too many teammates are near the ball, don't chase unless very close
-      const maxTeammatesNearBall = player.role === 'goalkeeper' ? 0 : (player.role === 'striker' ? 1 : 2)
-      if (teammatesNearBall >= maxTeammatesNearBall && ballDist > 30) {
-        ballIsLoose = false
-      }
-    }
-    
-    // Reduce ball chasing if too many players are already near the ball
-    const playersNearBall = this.players.filter(p => {
-      const dist = Math.hypot(p.x - this.ball.x, p.y - this.ball.y)
-      return dist < 30 && p.team === player.team && p !== player
-    })
-    
-    const shouldAvoidCongestion = playersNearBall.length >= 2 && ballDist > 15
-    
-    // If avoiding congestion, don't treat ball as loose
-    if (shouldAvoidCongestion) {
-      ballIsLoose = false
-    }
+    const ballIsLoose = !this.ball.possessor && !this.gameState.ballOut
     
     // Get team tactic and strategy
     const tactic = player.team === 'home' ? this.config.homeTactic : this.config.awayTactic
@@ -629,10 +403,7 @@ export class FutsalGameEngine {
     this.updatePlayerMovement(player, maxSpeed, accelRate)
     
     // Handle ball interactions with tactical context
-    // Check if player can pick up the ball based on distance
-    // Reduce collision distance slightly for better visual alignment (multiply by 0.8)
-    const canPickUpBall = ballDist < (player.radius + this.ball.radius) * 0.8 && !this.ball.possessor && ballIsLoose
-    this.updatePlayerBallInteraction(player, hasBall || canPickUpBall, tactic)
+    this.updatePlayerBallInteraction(player, hasBall, tactic)
     
     // Tactical discipline - players maintain shape
     this.enforceTacticalDiscipline(player, tactic, strategy)
@@ -658,26 +429,6 @@ export class FutsalGameEngine {
   
   // Determine if player should pursue the ball
   private shouldPursueBall(player: Player, ballDist: number): boolean {
-    // Check if player is in restart cooldown
-    if (player.restartCooldown && Date.now() < player.restartCooldown) {
-      return false // Player must wait before chasing ball after taking restart
-    }
-    
-    // Check if we're in a kickoff situation - delay pursuit for non-kickoff team
-    if (this.gameState.gameTime > 1200000 - 3000) { // First 3 seconds of half
-      const ballAtCenter = Math.hypot(this.ball.x - this.config.fieldWidth / 2, this.ball.y - this.config.fieldHeight / 2) < 50
-      if (ballAtCenter) {
-        // Only the striker from the kicking off team should pursue initially
-        const centerX = this.config.fieldWidth / 2
-        const isKickingOffTeam = (player.team === 'home' && this.ball.x < centerX + 10) || 
-                               (player.team === 'away' && this.ball.x > centerX - 10)
-        
-        if (!isKickingOffTeam && ballDist > 40) {
-          return false // Non-kickoff team stays back
-        }
-      }
-    }
-    
     // Always pursue if very close
     if (ballDist < 30) return true
     
@@ -799,11 +550,6 @@ export class FutsalGameEngine {
   
   // Check if ball has been stationary
   private isBallStationary(): boolean {
-    // During the first 5 seconds of the game, never consider ball stationary (for kickoff)
-    if (this.gameState.gameTime > 1200000 - 5000) {
-      return false
-    }
-    
     const ballSpeed = Math.hypot(this.ball.vx, this.ball.vy)
     const ballMoved = Math.hypot(
       this.ball.x - this.lastBallPosition.x,
@@ -826,12 +572,11 @@ export class FutsalGameEngine {
   private checkBallOutOfBounds(): void {
     const ballX = this.ball.x
     const ballY = this.ball.y
-    const fieldMargin = 0 // Ball must completely cross the line
+    const fieldMargin = 5 // Small margin before considering ball out
     
-    // Check if ball is out of bounds - with ball radius consideration
-    const ballRadius = this.ball.radius
-    if (ballX - ballRadius <= fieldMargin || ballX + ballRadius >= this.config.fieldWidth ||
-        ballY - ballRadius <= fieldMargin || ballY + ballRadius >= this.config.fieldHeight) {
+    // Check if ball is out of bounds
+    if (ballX <= fieldMargin || ballX >= this.config.fieldWidth - fieldMargin ||
+        ballY <= fieldMargin || ballY >= this.config.fieldHeight - fieldMargin) {
       this.handleBallOut()
     }
   }
@@ -848,42 +593,39 @@ export class FutsalGameEngine {
     const ballY = this.ball.y
     
     // Check if ball went out on sidelines or goal lines
-    const ballRadius = this.ball.radius
-    if (ballY - ballRadius <= 0 || ballY + ballRadius >= this.config.fieldHeight) {
+    if (ballY <= 10 || ballY >= this.config.fieldHeight - 10) {
       // Ball went out on the sidelines (top/bottom)
       this.gameState.restartType = 'kick-in'
       this.gameState.restartTeam = lastTeam === 'home' ? 'away' : 'home'
       this.gameState.restartPosition = {
         x: Math.max(50, Math.min(this.config.fieldWidth - 50, ballX)),
-        y: ballY - ballRadius <= 0 ? 15 : this.config.fieldHeight - 15
+        y: ballY <= 10 ? 15 : this.config.fieldHeight - 15
       }
-    } else if (ballX - ballRadius <= 0 || ballX + ballRadius >= this.config.fieldWidth) {
+    } else if (ballX <= 10 || ballX >= this.config.fieldWidth - 10) {
       // Ball went out on goal lines (left/right)
       const nearGoal = this.isNearGoal(ballY)
       
       if (nearGoal) {
         // Ball went out near the goal
-        // Corner kick occurs when attacking team last touched the ball before it went out
-        const defendingTeam = ballX - ballRadius <= 0 ? 'home' : 'away'
-        const isCorner = lastTeam !== defendingTeam
+        const isCorner = lastTeam === (ballX <= 10 ? 'away' : 'home')
         
         if (isCorner) {
           // Corner kick
           this.gameState.restartType = 'corner'
           this.gameState.restartTeam = lastTeam!
           this.gameState.restartPosition = {
-            x: ballX - ballRadius <= 0 ? 0 : this.config.fieldWidth,
-            y: ballY < this.config.fieldHeight / 2 ? 0 : this.config.fieldHeight
+            x: ballX <= 10 ? 15 : this.config.fieldWidth - 15,
+            y: ballY < this.config.fieldHeight / 2 ? 15 : this.config.fieldHeight - 15
           }
           
           // Track corner stat
           this.gameState.matchStats.corners[lastTeam!]++
         } else {
-          // Goal kick - defending team gets the ball
+          // Goal kick
           this.gameState.restartType = 'goal-kick'
-          this.gameState.restartTeam = defendingTeam
+          this.gameState.restartTeam = ballX <= 10 ? 'home' : 'away'
           this.gameState.restartPosition = {
-            x: defendingTeam === 'home' ? 60 : this.config.fieldWidth - 60,
+            x: ballX <= 10 ? 60 : this.config.fieldWidth - 60,
             y: this.config.fieldHeight / 2
           }
         }
@@ -909,14 +651,7 @@ export class FutsalGameEngine {
     
     // Execute restart after a brief delay
     setTimeout(() => {
-      if (this.gameState.restartType === 'corner') {
-        this.executeCorner()
-      } else if (this.gameState.restartType === 'kick-in') {
-        this.executeKickIn()
-      } else if (this.gameState.restartType === 'goal-kick') {
-        this.executeGoalKick()
-      }
-      // Note: free-kicks are handled separately through handleFoul
+      this.executeKickIn()
     }, 800) // Futsal has quicker restarts than regular soccer
   }
   
@@ -929,96 +664,7 @@ export class FutsalGameEngine {
     return ballY >= (goalTop - goalAreaExtension) && ballY <= (goalBottom + goalAreaExtension)
   }
   
-  // Setup corner kick
-  private executeCorner(): void {
-    if (!this.gameState.restartPosition || !this.gameState.restartTeam) return
-    
-    // Place ball at exact corner
-    const isLeftCorner = this.gameState.restartPosition.x < this.config.fieldWidth / 2
-    const isTopCorner = this.gameState.restartPosition.y < this.config.fieldHeight / 2
-    
-    this.ball.x = isLeftCorner ? 0 : this.config.fieldWidth
-    this.ball.y = isTopCorner ? 0 : this.config.fieldHeight
-    this.ball.z = 0
-    this.ball.vx = 0
-    this.ball.vy = 0
-    this.ball.vz = 0
-    this.ball.isStationary = true
-    
-    // Find nearest player from the restart team to take the corner
-    const restartPlayers = this.players.filter(p => 
-      p.team === this.gameState.restartTeam && !p.isSentOff
-    )
-    
-    if (restartPlayers.length > 0) {
-      // Find player with best crossing/technique for corners
-      const cornerTaker = restartPlayers.sort((a, b) => {
-        // Prioritize players with good crossing and technique
-        const aScore = a.attributes.crossing + a.attributes.technique + a.attributes.curve
-        const bScore = b.attributes.crossing + b.attributes.technique + b.attributes.curve
-        return bScore - aScore
-      })[0]
-      
-      // Set the taker to move to corner position
-      cornerTaker.isMovingToRestart = true
-      cornerTaker.restartRole = 'taker'
-      
-      // Position in buffer zone at corner
-      cornerTaker.restartTarget = {
-        x: isLeftCorner ? -15 : this.config.fieldWidth + 15,
-        y: isTopCorner ? -15 : this.config.fieldHeight + 15
-      }
-      
-      // Position attacking players in the box
-      const attackingPlayers = restartPlayers.filter(p => p !== cornerTaker && p.role !== 'goalkeeper')
-      attackingPlayers.forEach((player, index) => {
-        player.isMovingToRestart = true
-        player.restartRole = 'support'
-        
-        // Position in and around the penalty area
-        const targetGoalX = isLeftCorner ? this.config.fieldWidth - 80 : 80
-        const positions = [
-          { x: targetGoalX, y: this.config.fieldHeight / 2 }, // Near post
-          { x: targetGoalX - (isLeftCorner ? 30 : -30), y: this.config.fieldHeight / 2 + 20 }, // Far post
-          { x: targetGoalX - (isLeftCorner ? 50 : -50), y: this.config.fieldHeight / 2 - 20 }, // Edge of box
-          { x: targetGoalX - (isLeftCorner ? 70 : -70), y: this.config.fieldHeight / 2 } // Outside box
-        ]
-        
-        if (index < positions.length) {
-          player.restartTarget = positions[index]
-        }
-      })
-    }
-    
-    // Move defending players to defensive positions
-    const minDistance = 50 // 5 meters minimum distance
-    const cornerX = this.gameState.restartPosition?.x || this.ball.x
-    const cornerY = this.gameState.restartPosition?.y || this.ball.y
-    
-    this.players.forEach(player => {
-      if (player.team !== this.gameState.restartTeam && !player.isSentOff) {
-        const dist = Math.hypot(player.x - cornerX, player.y - cornerY)
-        if (dist < minDistance) {
-          player.isMovingToRestart = true
-          const angle = Math.atan2(player.y - cornerY, player.x - cornerX)
-          player.restartTarget = {
-            x: cornerX + Math.cos(angle) * (minDistance + 10),
-            y: cornerY + Math.sin(angle) * (minDistance + 10)
-          }
-        } else {
-          // Defensive positioning in the box
-          player.isMovingToRestart = true
-          const goalX = player.team === 'home' ? 30 : this.config.fieldWidth - 30
-          player.restartTarget = {
-            x: goalX + (player.team === 'home' ? 50 : -50),
-            y: this.config.fieldHeight / 2 + (player.number % 3 - 1) * 30
-          }
-        }
-      }
-    })
-  }
-  
-  // Setup kick-in with player walking to position
+  // Execute kick-in (futsal restart)
   private executeKickIn(): void {
     if (!this.gameState.restartPosition || !this.gameState.restartTeam) return
     
@@ -1029,10 +675,6 @@ export class FutsalGameEngine {
     this.ball.vx = 0
     this.ball.vy = 0
     this.ball.vz = 0
-    this.ball.isStationary = true
-    
-    // Set kick-in timer for fallback
-    this.freeKickStartTime = Date.now()
     
     // Find nearest player from the restart team to take the kick-in
     const restartPlayers = this.players.filter(p => 
@@ -1047,170 +689,55 @@ export class FutsalGameEngine {
         return aDist - bDist
       })[0]
       
-      // Set the taker to move to the ball position
-      kickInTaker.isMovingToRestart = true
-      kickInTaker.restartRole = 'taker'
-      
-      // Calculate target position for kick-in
+      // Position kick-in taker next to ball
       const kickInDistance = 15
+      const fieldCenter = { x: this.config.fieldWidth / 2, y: this.config.fieldHeight / 2 }
+      const directionToCenterX = fieldCenter.x - this.ball.x
+      const directionToCenterY = fieldCenter.y - this.ball.y
+      const directionLength = Math.hypot(directionToCenterX, directionToCenterY)
       
-      // For kick-ins on touchlines, position the player appropriately
-      if (this.gameState.restartType === 'kick-in') {
-        // Determine which touchline the ball is on based on restart position
-        const isTopTouchline = this.ball.y <= 20
-        const isBottomTouchline = this.ball.y >= this.config.fieldHeight - 20
-        const isLeftTouchline = this.ball.x <= 20
-        const isRightTouchline = this.ball.x >= this.config.fieldWidth - 20
-        
-        if (isTopTouchline || isBottomTouchline) {
-          // Ball is on top or bottom touchline
-          // Place ball exactly on the line
-          this.ball.y = isTopTouchline ? 0 : this.config.fieldHeight
-          
-          // Position player outside the field in buffer zone
-          kickInTaker.restartTarget = {
-            x: this.ball.x,
-            y: isTopTouchline ? -15 : this.config.fieldHeight + 15
-          }
-        } else if (isLeftTouchline || isRightTouchline) {
-          // Ball is on left or right touchline (goal lines)
-          // Place ball exactly on the line
-          this.ball.x = isLeftTouchline ? 0 : this.config.fieldWidth
-          
-          // Position player outside the field in buffer zone
-          kickInTaker.restartTarget = {
-            x: isLeftTouchline ? -15 : this.config.fieldWidth + 15,
-            y: this.ball.y
-          }
-        } else {
-          // Should not happen for kick-ins, but fallback to field-side positioning
-          const fieldCenter = { x: this.config.fieldWidth / 2, y: this.config.fieldHeight / 2 }
-          const directionToCenterX = fieldCenter.x - this.ball.x
-          const directionToCenterY = fieldCenter.y - this.ball.y
-          const directionLength = Math.hypot(directionToCenterX, directionToCenterY)
-          
-          if (directionLength > 0) {
-            kickInTaker.restartTarget = {
-              x: this.ball.x - (directionToCenterX / directionLength) * kickInDistance,
-              y: this.ball.y - (directionToCenterY / directionLength) * kickInDistance
-            }
-          }
-        }
-      } else {
-        // Other restarts (corners, goal kicks)
-        const fieldCenter = { x: this.config.fieldWidth / 2, y: this.config.fieldHeight / 2 }
-        const directionToCenterX = fieldCenter.x - this.ball.x
-        const directionToCenterY = fieldCenter.y - this.ball.y
-        const directionLength = Math.hypot(directionToCenterX, directionToCenterY)
-        
-        if (directionLength > 0) {
-          kickInTaker.restartTarget = {
-            x: this.ball.x + (directionToCenterX / directionLength) * kickInDistance,
-            y: this.ball.y + (directionToCenterY / directionLength) * kickInDistance
-          }
-        }
+      if (directionLength > 0) {
+        kickInTaker.x = this.ball.x + (directionToCenterX / directionLength) * kickInDistance
+        kickInTaker.y = this.ball.y + (directionToCenterY / directionLength) * kickInDistance
       }
       
-      // Ensure target is in bounds (including buffer zone for kick-ins)
-      if (kickInTaker.restartTarget) {
-        const buffer = this.config.fieldBuffer || 0
-        kickInTaker.restartTarget.x = Math.max(kickInTaker.radius - buffer, Math.min(this.config.fieldWidth + buffer - kickInTaker.radius, kickInTaker.restartTarget.x))
-        kickInTaker.restartTarget.y = Math.max(kickInTaker.radius - buffer, Math.min(this.config.fieldHeight + buffer - kickInTaker.radius, kickInTaker.restartTarget.y))
-      }
+      // Ensure kicker is in bounds
+      kickInTaker.x = Math.max(kickInTaker.radius, Math.min(this.config.fieldWidth - kickInTaker.radius, kickInTaker.x))
+      kickInTaker.y = Math.max(kickInTaker.radius, Math.min(this.config.fieldHeight - kickInTaker.radius, kickInTaker.y))
+      
+      // Face the field
+      kickInTaker.facing = Math.atan2(fieldCenter.y - kickInTaker.y, fieldCenter.x - kickInTaker.x)
+      
+      // Give possession to kick-in taker
+      this.ball.possessor = kickInTaker
+      this.ball.lastKicker = kickInTaker
+      this.gameState.possession = kickInTaker.team
     }
     
-    // Move opposing players away gradually - use restart position, not current ball position
-    const minDistance = 50 // 5 meters for futsal
-    const restartX = this.gameState.restartPosition?.x || this.ball.x
-    const restartY = this.gameState.restartPosition?.y || this.ball.y
-    
+    // Move opposing players away (4-meter rule in futsal)
+    const minDistance = 25 // 4 meters scaled
     this.players.forEach(player => {
-      if (player.team !== this.gameState.restartTeam && !player.isSentOff) {
-        const dist = Math.hypot(player.x - restartX, player.y - restartY)
+      if (player.team !== this.gameState.restartTeam) {
+        const dist = Math.hypot(player.x - this.ball.x, player.y - this.ball.y)
         if (dist < minDistance) {
-          player.isMovingToRestart = true
-          const angle = Math.atan2(player.y - restartY, player.x - restartX)
-          player.restartTarget = {
-            x: restartX + Math.cos(angle) * (minDistance + 10),
-            y: restartY + Math.sin(angle) * (minDistance + 10)
-          }
+          const angle = Math.atan2(player.y - this.ball.y, player.x - this.ball.x)
+          player.x = this.ball.x + Math.cos(angle) * minDistance
+          player.y = this.ball.y + Math.sin(angle) * minDistance
           
           // Keep in bounds
-          player.restartTarget.x = Math.max(player.radius, Math.min(this.config.fieldWidth - player.radius, player.restartTarget.x))
-          player.restartTarget.y = Math.max(player.radius, Math.min(this.config.fieldHeight - player.radius, player.restartTarget.y))
+          player.x = Math.max(player.radius, Math.min(this.config.fieldWidth - player.radius, player.x))
+          player.y = Math.max(player.radius, Math.min(this.config.fieldHeight - player.radius, player.y))
         }
       }
     })
     
-    // Start a timer to complete the kick-in if player doesn't reach in time
-    if (kickInTaker) {
-      setTimeout(() => {
-        this.completeRestart(kickInTaker)
-      }, 2000) // 2 second timeout for kick-ins
-    }
-  }
-
-  // Setup goal kick
-  private executeGoalKick(): void {
-    if (!this.gameState.restartPosition || !this.gameState.restartTeam) return
-    
-    // Place ball at goal kick position
-    this.ball.x = this.gameState.restartPosition.x
-    this.ball.y = this.gameState.restartPosition.y
-    this.ball.z = 0
-    this.ball.vx = 0
-    this.ball.vy = 0
-    this.ball.vz = 0
-    this.ball.isStationary = true
-    
-    // Set timer for fallback
-    this.freeKickStartTime = Date.now()
-    
-    // Find goalkeeper to take the goal kick
-    const goalkeeper = this.players.find(p => 
-      p.team === this.gameState.restartTeam && 
-      p.role === 'goalkeeper' && 
-      !p.isSentOff
-    )
-    
-    if (!goalkeeper) {
-      // If no goalkeeper, find any player
-      const anyPlayer = this.players.find(p => 
-        p.team === this.gameState.restartTeam && !p.isSentOff
-      )
-      if (anyPlayer) {
-        this.setupGoalKickTaker(anyPlayer)
-      }
-    } else {
-      this.setupGoalKickTaker(goalkeeper)
-    }
-  }
-
-  private setupGoalKickTaker(player: Player): void {
-    // Set the taker to move to the ball
-    player.isMovingToRestart = true
-    player.restartRole = 'taker'
-    
-    // Position close to the ball
-    const kickDistance = 15
-    player.restartTarget = {
-      x: this.ball.x,
-      y: this.ball.y
-    }
-    
-    // Start a timer to complete the goal kick if player doesn't reach in time
-    setTimeout(() => {
-      this.completeRestart(player)
-    }, 2000) // 2 second timeout for goal kicks
+    // Reset game state
+    this.gameState.ballOut = false
+    this.gameState.restartType = null
+    this.gameState.restartTeam = null
   }
 
   private updatePlayerPositioning(player: Player, tactic: string, strategy: number, hasBall: boolean, ballDist: number, tacticalAwareness: number, compactness: number, pushUpField: number): void {
-    // Check if player should make a run into space
-    if (!hasBall && this.shouldMakeRun(player, tactic)) {
-      this.makeIntelligentRun(player, tactic)
-      return
-    }
-    
     // Base positioning based on role
     switch (player.role) {
       case 'goalkeeper':
@@ -1382,21 +909,16 @@ export class FutsalGameEngine {
       const numDefenders = defenders.length
       
       if (numDefenders > 1) {
-        // Dynamic spacing based on field size and number of defenders
-        const fieldMargin = 40 // Keep defenders away from touchlines
-        const usableHeight = this.config.fieldHeight - (fieldMargin * 2)
-        const spacing = usableHeight / (numDefenders - 1)
-        const startY = fieldMargin
+        // Spread defenders across the width
+        const spacing = (this.config.fieldHeight * 0.6) / (numDefenders - 1)
+        const startY = this.config.fieldHeight * 0.2
         
         player.targetX = defenseLineX
         player.targetY = startY + defenderIndex * spacing
         
-        // Shift towards ball side with bounds checking
+        // Shift towards ball side
         const ballSideShift = (this.ball.y - this.config.fieldHeight / 2) * 0.2 * compactness
-        const shiftedY = player.targetY + ballSideShift * tacticalAwareness
-        
-        // Ensure defender stays within field bounds
-        player.targetY = Math.max(fieldMargin, Math.min(this.config.fieldHeight - fieldMargin, shiftedY))
+        player.targetY += ballSideShift * tacticalAwareness
       } else {
         // Single defender stays central
         player.targetX = defenseLineX
@@ -1458,26 +980,19 @@ export class FutsalGameEngine {
       player.targetX = bestX
       player.targetY = bestY
     } else if (tactic === 'pass-move' && teamHasBall) {
-      // Use wander behavior for natural movement patterns
-      const maxSpeed = this.getPlayerMaxSpeed(player)
-      const wanderForce = SteeringBehaviors.wander(player, maxSpeed, 50 * tacticalAwareness)
+      // Constant movement to create passing lanes
+      const time = Date.now() / 2000
+      const movePattern = player.number % 2
       
-      // Apply boundaries to keep player in position
-      const centerX = centralZoneX
-      const centerY = this.config.fieldHeight / 2
-      const maxDistance = 100
-      
-      // Seek back to zone if too far
-      const distFromCenter = Math.hypot(player.x - centerX, player.y - centerY)
-      if (distFromCenter > maxDistance) {
-        const seekForce = SteeringBehaviors.arrive(player, { x: centerX, y: centerY }, maxSpeed)
-        const combined = SteeringBehaviors.combine([
-          { force: wanderForce, weight: 0.3 },
-          { force: seekForce, weight: 0.7 }
-        ])
-        SteeringBehaviors.applyForce(player, combined, 1/60)
+      if (movePattern === 0) {
+        // Horizontal movement
+        const baseY = this.config.fieldHeight / 2
+        player.targetX = centralZoneX + Math.sin(time) * 80 * tacticalAwareness
+        player.targetY = baseY + Math.cos(time * 1.5) * 60
       } else {
-        SteeringBehaviors.applyForce(player, wanderForce, 1/60)
+        // Diagonal runs
+        player.targetX = centralZoneX + Math.cos(time) * 100 * tacticalAwareness
+        player.targetY = this.config.fieldHeight / 2 + Math.sin(time * 0.8) * 80
       }
     } else if (!teamHasBall) {
       // Defensive positioning
@@ -1546,11 +1061,10 @@ export class FutsalGameEngine {
       player.targetX = pivotX
       player.targetY = this.config.fieldHeight / 2
       
-      // Use subtle wander for small movements
+      // Small movements to receive ball
       if (teamHasBall) {
-        const maxSpeed = this.getPlayerMaxSpeed(player) * 0.3
-        const wanderForce = SteeringBehaviors.wander(player, maxSpeed, 20)
-        SteeringBehaviors.applyForce(player, wanderForce, 1/60)
+        const time = Date.now() / 1500
+        player.targetY += Math.sin(time) * 20
       }
     } else if (tactic === 'wing-play') {
       // Wide positioning
@@ -1581,7 +1095,7 @@ export class FutsalGameEngine {
         
         if (defenders.length > 0) {
           // Find gaps between defenders
-          const bestGapX = oppositionGoalX
+          let bestGapX = oppositionGoalX
           let bestGapY = this.config.fieldHeight / 2
           let maxGapSize = 0
           
@@ -1615,19 +1129,9 @@ export class FutsalGameEngine {
           player.targetX = oppositionGoalX + (player.team === 'home' ? -80 : 80)
           player.targetY = bestGapY
           
-          // Use pursuit behavior to run into space
-          const maxSpeed = this.getPlayerMaxSpeed(player)
-          const targetPos = { x: player.targetX!, y: player.targetY! }
-          const arriveForce = SteeringBehaviors.arrive(player, targetPos, maxSpeed)
-          
-          // Add slight wander for curved runs
-          const wanderForce = SteeringBehaviors.wander(player, maxSpeed * 0.3, 30 * anticipation)
-          
-          const combined = SteeringBehaviors.combine([
-            { force: arriveForce, weight: 0.7 },
-            { force: wanderForce, weight: 0.3 * offBallQuality }
-          ])
-          SteeringBehaviors.applyForce(player, combined, 1/60)
+          // Curved runs
+          const runCurve = Math.sin(time * (1 + offBallQuality * 0.5)) * 30 * anticipation
+          player.targetX += runCurve
         } else {
           // No defenders, go straight to goal
           player.targetX = oppositionGoalX + (player.team === 'home' ? -60 : 60)
@@ -1658,104 +1162,17 @@ export class FutsalGameEngine {
     }
   }
 
-  private getPlayerMaxSpeed(player: Player): number {
-    const staminaFactor = player.stamina / player.maxStamina
-    const baseSpeed = 2.5 + (player.attributes.pace / 99) * 2.5
-    const maxSpeed = baseSpeed * (0.6 + staminaFactor * 0.4) * (0.8 + (player.attributes.agility / 99) * 0.2)
-    return maxSpeed
-  }
-
-  private calculateRepulsionForce(player: Player, otherPlayer: Player, idealDistance: number): Vector2D {
-    const dx = player.x - otherPlayer.x
-    const dy = player.y - otherPlayer.y
-    const distance = Math.hypot(dx, dy)
-    
-    if (distance < idealDistance && distance > 0) {
-      // Repulsion force increases as players get closer
-      const strength = (idealDistance - distance) / idealDistance
-      const force = strength * 2.0 // Adjust strength as needed
-      
-      return {
-        x: (dx / distance) * force,
-        y: (dy / distance) * force
-      }
-    }
-    
-    return { x: 0, y: 0 }
-  }
-
-  private applyBallPlayerCollisions(): void {
-    // Check collisions with all players
-    for (const player of this.players) {
-      if (player.isSentOff || player === this.ball.possessor) continue
-      
-      const dx = this.ball.x - player.x
-      const dy = this.ball.y - player.y
-      const distance = Math.hypot(dx, dy)
-      const minDistance = player.radius + this.ball.radius + 2 // Small buffer
-      
-      if (distance < minDistance && distance > 0) {
-        // Ball is too close to player - push it away
-        const pushForce = (minDistance - distance) / minDistance
-        const pushX = (dx / distance) * pushForce * 3
-        const pushY = (dy / distance) * pushForce * 3
-        
-        // Apply push to ball velocity
-        this.ball.vx += pushX
-        this.ball.vy += pushY
-        
-        // If ball is on ground and moving slowly, add small bounce
-        if (this.ball.z < 0.5 && Math.hypot(this.ball.vx, this.ball.vy) < 2) {
-          this.ball.vz = Math.max(this.ball.vz, 0.3)
-        }
-        
-        // Also push ball position slightly to prevent overlap
-        const positionPush = Math.max(0, minDistance - distance) * 0.5
-        this.ball.x += (dx / distance) * positionPush
-        this.ball.y += (dy / distance) * positionPush
-      }
-    }
-  }
-
   private updatePlayerMovement(player: Player, maxSpeed: number, accelRate: number): void {
     if (player.targetX !== undefined && player.targetY !== undefined) {
-      const target = { x: player.targetX, y: player.targetY }
-      const dist = Math.hypot(target.x - player.x, target.y - player.y)
+      const dx = player.targetX - player.x
+      const dy = player.targetY - player.y
+      const dist = Math.hypot(dx, dy)
       const currentSpeed = Math.hypot(player.vx, player.vy)
 
-      // Get other players for avoidance
-      const teammates = this.players.filter(p => p.team === player.team && p !== player && !p.isSentOff)
-      const opponents = this.players.filter(p => p.team !== player.team && !p.isSentOff)
-      
-      // Calculate steering forces
-      const forces: Array<{ force: Vector2D; weight: number }> = []
-      
       if (dist > 5) {
-        // Primary movement - arrive at target
-        const arriveForce = SteeringBehaviors.arrive(player, target, maxSpeed)
-        forces.push({ force: arriveForce, weight: 1.0 })
+        const desiredAngle = Math.atan2(dy, dx)
         
-        // Separation from teammates to avoid crowding
-        const separationForce = SteeringBehaviors.separation(player, teammates, 25)
-        if (Math.hypot(separationForce.x, separationForce.y) > 0) {
-          forces.push({ force: separationForce, weight: 0.8 })
-        }
-        
-        // Avoid opponents when not challenging for ball
-        const hasBall = this.ball.possessor === player
-        if (!hasBall) {
-          const avoidanceForce = SteeringBehaviors.separation(player, opponents, 35)
-          if (Math.hypot(avoidanceForce.x, avoidanceForce.y) > 0) {
-            forces.push({ force: avoidanceForce, weight: 0.6 })
-          }
-        }
-        
-        // Apply combined steering force
-        const steeringForce = SteeringBehaviors.combine(forces)
-        SteeringBehaviors.applyForce(player, steeringForce, 1/60)
-        
-        // Update facing direction smoothly
-        const desiredAngle = Math.atan2(player.vy, player.vx)
+        // Update facing direction with smooth turning
         const facingDiff = desiredAngle - player.facing
         const turnSpeed = (player.attributes.agility / 99) * 0.15
         
@@ -1766,8 +1183,38 @@ export class FutsalGameEngine {
         
         player.facing += Math.sign(normalizedDiff) * Math.min(Math.abs(normalizedDiff), turnSpeed)
         
-        // Apply momentum and balance effects
+        // Realistic acceleration curves
+        const accelerationCurve = (speed: number, max: number) => {
+          const ratio = speed / max
+          if (ratio < 0.3) return 1.2 // Quick initial burst
+          if (ratio < 0.7) return 1.0 // Steady acceleration
+          if (ratio < 0.9) return 0.7 // Approaching top speed
+          return 0.3 // Hard to reach absolute max
+        }
+        
+        const accelModifier = accelerationCurve(currentSpeed, maxSpeed)
+        const effectiveAccel = accelRate * accelModifier * (player.attributes.acceleration / 99)
+        
+        // Movement based on facing direction and control
+        const controlQuality = (player.attributes.technique / 99) * 0.7 + 0.3
+        const targetSpeed = Math.min(maxSpeed, dist / 10) * controlQuality
+        
+        // Add momentum-based movement
         const momentum = currentSpeed / maxSpeed
+        const inertia = 0.85 + (player.attributes.strength / 99) * 0.1
+        
+        // Calculate desired velocity based on facing
+        const targetVx = Math.cos(player.facing) * targetSpeed
+        const targetVy = Math.sin(player.facing) * targetSpeed
+        
+        // Apply acceleration with momentum consideration
+        const vxDiff = targetVx - player.vx
+        const vyDiff = targetVy - player.vy
+        
+        player.vx += vxDiff * effectiveAccel * (1 - momentum * 0.3)
+        player.vy += vyDiff * effectiveAccel * (1 - momentum * 0.3)
+        
+        // Apply slight drift when changing direction at speed
         if (momentum > 0.5) {
           const driftFactor = (1 - player.attributes.balance / 99) * 0.1
           player.vx *= (1 - driftFactor)
@@ -1781,22 +1228,12 @@ export class FutsalGameEngine {
         player.vy *= decelRate
         
         // Face the target when close
-        player.facing = Math.atan2(target.y - player.y, target.x - player.x)
-      }
-      
-      // Limit to max speed (accounting for stamina)
-      const speed = Math.hypot(player.vx, player.vy)
-      const fatigueFactor = player.stamina / player.maxStamina
-      const effectiveMaxSpeed = maxSpeed * (0.7 + fatigueFactor * 0.3)
-      
-      if (speed > effectiveMaxSpeed) {
-        const scale = effectiveMaxSpeed / speed
-        player.vx *= scale
-        player.vy *= scale
+        player.facing = Math.atan2(dy, dx)
       }
       
       // Enhanced stamina system
-      const speedRatio = speed / maxSpeed
+      const playerSpeed = Math.hypot(player.vx, player.vy)
+      const speedRatio = playerSpeed / maxSpeed
       const workRateFactor = player.attributes.workRate / 99
       const fitnessLevel = player.attributes.stamina / 99
       
@@ -1813,26 +1250,23 @@ export class FutsalGameEngine {
         const recoveryRate = 0.08 * (0.7 + fitnessLevel * 0.3) * (0.8 + (player.attributes.determination / 99) * 0.2)
         player.stamina = Math.min(player.maxStamina, player.stamina + recoveryRate)
       }
+      
+      // Fatigue affects max speed
+      const fatigueFactor = player.stamina / player.maxStamina
+      if (fatigueFactor < 0.5) {
+        const fatigueSpeedPenalty = 0.7 + fatigueFactor * 0.6
+        player.vx *= fatigueSpeedPenalty
+        player.vy *= fatigueSpeedPenalty
+      }
     }
   }
 
   private updatePlayerBallInteraction(player: Player, hasBall: boolean, tactic: string): void {
     if (hasBall) {
       if (!this.ball.possessor) {
-        // Check if this player took the restart and cannot touch the ball yet
-        if (this.ball.restartTaker === player) {
-          // Cannot pick up the ball - let it bounce off
-          return
-        }
-        
         this.ball.possessor = player
         this.ball.lastKicker = player
         this.gameState.possession = player.team
-        
-        // Clear restart taker once another player touches the ball
-        if (this.ball.restartTaker) {
-          this.ball.restartTaker = null
-        }
       } else if (this.ball.possessor === player) {
         this.handleBallControl(player, tactic)
       }
@@ -1850,103 +1284,79 @@ export class FutsalGameEngine {
     }
     player.lastTouchTime = Date.now()
     
-    // Soccer dribbling - release ball and kick it forward at intervals
-    const timeSinceLastTouch = player.lastTouchTime ? Date.now() - player.lastTouchTime : 1000
+    // Realistic dribbling mechanics
+    const dribbleQuality = (
+      player.attributes.dribbling / 99 * 0.4 +
+      player.attributes.technique / 99 * 0.3 +
+      player.attributes.balance / 99 * 0.2 +
+      player.attributes.agility / 99 * 0.1
+    )
+    
     const playerSpeed = Math.hypot(player.vx, player.vy)
-    const touchInterval = 300 - playerSpeed * 20 // Touch more frequently when moving fast
+    const speedFactor = Math.min(1.5, playerSpeed / 3)
+    const baseDribbleDistance = 12 + (1 - dribbleQuality) * 8
+    const dribbleDistance = baseDribbleDistance * (1 + speedFactor * 0.3)
     
-    if (timeSinceLastTouch > touchInterval || timeSinceLastTouch > 500) {
-      // Time for a dribble touch
-      player.lastTouchTime = Date.now()
-      
-      // Calculate dribble quality
-      const dribbleQuality = (
-        player.attributes.dribbling / 99 * 0.4 +
-        player.attributes.technique / 99 * 0.3 +
-        player.attributes.balance / 99 * 0.2 +
-        player.attributes.agility / 99 * 0.1
-      )
-      
-      const speedFactor = Math.min(1, playerSpeed / 5)
-      
-      // Kick distance based on speed - further kicks when running fast
-      const kickDistance = 25 + speedFactor * 40 // Between 25-65 pixels ahead
-      const kickPower = 2.5 + speedFactor * 3 // Between 2.5-5.5 power
-      
-      // Kick direction with some error based on quality
-      const kickAngle = player.facing + (Math.random() - 0.5) * (1 - dribbleQuality) * 0.4
-      
-      // Apply kick to ball
-      this.ball.vx = Math.cos(kickAngle) * kickPower
-      this.ball.vy = Math.sin(kickAngle) * kickPower
-      this.ball.vz = 0.05 // Very slight bounce
-      
-      // Move ball ahead of player
-      this.ball.x = player.x + Math.cos(kickAngle) * 15
-      this.ball.y = player.y + Math.sin(kickAngle) * 15
-      
-      // Release possession - player must chase the ball
+    // Use player facing for dribble direction
+    const dribbleAngle = player.facing + (Math.random() - 0.5) * 0.2 * (1 - dribbleQuality)
+    const wobble = (1 - dribbleQuality) * 2 * (Math.random() - 0.5)
+    
+    // Keep ball on ground when dribbling
+    this.ball.x = player.x + Math.cos(dribbleAngle) * dribbleDistance + wobble
+    this.ball.y = player.y + Math.sin(dribbleAngle) * dribbleDistance + wobble
+    this.ball.z = Math.max(0, this.ball.z * 0.5) // Bring ball down
+    
+    this.ball.vx = player.vx * 0.9
+    this.ball.vy = player.vy * 0.9
+    this.ball.vz = 0
+    
+    // Add some ball spin when dribbling
+    this.ball.spin.x = -player.vy * 0.3
+    this.ball.spin.y = player.vx * 0.3
+    this.ball.spin.z *= 0.9
+    
+    // Decision making
+    const nearGoal = player.team === 'home' ? 
+      this.ball.x > this.config.fieldWidth - 180 : 
+      this.ball.x < 180
+    
+    const decisionQuality = (
+      player.attributes.decisions / 99 * 0.4 +
+      player.attributes.composure / 99 * 0.3 +
+      player.attributes.vision / 99 * 0.3
+    )
+    
+    // Pressure affects decisions
+    const pressure = this.calculatePressure(player)
+    const calmness = player.attributes.composure / 99
+    const panicFactor = pressure * (1 - calmness)
+    
+    // Base chances modified by role and situation
+    let basePassChance = player.role === 'defender' ? 0.06 : 0.04
+    let baseShootChance = 0.05
+    
+    // Tactic modifiers
+    if (tactic === 'pass-move') basePassChance *= 1.5
+    if (tactic === 'pivot' && player.role === 'striker') basePassChance *= 1.3
+    
+    // Too many touches increases chance to pass
+    if (player.consecutiveTouches > 3) {
+      basePassChance += 0.02 * player.consecutiveTouches
+    }
+    
+    // Apply decision quality and panic
+    const passChance = basePassChance * (0.5 + decisionQuality * 0.5) * (1 + panicFactor)
+    const shootChance = nearGoal ? baseShootChance * (0.5 + decisionQuality * 0.5) : 0
+    
+    const shouldPass = Math.random() < passChance
+    const shouldShoot = Math.random() < shootChance
+    
+    if (shouldShoot && nearGoal) {
+      this.executeShot(player)
       this.ball.possessor = null
-      this.ball.lastKicker = player
-      
-      // Add realistic ball spin
-      this.ball.spin.x = -this.ball.vy * 0.3
-      this.ball.spin.y = this.ball.vx * 0.3
-    }
-    
-    // Create AI context for utility-based decision making
-    const teammates = this.players.filter(p => p.team === player.team && p !== player && !p.isSentOff)
-    const opponents = this.players.filter(p => p.team !== player.team && !p.isSentOff)
-    
-    const aiContext: AIContext = {
-      player,
-      ball: this.ball,
-      gameState: this.gameState,
-      teammates,
-      opponents,
-      fieldWidth: this.config.fieldWidth,
-      fieldHeight: this.config.fieldHeight,
-      goalWidth: this.config.goalWidth
-    }
-    
-    // Get best action from utility AI
-    const bestAction = UtilityAI.evaluateActions(aiContext)
-    
-    // Execute the chosen action
-    switch (bestAction.type) {
-      case 'shoot':
-        this.executeShot(player)
-        this.ball.possessor = null
-        break
-        
-      case 'pass':
-        if (bestAction.target && 'team' in bestAction.target) {
-          // Pass to specific teammate
-          const passTarget = bestAction.target as Player
-          this.executePassToTarget(player, passTarget)
-        } else {
-          // Fallback to best pass
-          this.executePass(player)
-        }
-        this.ball.possessor = null
-        break
-        
-      case 'clear':
-        // Execute clearance (long pass/shot away from danger)
-        this.executeClearance(player)
-        this.ball.possessor = null
-        break
-        
-      case 'hold':
-        // Shield the ball - reduce movement speed but maintain possession
-        player.vx *= 0.5
-        player.vy *= 0.5
-        break
-        
-      case 'dribble':
-      default:
-        // Continue dribbling - no action needed
-        break
+    } else if (shouldPass) {
+      this.executePass(player)
+      this.ball.possessor = null
     }
   }
 
@@ -2103,7 +1513,7 @@ export class FutsalGameEngine {
   ): { vx: number; vy: number; vz: number; spin: { x: number; y: number; z: number } } {
     // Player shot attributes
     const shotPower = player.attributes.strength / 99
-    let shotAccuracy = player.attributes.finishing / 99
+    const shotAccuracy = player.attributes.finishing / 99
     const shotTechnique = player.attributes.technique / 99
     const composure = player.attributes.composure / 99
     
@@ -2116,7 +1526,7 @@ export class FutsalGameEngine {
     // Shot speed based on type
     let speed = 0
     let vz = 0
-    const spin = { x: 0, y: 0, z: 0 }
+    let spin = { x: 0, y: 0, z: 0 }
     
     switch (shotType) {
       case 'power':
@@ -2151,12 +1561,7 @@ export class FutsalGameEngine {
     // Pressure affects accuracy
     const pressure = this.calculatePressure(player)
     const pressureMultiplier = 1 - pressure * 0.5
-    
-    // Fatigue affects accuracy - tired players are less accurate
-    const fatigueFactor = player.stamina / player.maxStamina
-    const fatigueMultiplier = 0.7 + fatigueFactor * 0.3 // Between 0.7 and 1.0
-    
-    const effectiveAccuracy = shotAccuracy * composure * pressureMultiplier * fatigueMultiplier
+    const effectiveAccuracy = shotAccuracy * composure * pressureMultiplier
     
     // Shot error
     const maxError = Math.PI / 6 // 30 degrees
@@ -2190,85 +1595,13 @@ export class FutsalGameEngine {
     return { vx, vy, vz, spin }
   }
 
-  private executePassToTarget(player: Player, target: Player): void {
-    // Calculate pass physics directly to specified target
-    const dx = target.x - this.ball.x
-    const dy = target.y - this.ball.y
-    const dist = Math.hypot(dx, dy)
-    
-    // Lead the target based on their velocity
-    const leadTime = dist / 200 // Estimated ball speed
-    const leadX = target.vx * leadTime * 20
-    const leadY = target.vy * leadTime * 20
-    
-    const targetX = target.x + leadX
-    const targetY = target.y + leadY
-    const angle = Math.atan2(targetY - this.ball.y, targetX - this.ball.x)
-    
-    // Pass speed based on distance
-    const passSpeed = Math.min(6, 3 + dist / 100)
-    
-    // Apply pass
-    this.ball.vx = Math.cos(angle) * passSpeed
-    this.ball.vy = Math.sin(angle) * passSpeed
-    this.ball.vz = dist > 100 ? 1 : 0 // Loft for longer passes
-    
-    // Record pass
-    this.gameState.passCount[player.team]++
-    this.gameState.matchStats.passesAttempted[player.team]++
-    player.consecutiveTouches = 0
-    this.ball.lastTouchTime = Date.now()
-    
-    // Store pass info
-    this.ball.lastKicker = player
-    this.lastPassTarget = target
-    this.lastPassTime = Date.now()
-  }
-  
-  private executeClearance(player: Player): void {
-    // Clear the ball away from danger
-    const goalX = player.team === 'home' ? 0 : this.config.fieldWidth
-    const awayFromGoalX = player.team === 'home' ? this.config.fieldWidth : 0
-    
-    // Aim for far corner or wing
-    const targetY = Math.random() > 0.5 ? 0 : this.config.fieldHeight
-    const angle = Math.atan2(targetY - this.ball.y, awayFromGoalX - this.ball.x)
-    
-    // Strong clearance
-    const clearanceSpeed = 8 + Math.random() * 2
-    
-    this.ball.vx = Math.cos(angle) * clearanceSpeed
-    this.ball.vy = Math.sin(angle) * clearanceSpeed
-    this.ball.vz = 3 // High clearance
-    
-    // Add spin for distance
-    this.ball.spin = { x: -2, y: 0, z: 0 }
-    
-    // Record as a pass attempt
-    this.gameState.passCount[player.team]++
-    player.consecutiveTouches = 0
-    this.ball.lastTouchTime = Date.now()
-    this.ball.lastKicker = player
-  }
-
   private executePass(player: Player): void {
     const teammates = this.players.filter(p => p.team === player.team && p !== player && !p.isSentOff)
-    
-    // Check if under pressure - consider back pass
-    const pressure = this.calculatePressure(player)
-    const shouldConsiderBackPass = pressure > 0.6
     
     // Advanced pass evaluation
     const passOptions = teammates.map(teammate => {
       const dist = Math.hypot(teammate.x - player.x, teammate.y - player.y)
       const angle = Math.atan2(teammate.y - player.y, teammate.x - player.x)
-      
-      // Determine if this is a back pass
-      const attackingLeft = player.team === 'home'
-      const passDirection = Math.cos(angle) * (attackingLeft ? 1 : -1)
-      const isBackPass = passDirection < -0.3
-      const isSidePass = Math.abs(passDirection) < 0.3
-      const isForwardPass = passDirection > 0.3
       
       // Check passing lane
       const opponents = this.players.filter(p => p.team !== player.team && !p.isSentOff)
@@ -2300,22 +1633,13 @@ export class FutsalGameEngine {
       const positionScore = this.evaluateTeammatePosition(teammate, player)
       const movementScore = this.evaluateTeammateMovement(teammate, player)
       
-      // Boost back pass score when under pressure
-      let backPassBonus = 1
-      if (shouldConsiderBackPass && isBackPass) {
-        backPassBonus = 1.5 // 50% boost for back passes when under pressure
-      }
-      
       return {
         player: teammate,
         dist,
         angle,
         risk: interceptionRisk,
-        isBackPass,
-        isSidePass,
-        isForwardPass,
         score: passSuccess * distanceScore * positionScore * movementScore * 
-               (teammate.attributes.offTheBall / 99) * backPassBonus
+               (teammate.attributes.offTheBall / 99)
       }
     })
     
@@ -2350,23 +1674,10 @@ export class FutsalGameEngine {
       this.ball.vz = passPhysics.vz
       this.ball.spin = passPhysics.spin
       
-      // Record pass attempt
+      // Record pass
       this.gameState.passCount[player.team]++
-      this.gameState.matchStats.passesAttempted[player.team]++
       player.consecutiveTouches = 0
       this.ball.lastTouchTime = Date.now()
-      
-      // Store pass info for tracking completion
-      this.ball.lastKicker = player
-      this.lastPassTarget = target
-      this.lastPassTime = Date.now()
-      
-      // Store pass type for visual indicators
-      this.ball.passType = passType
-      this.ball.passDistance = passDist
-      this.ball.isBackPass = selectedPass.isBackPass || false
-      this.ball.isThroughBall = selectedPass.isForwardPass && target.targetY !== undefined && 
-                               Math.abs(target.y - target.targetY) > 30 // Player is making a run
     }
   }
   
@@ -2406,29 +1717,16 @@ export class FutsalGameEngine {
   
   // Evaluate pass distance
   private evaluatePassDistance(dist: number): number {
-    if (dist < 30) return 0.4 // Too close
-    if (dist < 80) return 0.8 // Short
-    if (dist < 150) return 1.0 // Good
-    if (dist < 250) return 1.2 // Long - encouraged!
-    if (dist < 350) return 1.1 // Very long
-    return 0.8 // Extremely long
+    if (dist < 50) return 0.7 // Too close
+    if (dist < 150) return 1.0 // Optimal
+    if (dist < 250) return 0.8 // Good
+    if (dist < 350) return 0.5 // Long
+    return 0.2 // Very long
   }
   
   // Evaluate teammate position
   private evaluateTeammatePosition(teammate: Player, passer: Player): number {
     let score = 1.0
-    
-    // Heavily penalize teammates near boundaries to prevent ball going out
-    const boundaryMargin = 60 // Distance from boundary to consider risky
-    const xToBoundary = Math.min(teammate.x, this.config.fieldWidth - teammate.x)
-    const yToBoundary = Math.min(teammate.y, this.config.fieldHeight - teammate.y)
-    
-    if (xToBoundary < boundaryMargin) {
-      score *= 0.3 + (xToBoundary / boundaryMargin) * 0.7 // 30-100% based on distance
-    }
-    if (yToBoundary < boundaryMargin) {
-      score *= 0.3 + (yToBoundary / boundaryMargin) * 0.7 // 30-100% based on distance
-    }
     
     // Better if teammate is forward
     if (passer.team === 'home') {
@@ -2498,7 +1796,7 @@ export class FutsalGameEngine {
     // Base pass speed
     let passSpeed = 4 + passQuality * 2
     let vz = 0
-    const spin = { x: 0, y: 0, z: 0 }
+    let spin = { x: 0, y: 0, z: 0 }
     
     // Lead the target
     const leadTime = dist / (passSpeed * 40)
@@ -2532,11 +1830,9 @@ export class FutsalGameEngine {
         break
     }
     
-    // Pass error based on quality, pressure and fatigue
+    // Pass error based on quality and pressure
     const pressure = this.calculatePressure(player)
-    const fatigueFactor = player.stamina / player.maxStamina
-    const fatigueMultiplier = 0.7 + fatigueFactor * 0.3 // Between 0.7 and 1.0
-    const errorFactor = (1 - passQuality * fatigueMultiplier) * (1 + pressure) * 0.1
+    const errorFactor = (1 - passQuality) * (1 + pressure) * 0.1
     const errorAngle = (Math.random() - 0.5) * errorFactor
     
     // Final velocity
@@ -2566,151 +1862,11 @@ export class FutsalGameEngine {
     
     return Math.min(1, pressure)
   }
-  
-  private shouldMakeRun(player: Player, tactic: string): boolean {
-    // Don't make runs if player is too far from play
-    const ballDist = Math.hypot(this.ball.x - player.x, this.ball.y - player.y)
-    if (ballDist > 250) return false
-    
-    // More likely to make runs with certain tactics
-    const tacticBonus = tactic === 'pass-move' ? 0.3 : tactic === 'counter' ? 0.4 : 0
-    
-    // Off the ball movement quality affects run frequency
-    const offBallQuality = player.attributes.offTheBall / 99
-    const anticipation = player.attributes.anticipation / 99
-    const workRate = player.attributes.workRate / 99
-    
-    // Role-based run chances
-    const roleChance = {
-      'striker': 0.15,
-      'midfielder': 0.10,
-      'defender': 0.05,
-      'goalkeeper': 0
-    }[player.role] || 0
-    
-    const runChance = (roleChance + tacticBonus) * offBallQuality * workRate
-    
-    // Check if there's space to run into
-    const hasSpace = this.findSpaceToRun(player) !== null
-    
-    return hasSpace && Math.random() < runChance
-  }
-  
-  private findSpaceToRun(player: Player): { x: number, y: number } | null {
-    const teammates = this.players.filter(p => p.team === player.team && p !== player && !p.isSentOff)
-    const opponents = this.players.filter(p => p.team !== player.team && !p.isSentOff)
-    
-    // Attacking direction
-    const attackingLeft = player.team === 'home'
-    const attackDirection = attackingLeft ? 1 : -1
-    
-    // Look for spaces in dangerous areas
-    const candidateSpaces: { x: number, y: number, score: number }[] = []
-    
-    // Search grid based on player position
-    const searchRadius = 150
-    const steps = 8
-    
-    for (let i = 0; i < steps; i++) {
-      const angle = (i / steps) * Math.PI * 2
-      const distance = 50 + Math.random() * 100
-      
-      const targetX = player.x + Math.cos(angle) * distance
-      const targetY = player.y + Math.sin(angle) * distance
-      
-      // Keep within bounds
-      if (targetX < 20 || targetX > this.config.fieldWidth - 20 ||
-          targetY < 20 || targetY > this.config.fieldHeight - 20) {
-        continue
-      }
-      
-      // Check space quality
-      let spaceScore = 1
-      
-      // Prefer forward runs
-      const forwardBonus = Math.cos(angle) * attackDirection
-      spaceScore += forwardBonus * 0.5
-      
-      // Check distance from opponents
-      for (const opp of opponents) {
-        const oppDist = Math.hypot(opp.x - targetX, opp.y - targetY)
-        if (oppDist < 40) {
-          spaceScore -= (40 - oppDist) / 40
-        }
-      }
-      
-      // Check distance from teammates (avoid crowding)
-      for (const tm of teammates) {
-        const tmDist = Math.hypot(tm.x - targetX, tm.y - targetY)
-        if (tmDist < 30) {
-          spaceScore -= (30 - tmDist) / 30 * 0.5
-        }
-      }
-      
-      // Prefer spaces that can receive passes
-      const passingLaneClear = this.checkPassingLane(player.x, player.y, targetX, targetY, opponents)
-      if (!passingLaneClear) {
-        spaceScore *= 0.3
-      }
-      
-      if (spaceScore > 0) {
-        candidateSpaces.push({ x: targetX, y: targetY, score: spaceScore })
-      }
-    }
-    
-    // Return best space
-    if (candidateSpaces.length > 0) {
-      candidateSpaces.sort((a, b) => b.score - a.score)
-      return candidateSpaces[0]
-    }
-    
-    return null
-  }
-  
-  private checkPassingLane(x1: number, y1: number, x2: number, y2: number, opponents: Player[]): boolean {
-    for (const opp of opponents) {
-      const dist = this.pointToLineDistance(opp.x, opp.y, x1, y1, x2, y2)
-      if (dist < 20) {
-        const oppDist = Math.hypot(opp.x - x1, opp.y - y1)
-        const targetDist = Math.hypot(x2 - x1, y2 - y1)
-        if (oppDist < targetDist) {
-          return false
-        }
-      }
-    }
-    return true
-  }
-  
-  private makeIntelligentRun(player: Player, tactic: string): void {
-    const space = this.findSpaceToRun(player)
-    if (!space) return
-    
-    // Sprint into space
-    const runSpeed = 1.5 // Faster than normal movement
-    const anticipation = player.attributes.anticipation / 99
-    
-    // Add some curve to the run for realism
-    const directAngle = Math.atan2(space.y - player.y, space.x - player.x)
-    const curveAmount = 0.3 * (1 - anticipation)
-    
-    player.targetX = space.x + Math.cos(directAngle + Math.PI/2) * curveAmount * 20
-    player.targetY = space.y + Math.sin(directAngle + Math.PI/2) * curveAmount * 20
-  }
 
   // Ball physics update
   private updateBallPhysics(deltaTime: number): void {
     if (!this.ball.possessor && !this.gameState.ballOut) {
       const dt = deltaTime * 60 * this.gameState.gameSpeed
-      
-      // Update air time
-      if (this.ball.z > 0.1) {
-        this.ball.airTime += dt
-      } else {
-        this.ball.airTime = 0
-      }
-      
-      // Apply ball-player collisions to prevent stuck situations
-      this.applyBallPlayerCollisions()
       
       // Apply spin effects on ball trajectory (Magnus effect)
       const spinFactor = 0.01
@@ -2722,448 +1878,56 @@ export class FutsalGameEngine {
       this.ball.y += this.ball.vy * dt
       this.ball.z += this.ball.vz * dt
       
-      // Prevent ball from getting stuck in dangerous areas
-      const cornerRadius = 40
-      const goalAreaDepth = 60
-      const centerX = this.config.fieldWidth / 2
-      const centerY = this.config.fieldHeight / 2
-      
-      // Check if ball is in corner
-      const isInCorner = (
-        (this.ball.x < cornerRadius || this.ball.x > this.config.fieldWidth - cornerRadius) &&
-        (this.ball.y < cornerRadius || this.ball.y > this.config.fieldHeight - cornerRadius)
-      )
-      
-      // Check if ball is stuck behind goal
-      const isBehindGoal = (
-        this.ball.x < 0 || this.ball.x > this.config.fieldWidth ||
-        (this.ball.x < goalAreaDepth && (this.ball.y < centerY - this.config.goalWidth || this.ball.y > centerY + this.config.goalWidth)) ||
-        (this.ball.x > this.config.fieldWidth - goalAreaDepth && (this.ball.y < centerY - this.config.goalWidth || this.ball.y > centerY + this.config.goalWidth))
-      )
-      
-      // If ball is in dangerous area and moving slowly, give it a push towards center
-      if ((isInCorner || isBehindGoal) && Math.hypot(this.ball.vx, this.ball.vy) < 2) {
-        const pushDirection = {
-          x: (centerX - this.ball.x) / Math.hypot(centerX - this.ball.x, centerY - this.ball.y),
-          y: (centerY - this.ball.y) / Math.hypot(centerX - this.ball.x, centerY - this.ball.y)
-        }
-        
-        this.ball.vx += pushDirection.x * 3
-        this.ball.vy += pushDirection.y * 3
-        
-        if (this.ball.z < 0.5) {
-          this.ball.vz = 1 // Small bounce to help clear obstacles
-        }
-        
-        console.log('Ball in dangerous area - applying preventive push')
-      }
-      
-      // Enhanced gravity with realistic acceleration
+      // Gravity for ball height
       if (this.ball.z > 0) {
-        this.ball.vz -= 0.6 * dt // stronger gravity for more realistic feel
+        this.ball.vz -= 0.5 * dt // gravity
       }
       
-      // Enhanced ball bounce with surface interaction
+      // Ball bounce
       if (this.ball.z <= 0 && this.ball.vz < 0) {
         this.ball.z = 0
+        this.ball.vz = -this.ball.vz * 0.6 // bounce damping
         
-        // Calculate bounce intensity based on impact speed
-        const impactSpeed = Math.abs(this.ball.vz)
-        const bounceCoefficient = Math.max(0.3, 0.7 - this.ball.bounceCount * 0.1) // decreasing bounces
-        
-        this.ball.vz = impactSpeed * bounceCoefficient
-        this.ball.bounceCount++
-        this.ball.lastBounceTime = Date.now()
-        
-        // Surface friction affects horizontal velocity on bounce
-        // Less friction loss for futsal balls
-        const surfaceFriction = 0.95
-        this.ball.vx *= surfaceFriction
-        this.ball.vy *= surfaceFriction
-        
-        // Add realistic spin on bounce
-        this.ball.spin.z += (Math.random() - 0.5) * 8
-        this.ball.spin.x += this.ball.vy * 0.3
-        this.ball.spin.y -= this.ball.vx * 0.3
+        // Add some spin on bounce
+        this.ball.spin.z = (Math.random() - 0.5) * 10
       }
       
-      // Futsal ball physics - different behavior in air vs ground
+      // Futsal ball has less bounce and rolls more
+      const groundFriction = this.ball.z <= 0.5 ? 0.94 : 0.98
+      const airResistance = 0.99
       const currentSpeed = Math.hypot(this.ball.vx, this.ball.vy)
       
-      if (this.ball.z > 0.5) {
-        // Air resistance (less friction in air)
-        const airResistance = 0.98
-        this.ball.vx *= airResistance
-        this.ball.vy *= airResistance
-      } else {
-        // Ground friction - more realistic rolling
-        // Futsal balls have less friction than regular soccer balls
-        let groundFriction: number
-        if (currentSpeed > 5) {
-          groundFriction = 0.985 // Very fast - minimal friction
-        } else if (currentSpeed > 3) {
-          groundFriction = 0.98 // Fast rolling
-        } else if (currentSpeed > 1) {
-          groundFriction = 0.975 // Medium rolling
-        } else if (currentSpeed > 0.5) {
-          groundFriction = 0.97 // Slow rolling
-        } else {
-          groundFriction = 0.95 // Very slow - more friction to stop
-        }
-        
-        this.ball.vx *= groundFriction
-        this.ball.vy *= groundFriction
-        
-        // Rolling physics - convert velocity to spin
-        if (currentSpeed > 0.1) {
-          this.ball.spin.x = -this.ball.vy * 0.4
-          this.ball.spin.y = this.ball.vx * 0.4
-        }
-        
-        // Add tiny random variations for more natural movement
-        if (currentSpeed > 0.5 && currentSpeed < 4) {
-          this.ball.vx += (Math.random() - 0.5) * 0.02
-          this.ball.vy += (Math.random() - 0.5) * 0.02
-        }
+      // Apply friction based on whether ball is on ground or in air
+      const friction = this.ball.z > 0.5 ? airResistance : groundFriction
+      this.ball.vx *= friction
+      this.ball.vy *= friction
+      
+      // Spin decay
+      this.ball.spin.x *= 0.95
+      this.ball.spin.y *= 0.95
+      this.ball.spin.z *= 0.92
+      
+      // Enhanced rolling physics for futsal
+      if (this.ball.z <= 0.5 && currentSpeed > 0.1) {
+        // Convert some velocity to spin when rolling
+        this.ball.spin.x = -this.ball.vy * 0.5
+        this.ball.spin.y = this.ball.vx * 0.5
       }
       
-      // Spin decay (different rates for different spin types)
-      this.ball.spin.x *= 0.94
-      this.ball.spin.y *= 0.94
-      this.ball.spin.z *= 0.88 // side spin decays faster
-      
-      // Magnus effect - ball curves due to spin
-      if (this.ball.z > 0.1 || currentSpeed > 1) {
-        const magnusStrength = 0.015 * dt
-        
-        // Side spin causes horizontal curve
-        if (Math.abs(this.ball.spin.z) > 0.1) {
-          const curveForce = this.ball.spin.z * magnusStrength * currentSpeed
-          // Perpendicular to velocity
-          const velAngle = Math.atan2(this.ball.vy, this.ball.vx)
-          this.ball.vx += Math.sin(velAngle) * curveForce
-          this.ball.vy -= Math.cos(velAngle) * curveForce
-        }
-        
-        // Top/back spin affects vertical movement and distance
-        if (this.ball.z > 0.1 && Math.abs(this.ball.spin.x) > 0.1) {
-          // Backspin creates lift, topspin pulls down
-          this.ball.vz += this.ball.spin.x * magnusStrength * 0.5
-        }
-      }
-      
-      // Check if ball is essentially stopped
-      const totalSpeed = Math.hypot(this.ball.vx, this.ball.vy, this.ball.vz)
-      if (totalSpeed < 0.05 && this.ball.z < 0.1) { // Lower threshold - let it roll longer
-        this.ball.vx = 0
-        this.ball.vy = 0
-        this.ball.vz = 0
-        this.ball.z = 0
-        this.ball.spin = { x: 0, y: 0, z: 0 }
-        this.ball.bounceCount = 0
-        this.ball.airTime = 0
-        
-        // If ball stops and players are crowding it, give it a small random kick
-        const nearbyPlayers = this.players.filter(p => {
-          const dist = Math.hypot(p.x - this.ball.x, p.y - this.ball.y)
-          return dist < 20 && !p.isMovingToRestart
-        })
-        
-        if (nearbyPlayers.length >= 3) {
-          const randomAngle = Math.random() * Math.PI * 2
-          const escapeSpeed = 2 + Math.random() * 2
-          this.ball.vx = Math.cos(randomAngle) * escapeSpeed
-          this.ball.vy = Math.sin(randomAngle) * escapeSpeed
-          this.ball.vz = 0.5 + Math.random() * 1
-        }
-      }
-    }
-    
-    // Ball stuck detection (works for all ball states)
-    this.checkBallStuck(deltaTime)
-    
-    if (!this.ball.possessor && !this.gameState.ballOut && !this.ball.isStationary) {
       // First touch mechanics
       this.handleFirstTouch()
       
       // Ball out of bounds check
       this.checkBallOutOfBounds()
       
+      // Ball stops at low speeds
+      if (Math.abs(this.ball.vx) < 0.1) this.ball.vx = 0
+      if (Math.abs(this.ball.vy) < 0.1) this.ball.vy = 0
+      if (Math.abs(this.ball.vz) < 0.1 && this.ball.z <= 0) this.ball.vz = 0
+      
       // Ball contests
       this.handleBallContests()
     }
-  }
-
-  private checkBallStuck(deltaTime: number): void {
-    // Skip stuck detection during restarts or when ball is possessed
-    if (this.ball.possessor || this.gameState.ballOut) {
-      this.ball.stuckCheckTimer = 0
-      this.lastBallPosition = { x: this.ball.x, y: this.ball.y }
-      return
-    }
-    
-    // Special handling for kickoff - more aggressive stuck detection
-    const isKickoffTime = this.gameState.gameTime > 1200000 - 5000 // First 5 seconds
-    if (isKickoffTime && this.ball.isStationary) {
-      this.ball.stuckCheckTimer += deltaTime * 2 // Accelerate stuck detection during kickoff
-    }
-    
-    const currentTime = this.gameState.gameTime
-    const ballSpeed = Math.hypot(this.ball.vx, this.ball.vy, this.ball.vz)
-    const ballMovement = Math.hypot(
-      this.ball.x - this.lastBallPosition.x, 
-      this.ball.y - this.lastBallPosition.y
-    )
-    
-    // If ball is moving significantly, reset timers
-    if (ballSpeed > 0.5 || ballMovement > 2) {
-      this.ball.lastMovementTime = currentTime
-      this.ball.stuckCheckTimer = 0
-      this.lastBallPosition = { x: this.ball.x, y: this.ball.y }
-      return
-    }
-    
-    // Accumulate stuck time
-    this.ball.stuckCheckTimer += deltaTime
-    
-    // Multi-tier stuck resolution system
-    
-    // Tier 1: Small repel (300ms)
-    if (this.ball.stuckCheckTimer > 0.3 && this.ball.stuckCheckTimer <= 0.31) {
-      console.log('Ball stuck Tier 1: Small repel')
-      this.repelBallFromStrongestPlayer(3) // Small force
-    }
-    
-    // Tier 2: Medium repel (600ms)
-    else if (this.ball.stuckCheckTimer > 0.6 && this.ball.stuckCheckTimer <= 0.61) {
-      console.log('Ball stuck Tier 2: Medium repel')
-      this.repelBallFromStrongestPlayer(6) // Medium force
-    }
-    
-    // Tier 3: Strong repel with random direction (900ms)
-    else if (this.ball.stuckCheckTimer > 0.9 && this.ball.stuckCheckTimer <= 0.91) {
-      console.log('Ball stuck Tier 3: Strong random repel')
-      this.repelBallRandomDirection(8) // Strong force
-    }
-    
-    // Tier 4: Teleport to empty space (1.2 seconds)
-    else if (this.ball.stuckCheckTimer > 1.2 && this.ball.stuckCheckTimer <= 1.21) {
-      console.log('Ball stuck Tier 4: Teleport to empty space')
-      this.moveBallToEmptySpace()
-    }
-    
-    // Tier 5: Emergency reset to center (1.5 seconds)
-    else if (this.ball.stuckCheckTimer > 1.5) {
-      console.log('Ball stuck Tier 5: Emergency reset to center')
-      this.emergencyBallReset()
-      this.ball.stuckCheckTimer = 0
-    }
-    
-    // Update last position for movement detection
-    if (this.ball.stuckCheckTimer % 0.1 < deltaTime) {
-      this.lastBallPosition = { x: this.ball.x, y: this.ball.y }
-    }
-  }
-
-  private repelBallFromStrongestPlayer(force: number = 5): void {
-    // Find all players near the ball
-    const nearbyPlayers = this.players.filter(p => {
-      const dist = Math.hypot(p.x - this.ball.x, p.y - this.ball.y)
-      return dist < 50 && !p.isSentOff && !p.isMovingToRestart
-    })
-    
-    if (nearbyPlayers.length === 0) {
-      // No players nearby, give ball random kick
-      const randomAngle = Math.random() * Math.PI * 2
-      this.ball.vx = Math.cos(randomAngle) * 3
-      this.ball.vy = Math.sin(randomAngle) * 3
-      this.ball.vz = 1
-      return
-    }
-    
-    // Calculate player strengths
-    const playerStrengths = nearbyPlayers.map(p => ({
-      player: p,
-      strength: (
-        p.attributes.strength / 99 * 0.3 +
-        p.attributes.determination / 99 * 0.2 +
-        p.attributes.agility / 99 * 0.2 +
-        p.attributes.technique / 99 * 0.15 +
-        p.attributes.balance / 99 * 0.15
-      ),
-      distance: Math.hypot(p.x - this.ball.x, p.y - this.ball.y)
-    }))
-    
-    // Sort by strength (strongest first)
-    playerStrengths.sort((a, b) => b.strength - a.strength)
-    
-    const strongest = playerStrengths[0]
-    const secondStrongest = playerStrengths.length > 1 ? playerStrengths[1] : null
-    
-    let repelDirection: { x: number; y: number }
-    
-    // Check if we have a clear strongest player or if it's equal strength
-    if (!secondStrongest || Math.abs(strongest.strength - secondStrongest.strength) > 0.1) {
-      // Repel away from strongest player
-      const dx = this.ball.x - strongest.player.x
-      const dy = this.ball.y - strongest.player.y
-      const dist = Math.hypot(dx, dy)
-      
-      if (dist > 0) {
-        repelDirection = { x: dx / dist, y: dy / dist }
-      } else {
-        // Players on top of ball, use random direction
-        const angle = Math.random() * Math.PI * 2
-        repelDirection = { x: Math.cos(angle), y: Math.sin(angle) }
-      }
-    } else {
-      // Equal strength - 50/50 random direction
-      const angle = Math.random() * Math.PI * 2
-      repelDirection = { x: Math.cos(angle), y: Math.sin(angle) }
-    }
-    
-    // Apply repel force
-    const repelPower = force + Math.random() * 2
-    this.ball.vx = repelDirection.x * repelPower
-    this.ball.vy = repelDirection.y * repelPower
-    this.ball.vz = Math.min(force * 0.3, 2) + Math.random() * 0.5
-    
-    // Clear possession
-    this.ball.possessor = null
-    this.ball.bounceCount = 0
-    this.ball.isStationary = false
-    
-    console.log(`Ball repelled with force ${force} from stuck position. Direction: (${repelDirection.x.toFixed(2)}, ${repelDirection.y.toFixed(2)})`)
-  }
-  
-  private repelBallRandomDirection(force: number = 5): void {
-    // Generate random direction biased towards open field areas
-    const centerX = this.config.fieldWidth / 2
-    const centerY = this.config.fieldHeight / 2
-    
-    // Bias towards center when near edges
-    let targetX = centerX + (Math.random() - 0.5) * 200
-    let targetY = centerY + (Math.random() - 0.5) * 150
-    
-    // If ball is near edge, strongly bias towards center
-    if (this.ball.x < 50 || this.ball.x > this.config.fieldWidth - 50) {
-      targetX = centerX
-    }
-    if (this.ball.y < 50 || this.ball.y > this.config.fieldHeight - 50) {
-      targetY = centerY
-    }
-    
-    const dirX = targetX - this.ball.x
-    const dirY = targetY - this.ball.y
-    const dist = Math.hypot(dirX, dirY)
-    
-    if (dist > 0) {
-      this.ball.vx = (dirX / dist) * force
-      this.ball.vy = (dirY / dist) * force
-      this.ball.vz = Math.min(force * 0.2, 2) // Higher bounce for random direction
-    } else {
-      // Fallback to pure random
-      const angle = Math.random() * Math.PI * 2
-      this.ball.vx = Math.cos(angle) * force
-      this.ball.vy = Math.sin(angle) * force
-      this.ball.vz = 1
-    }
-    
-    this.ball.possessor = null
-    this.ball.isStationary = false
-    this.ball.bounceCount = 0
-    
-    console.log(`Ball repelled in random direction with force ${force}`)
-  }
-  
-  private emergencyBallReset(): void {
-    // Emergency reset - place ball at center with small random offset
-    const centerX = this.config.fieldWidth / 2
-    const centerY = this.config.fieldHeight / 2
-    
-    this.ball.x = centerX + (Math.random() - 0.5) * 40
-    this.ball.y = centerY + (Math.random() - 0.5) * 40
-    this.ball.z = 0
-    this.ball.vx = (Math.random() - 0.5) * 4
-    this.ball.vy = (Math.random() - 0.5) * 4
-    this.ball.vz = 0
-    this.ball.possessor = null
-    this.ball.isStationary = false
-    this.ball.lastMovementTime = this.gameState.gameTime
-    this.ball.bounceCount = 0
-    
-    // Push nearby players away slightly
-    this.players.forEach(player => {
-      const dist = Math.hypot(player.x - this.ball.x, player.y - this.ball.y)
-      if (dist < 50 && !player.isSentOff) {
-        const pushDir = {
-          x: (player.x - this.ball.x) / Math.max(dist, 1),
-          y: (player.y - this.ball.y) / Math.max(dist, 1)
-        }
-        player.x += pushDir.x * 30
-        player.y += pushDir.y * 30
-        player.targetX = player.x
-        player.targetY = player.y
-      }
-    })
-    
-    console.log('Emergency ball reset executed - ball placed at center')
-  }
-
-  private moveBallToEmptySpace(): void {
-    // Find empty space away from all players
-    const minDistanceFromPlayers = 40 // Minimum distance from any player
-    const fieldMargin = 30 // Stay away from field edges
-    
-    let bestPosition: { x: number; y: number } | null = null
-    let maxMinDistance = 0
-    
-    // Try multiple random positions and pick the one furthest from all players
-    for (let attempts = 0; attempts < 50; attempts++) {
-      const candidateX = fieldMargin + Math.random() * (this.config.fieldWidth - 2 * fieldMargin)
-      const candidateY = fieldMargin + Math.random() * (this.config.fieldHeight - 2 * fieldMargin)
-      
-      // Find distance to nearest player
-      let minDistanceToPlayer = Number.MAX_VALUE
-      for (const player of this.players) {
-        if (player.isSentOff || player.isMovingToRestart) continue
-        const distance = Math.hypot(candidateX - player.x, candidateY - player.y)
-        minDistanceToPlayer = Math.min(minDistanceToPlayer, distance)
-      }
-      
-      // If this position is better (further from nearest player), save it
-      if (minDistanceToPlayer > maxMinDistance) {
-        maxMinDistance = minDistanceToPlayer
-        bestPosition = { x: candidateX, y: candidateY }
-      }
-      
-      // If we found a position with sufficient clearance, use it
-      if (minDistanceToPlayer >= minDistanceFromPlayers) {
-        break
-      }
-    }
-    
-    // If no good position found, just use center field
-    if (!bestPosition || maxMinDistance < 20) {
-      bestPosition = { 
-        x: this.config.fieldWidth / 2, 
-        y: this.config.fieldHeight / 2 
-      }
-    }
-    
-    // Move ball to the empty space with a gentle bounce
-    this.ball.x = bestPosition.x
-    this.ball.y = bestPosition.y
-    this.ball.z = 0
-    this.ball.vx = 0
-    this.ball.vy = 0
-    this.ball.vz = 0.5 // Small bounce to show the ball moved
-    this.ball.possessor = null
-    this.ball.bounceCount = 0
-    this.ball.isStationary = false
-    this.ball.spin = { x: 0, y: 0, z: 0 }
-    
-    console.log(`Ball moved to empty space at (${bestPosition.x.toFixed(1)}, ${bestPosition.y.toFixed(1)}) - min distance from players: ${maxMinDistance.toFixed(1)}`)
   }
 
   private handleFirstTouch(): void {
@@ -3171,73 +1935,27 @@ export class FutsalGameEngine {
     if (ballSpeed > 1) {
       const receivingPlayer = this.players.find(p => {
         const dist = Math.hypot(p.x - this.ball.x, p.y - this.ball.y)
-        // Check both lastKicker and restartTaker
-        // Reduce collision distance for better visual alignment
-        return dist < (p.radius + this.ball.radius) * 0.8 && p !== this.ball.lastKicker && p !== this.ball.restartTaker
+        return dist < p.radius + this.ball.radius && p !== this.ball.lastKicker
       })
       
       if (receivingPlayer) {
-        // Calculate first touch quality with ball speed and fatigue factors
-        const baseQuality = (
+        const firstTouchQuality = (
           receivingPlayer.attributes.firstTouch / 99 * 0.5 +
           receivingPlayer.attributes.technique / 99 * 0.3 +
           receivingPlayer.attributes.composure / 99 * 0.2
         )
         
-        // Harder to control fast balls
-        const speedDifficulty = Math.min(1, ballSpeed / 10) // 0 to 1 based on ball speed
-        const speedMultiplier = 1 - speedDifficulty * 0.3 // Max 30% reduction for very fast balls
-        
-        // Fatigue affects first touch
-        const fatigueFactor = receivingPlayer.stamina / receivingPlayer.maxStamina
-        const fatigueMultiplier = 0.8 + fatigueFactor * 0.2 // Between 0.8 and 1.0
-        
-        const firstTouchQuality = baseQuality * speedMultiplier * fatigueMultiplier
-        
-        // Check if this is a completed pass
-        if (this.ball.lastKicker && this.lastPassTarget && this.lastPassTime) {
-          const timeSincePass = Date.now() - this.lastPassTime
-          if (timeSincePass < 3000) { // Within 3 seconds
-            if (receivingPlayer === this.lastPassTarget && receivingPlayer.team === this.ball.lastKicker.team) {
-              // Pass completed successfully to intended target
-              this.gameState.matchStats.passesCompleted[receivingPlayer.team]++
-            } else if (receivingPlayer.team === this.ball.lastKicker.team) {
-              // Pass completed to teammate (not intended target but still successful)
-              this.gameState.matchStats.passesCompleted[receivingPlayer.team]++
-            }
-            // Clear pass tracking
-            this.lastPassTarget = null
-            this.lastPassTime = null
-          }
-        }
-        
-        // Clear pass indicators when ball is received
-        this.ball.passType = undefined
-        this.ball.passDistance = undefined
-        this.ball.isBackPass = undefined
-        this.ball.isThroughBall = undefined
-        
         if (Math.random() > firstTouchQuality) {
-          // Poor first touch - ball bounces away
           const errorAngle = Math.random() * Math.PI * 2
-          const errorDistance = (1 - firstTouchQuality) * (20 + ballSpeed * 2) // More error for faster balls
+          const errorDistance = (1 - firstTouchQuality) * 30
           this.ball.vx = Math.cos(errorAngle) * errorDistance * 0.2
           this.ball.vy = Math.sin(errorAngle) * errorDistance * 0.2
-          this.ball.vz = Math.random() * 0.5 // Small bounce
         } else {
-          // Good first touch - control the ball
-          const controlFactor = firstTouchQuality * 0.1
-          this.ball.vx *= controlFactor
-          this.ball.vy *= controlFactor
-          this.ball.vz = 0 // Bring ball to ground
+          this.ball.vx *= firstTouchQuality * 0.1
+          this.ball.vy *= firstTouchQuality * 0.1
           this.ball.possessor = receivingPlayer
           this.ball.lastKicker = receivingPlayer
           this.gameState.possession = receivingPlayer.team
-          
-          // Clear restart taker once another player touches the ball
-          if (this.ball.restartTaker) {
-            this.ball.restartTaker = null
-          }
         }
       }
     }
@@ -3245,18 +1963,9 @@ export class FutsalGameEngine {
 
 
   private handleBallContests(): void {
-    // Don't handle ball contests during restarts or when ball is stationary
-    if (this.ball.isStationary || this.gameState.ballOut) return
-    
-    // Check if we're in a kickoff situation - prevent contests for 3 seconds
-    if (this.gameState.gameTime > 1200000 - 3000) { // First 3 seconds of half
-      return
-    }
-    
     const playersNearBall = this.players.filter(p => {
       const dist = Math.hypot(p.x - this.ball.x, p.y - this.ball.y)
-      // Reduced radius to prevent constant clustering, use same 0.8 multiplier
-      return dist < (p.radius + this.ball.radius) * 0.8 + 5 && !p.isMovingToRestart
+      return dist < p.radius + this.ball.radius + 10
     })
     
     if (playersNearBall.length >= 2 && !this.ball.possessor) {
@@ -3281,41 +1990,28 @@ export class FutsalGameEngine {
       const strengthDiff = Math.abs(strongest.strength - secondStrongest.strength)
       const isEqualStrength = strengthDiff < 0.1
       
-      // Reduce contest frequency to prevent constant clustering
-      if ((isEqualStrength || Math.random() < 0.2) && playersNearBall.length <= 4) {
+      if (isEqualStrength || Math.random() < 0.3) {
         const angle = Math.atan2(
           this.ball.y - (strongest.player.y + secondStrongest.player.y) / 2,
           this.ball.x - (strongest.player.x + secondStrongest.player.x) / 2
         )
         
-        // Stronger ball repel force to clear congestion
-        const repelPower = 6 + playersNearBall.length * 2
+        const repelPower = 4 + playersNearBall.length
         this.ball.vx = Math.cos(angle) * repelPower
         this.ball.vy = Math.sin(angle) * repelPower
-        this.ball.vz = Math.max(1, repelPower * 0.3) // Add some height to clear players
         this.ball.possessor = null
-        this.ball.bounceCount = 0 // Reset bounce count for new trajectory
         
-        // Push players away more forcefully
         playersNearBall.forEach((p, i) => {
           const pushAngle = (Math.PI * 2 * i) / playersNearBall.length
-          const pushDistance = 8 + Math.random() * 5 // More variable push distance
-          p.x += Math.cos(pushAngle) * pushDistance
-          p.y += Math.sin(pushAngle) * pushDistance
-          
-          // Keep players in bounds (including buffer zone)
-          const buffer = this.config.fieldBuffer || 0
-          p.x = Math.max(p.radius - buffer, Math.min(this.config.fieldWidth + buffer - p.radius, p.x))
-          p.y = Math.max(p.radius - buffer, Math.min(this.config.fieldHeight + buffer - p.radius, p.y))
+          p.x += Math.cos(pushAngle) * 3
+          p.y += Math.sin(pushAngle) * 3
         })
       } else {
         const winner = strongest.player
-        // Only award possession if player is very close and not part of a big crowd
-        if (strongest.distance < winner.radius + this.ball.radius + 1 && playersNearBall.length <= 3) {
+        if (strongest.distance < winner.radius + this.ball.radius + 2) {
           this.ball.possessor = winner
           this.ball.lastKicker = winner
           this.gameState.possession = winner.team
-          this.ball.isStationary = false
         }
       }
     }
@@ -3414,27 +2110,27 @@ export class FutsalGameEngine {
       return false
     }
     
-    // No fouls if ball is very close (fighting for the ball) - increased radius
+    // No fouls if ball is very close (fighting for the ball)
     const ballDist1 = Math.hypot(this.ball.x - player1.x, this.ball.y - player1.y)
     const ballDist2 = Math.hypot(this.ball.x - player2.x, this.ball.y - player2.y)
-    const ballNearby = Math.min(ballDist1, ballDist2) < 50 // Increased to 50
+    const ballNearby = Math.min(ballDist1, ballDist2) < 30
     
     if (ballNearby && !isSlideTackle) {
-      // Normal challenge for the ball, very unlikely to be a foul
-      return impactForce > 300 && Math.random() < 0.02 // Reduced to 2% chance
+      // Normal challenge for the ball, less likely to be a foul
+      return impactForce > 200 && Math.random() < 0.1
     }
     
-    // Slide tackles more likely to be fouls but still reduced
+    // Slide tackles more likely to be fouls
     if (isSlideTackle) {
       const tacklingPlayer = player1.isSliding ? player1 : player2
       const tackleQuality = tacklingPlayer.attributes.tackling / 99
-      const foulChance = 0.15 - tackleQuality * 0.1 // Reduced significantly
+      const foulChance = 0.4 - tackleQuality * 0.3
       return Math.random() < foulChance
     }
     
-    // High impact collisions - much higher threshold
-    if (impactForce > 300) { // Increased to 300
-      return Math.random() < 0.05 // Reduced to 5% chance
+    // High impact collisions
+    if (impactForce > 180) {
+      return Math.random() < 0.3
     }
     
     return false
@@ -3444,8 +2140,8 @@ export class FutsalGameEngine {
   private handleFoul(foulingPlayer: Player, fouledPlayer: Player, position: { x: number; y: number }): void {
     const currentTime = Date.now()
     
-    // Prevent multiple fouls in quick succession - increased cooldown
-    if (this.gameState.lastFoulTime && currentTime - this.gameState.lastFoulTime < 3000) {
+    // Prevent multiple fouls in quick succession
+    if (this.gameState.lastFoulTime && currentTime - this.gameState.lastFoulTime < 1000) {
       return
     }
     
@@ -3520,388 +2216,84 @@ export class FutsalGameEngine {
   private setupFreeKick(): void {
     if (!this.gameState.restartPosition || !this.gameState.restartTeam) return
     
-    // Set free kick timer - 2 seconds to take the kick
-    this.gameState.freeKickTimer = Date.now()
-    this.gameState.freeKickTimerExpiry = Date.now() + 2000 // 2 seconds
-    this.freeKickStartTime = Date.now() // For fallback mechanism
+    const minDistance = this.gameState.restartType === 'penalty' ? 50 : 30
     
-    // Place ball at free kick position
-    this.ball.x = this.gameState.restartPosition.x
-    this.ball.y = this.gameState.restartPosition.y
-    this.ball.z = 0
-    this.ball.vx = 0
-    this.ball.vy = 0
-    this.ball.vz = 0
-    this.ball.isStationary = true
-    
-    // Find best player to take the free kick
-    const eligiblePlayers = this.players.filter(p => 
-      p.team === this.gameState.restartTeam && !p.isSentOff
-    )
-    
-    // Sort by free kick attribute and distance
-    const freeKickTaker = eligiblePlayers.sort((a, b) => {
-      const aDist = Math.hypot(a.x - this.ball.x, a.y - this.ball.y)
-      const bDist = Math.hypot(b.x - this.ball.x, b.y - this.ball.y)
-      // Prefer players with better freekick skill who are also close
-      return (bDist + (99 - b.attributes.freekick)) - (aDist + (99 - a.attributes.freekick))
-    })[0]
-    
-    if (freeKickTaker) {
-      
-      // Set the taker to move to the ball
-      freeKickTaker.isMovingToRestart = true
-      freeKickTaker.restartRole = 'taker'
-      
-      // Position close to the ball
-      const goalX = freeKickTaker.team === 'home' ? this.config.fieldWidth : 0
-      const angleToGoal = Math.atan2(this.config.fieldHeight / 2 - this.ball.y, goalX - this.ball.x)
-      
-      // Position just behind the ball, close enough to take the kick
-      const kickDistance = 12 // Close enough to satisfy the kick distance check
-      freeKickTaker.restartTarget = {
-        x: this.ball.x - Math.cos(angleToGoal) * kickDistance,
-        y: this.ball.y - Math.sin(angleToGoal) * kickDistance
-      }
-      
-      
-      // Keep in bounds (no buffer for free kicks - must be inside field)
-      freeKickTaker.restartTarget.x = Math.max(freeKickTaker.radius, Math.min(this.config.fieldWidth - freeKickTaker.radius, freeKickTaker.restartTarget.x))
-      freeKickTaker.restartTarget.y = Math.max(freeKickTaker.radius, Math.min(this.config.fieldHeight - freeKickTaker.radius, freeKickTaker.restartTarget.y))
-      
-      // Track for stats
-      this.lastFreeKickTaker = freeKickTaker
-      
-      // Start a timer to complete the free kick if player doesn't reach in time
-      setTimeout(() => {
-        this.completeRestart(freeKickTaker)
-      }, 2500) // 2.5 second timeout for free kicks
-    }
-    
-    // Move opposing players away gradually
-    const minDistance = this.gameState.restartType === 'penalty' ? 50 : 50 // 5 meters for free kicks
+    // Move all opposing players away
     this.players.forEach(player => {
-      if (player.team !== this.gameState.restartTeam && !player.isSentOff) {
+      if (player.team !== this.gameState.restartTeam) {
         const dist = Math.hypot(
           player.x - this.gameState.restartPosition!.x,
           player.y - this.gameState.restartPosition!.y
         )
         
         if (dist < minDistance) {
-          player.isMovingToRestart = true
           const angle = Math.atan2(
             player.y - this.gameState.restartPosition!.y,
             player.x - this.gameState.restartPosition!.x
           )
           
-          player.restartTarget = {
-            x: this.gameState.restartPosition!.x + Math.cos(angle) * (minDistance + 10),
-            y: this.gameState.restartPosition!.y + Math.sin(angle) * (minDistance + 10)
-          }
-          
-          // Keep in bounds (but NOT for kick-in takers)
-          player.restartTarget.x = Math.max(player.radius, Math.min(this.config.fieldWidth - player.radius, player.restartTarget.x))
-          player.restartTarget.y = Math.max(player.radius, Math.min(this.config.fieldHeight - player.radius, player.restartTarget.y))
+          player.x = this.gameState.restartPosition!.x + Math.cos(angle) * minDistance
+          player.y = this.gameState.restartPosition!.y + Math.sin(angle) * minDistance
         }
       }
     })
+    
+    this.executeRestart()
   }
 
-  // Execute restart is now handled by player AI when they reach position
-
-  // Setup realistic player movement for restarts
-  private setupRestartPlayerMovement(): void {
+  // Execute restart (used for free kicks, penalties, etc.)
+  private executeRestart(): void {
     if (!this.gameState.restartPosition || !this.gameState.restartTeam) return
     
-    // Set free kick start time for fallback
-    this.freeKickStartTime = Date.now()
+    // Place ball at restart position
+    this.ball.x = this.gameState.restartPosition.x
+    this.ball.y = this.gameState.restartPosition.y
+    this.ball.z = 0
+    this.ball.vx = 0
+    this.ball.vy = 0
+    this.ball.vz = 0
     
+    // Find nearest player from the restart team to take the restart
     const restartPlayers = this.players.filter(p => 
       p.team === this.gameState.restartTeam && !p.isSentOff
     )
     
-    if (restartPlayers.length === 0) return
-    
-    // Find the best player to take the restart (closest + good at technique/passing)
-    const restartTaker = restartPlayers.sort((a, b) => {
-      const aDist = Math.hypot(a.x - this.ball.x, a.y - this.ball.y)
-      const bDist = Math.hypot(b.x - this.ball.x, b.y - this.ball.y)
-      const aSkill = (a.attributes.passing + a.attributes.technique) / 2
-      const bSkill = (b.attributes.passing + b.attributes.technique) / 2
+    if (restartPlayers.length > 0) {
+      // Find closest player to restart position
+      const restartTaker = restartPlayers.sort((a, b) => {
+        const aDist = Math.hypot(a.x - this.ball.x, a.y - this.ball.y)
+        const bDist = Math.hypot(b.x - this.ball.x, b.y - this.ball.y)
+        return aDist - bDist
+      })[0]
       
-      // Combine distance and skill (closer + more skilled = better)
-      const aScore = (1 / (aDist + 1)) * aSkill
-      const bScore = (1 / (bDist + 1)) * bSkill
-      
-      return bScore - aScore
-    })[0]
-    
-    // Clear any existing restart states
-    this.players.forEach(player => {
-      player.isMovingToRestart = false
-      player.restartTarget = undefined
-      player.restartRole = 'normal'
-    })
-    
-    // Set up the restart taker
-    const offsetDistance = 12 // Distance from ball for the restart taker
-    // Calculate angle towards opponent goal
-    const opponentGoalX = restartTaker.team === 'home' ? this.config.fieldWidth : 0
-    const ballToGoalAngle = Math.atan2(this.config.fieldHeight / 2 - this.ball.y, opponentGoalX - this.ball.x)
-    const targetX = this.ball.x - Math.cos(ballToGoalAngle) * offsetDistance
-    const targetY = this.ball.y - Math.sin(ballToGoalAngle) * offsetDistance
-    
-    restartTaker.isMovingToRestart = true
-    restartTaker.restartTarget = { x: targetX, y: targetY }
-    restartTaker.restartRole = 'taker'
-    restartTaker.targetX = targetX
-    restartTaker.targetY = targetY
-    
-    // Set up supporting players for proper positioning
-    const supportPlayers = restartPlayers.filter(p => p !== restartTaker).slice(0, 2)
-    supportPlayers.forEach((player, index) => {
-      const supportAngle = ballToGoalAngle + (index === 0 ? Math.PI / 4 : -Math.PI / 4)
-      const supportDistance = 25 + index * 15
-      const supportX = this.ball.x + Math.cos(supportAngle) * supportDistance
-      const supportY = this.ball.y + Math.sin(supportAngle) * supportDistance
-      
-      // Keep support players in bounds
-      const clampedX = Math.max(20, Math.min(this.config.fieldWidth - 20, supportX))
-      const clampedY = Math.max(20, Math.min(this.config.fieldHeight - 20, supportY))
-      
-      player.isMovingToRestart = true
-      player.restartTarget = { x: clampedX, y: clampedY }
-      player.restartRole = 'support'
-      player.targetX = clampedX
-      player.targetY = clampedY
-    })
-    
-    // Start a timer to complete the restart once players are in position
-    setTimeout(() => {
-      this.completeRestart(restartTaker)
-    }, 1500) // Give players 1.5 seconds to get into position
-  }
-
-  // Complete the restart once players are positioned
-  private completeRestart(restartTaker: Player): void {
-    if (!this.ball.isStationary) return // Restart already completed
-    
-    // Check if 2 seconds have passed since free kick started
-    const currentTime = Date.now()
-    const timeSinceFreeKick = this.freeKickStartTime ? currentTime - this.freeKickStartTime : 0
-    const forceShoot = timeSinceFreeKick > 2000 // 2 second fallback
-    
-    // Check if restart taker is close enough to the ball, or force completion if they're reasonably close
-    const distanceToBall = Math.hypot(restartTaker.x - this.ball.x, restartTaker.y - this.ball.y)
-    
-    // For kick-ins, allow larger distance since player might be in buffer zone
-    const maxAllowedDistance = this.gameState.restartType === 'kick-in' ? 35 : 25
-    
-    if (distanceToBall < maxAllowedDistance || restartTaker.isSentOff || forceShoot) {
-      // If original taker is sent off, find another player
-      let actualTaker = restartTaker
-      if (restartTaker.isSentOff) {
-        const availablePlayers = this.players.filter(p => 
-          p.team === this.gameState.restartTeam && !p.isSentOff
-        )
-        if (availablePlayers.length > 0) {
-          actualTaker = availablePlayers.sort((a, b) => {
-            const aDist = Math.hypot(a.x - this.ball.x, a.y - this.ball.y)
-            const bDist = Math.hypot(b.x - this.ball.x, b.y - this.ball.y)
-            return aDist - bDist
-          })[0]
-        }
-      }
-      
-      // Move player to ball if needed
-      if (distanceToBall > 15) {
-        actualTaker.x = this.ball.x + (Math.random() - 0.5) * 10
-        actualTaker.y = this.ball.y + (Math.random() - 0.5) * 10
-      }
+      // Position player near the ball
+      const offsetX = restartTaker.team === 'home' ? -15 : 15
+      restartTaker.x = this.ball.x + offsetX
+      restartTaker.y = this.ball.y
       
       // Give possession to the restart taker
-      this.ball.possessor = actualTaker
-      this.ball.lastKicker = actualTaker
-      this.ball.isStationary = false
-      this.gameState.possession = actualTaker.team
-      
-      // Track free kick if this was a free kick
-      if (this.gameState.restartType === 'free-kick') {
-        this.gameState.matchStats.freeKicksAttempted[actualTaker.team]++
-        this.lastFreeKickTaker = actualTaker
-      }
-      
-      // If forced due to timeout
-      if (forceShoot) {
-        if (this.gameState.restartType === 'free-kick') {
-          // For free kicks, shoot at goal
-          this.executeAutomaticShot(actualTaker)
-        } else if (this.gameState.restartType === 'kick-in') {
-          // For kick-ins, make a simple pass infield
-          const fieldCenter = { x: this.config.fieldWidth / 2, y: this.config.fieldHeight / 2 }
-          const targetAngle = Math.atan2(fieldCenter.y - this.ball.y, fieldCenter.x - this.ball.x)
-          const kickPower = 3
-          this.ball.vx = Math.cos(targetAngle) * kickPower
-          this.ball.vy = Math.sin(targetAngle) * kickPower
-          this.ball.vz = 0
-          this.ball.possessor = null
-          this.ball.lastKicker = actualTaker
-        } else if (this.gameState.restartType === 'goal-kick') {
-          // For goal kicks, kick upfield with more power
-          const targetX = actualTaker.team === 'home' ? this.config.fieldWidth * 0.75 : this.config.fieldWidth * 0.25
-          const targetY = this.config.fieldHeight / 2
-          const targetAngle = Math.atan2(targetY - this.ball.y, targetX - this.ball.x)
-          const kickPower = 6 // Stronger kick for goal kicks
-          this.ball.vx = Math.cos(targetAngle) * kickPower
-          this.ball.vy = Math.sin(targetAngle) * kickPower
-          this.ball.vz = 1.5 // Some height for goal kicks
-          this.ball.possessor = null
-          this.ball.lastKicker = actualTaker
-        }
-      }
-      
-      // Clear restart state
-      this.gameState.ballOut = false
-      this.gameState.restartType = null
-      this.gameState.restartTeam = null
-      this.ballStationaryTime = 0
-      this.freeKickStartTime = null // Reset timer
-      
-      // Clear restart movement for all players
-      this.players.forEach(player => {
-        player.isMovingToRestart = false
-        player.restartTarget = undefined
-        player.restartRole = 'normal'
-      })
-    } else {
-      // Player not close enough, try again in a bit
-      setTimeout(() => {
-        this.completeRestart(restartTaker)
-      }, 500)
-    }
-  }
-
-  // Execute automatic shot when free kick timeout occurs
-  private executeAutomaticShot(player: Player): void {
-    // Calculate angle and power for shot towards goal
-    const opponentGoalX = player.team === 'home' ? this.config.fieldWidth : 0
-    const goalCenterY = this.config.fieldHeight / 2
-    
-    // Add some randomness to the target within the goal
-    const goalWidth = 60
-    const targetY = goalCenterY + (Math.random() - 0.5) * goalWidth * 0.8
-    
-    const dx = opponentGoalX - this.ball.x
-    const dy = targetY - this.ball.y
-    const distance = Math.hypot(dx, dy)
-    
-    // Calculate shot power based on distance and player's shooting ability
-    const shootingPower = (player.attributes.finishing + player.attributes.technique) / 2 / 99
-    const basePower = Math.min(12, 6 + distance * 0.02) // Base power scales with distance
-    const finalPower = basePower * (0.7 + shootingPower * 0.6) // 70-130% of base power
-    
-    // Normalize direction and apply power
-    this.ball.vx = (dx / distance) * finalPower
-    this.ball.vy = (dy / distance) * finalPower
-    this.ball.vz = 1 + Math.random() * 2 // Add some lift
-    
-    // Add some shooting error based on player skill
-    const accuracy = player.attributes.finishing / 99
-    const errorFactor = (1 - accuracy) * 0.3 // Max 30% error for worst players
-    this.ball.vx += (Math.random() - 0.5) * finalPower * errorFactor
-    this.ball.vy += (Math.random() - 0.5) * finalPower * errorFactor
-    
-    // Release possession for realistic shot mechanics
-    this.ball.possessor = null
-    
-  }
-
-  // Check if free kick timer has expired
-  private checkFreeKickTimer(): void {
-    // Only check if we have a free kick in progress
-    if (!this.gameState.freeKickTimer || 
-        !this.gameState.freeKickTimerExpiry || 
-        this.gameState.restartType !== 'free-kick' ||
-        !this.gameState.ballOut) {
-      return
+      this.ball.possessor = restartTaker
+      this.ball.lastKicker = restartTaker
     }
     
-    const currentTime = Date.now()
-    if (currentTime >= this.gameState.freeKickTimerExpiry) {
-      // Timer expired - find the designated kicker or closest player
-      const kickerTeam = this.gameState.restartTeam
-      if (!kickerTeam) return
-      
-      const teamPlayers = this.players.filter(p => 
-        p.team === kickerTeam && 
-        !p.isSentOff && 
-        p.restartRole === 'taker'
-      )
-      
-      let kicker = teamPlayers[0]
-      
-      // If no designated taker, find closest player
-      if (!kicker) {
-        const eligiblePlayers = this.players.filter(p => 
-          p.team === kickerTeam && !p.isSentOff
-        )
-        
-        kicker = eligiblePlayers.sort((a, b) => {
-          const aDist = Math.hypot(a.x - this.ball.x, a.y - this.ball.y)
-          const bDist = Math.hypot(b.x - this.ball.x, b.y - this.ball.y)
-          return aDist - bDist
-        })[0]
-      }
-      
-      if (kicker) {
-        // Force the kick
-        this.ball.possessor = kicker
-        this.ball.lastKicker = kicker
-        this.ball.isStationary = false
-        this.gameState.possession = kicker.team
-        
-        // Track the free kick attempt
-        this.gameState.matchStats.freeKicksAttempted[kicker.team]++
-        this.lastFreeKickTaker = kicker
-        
-        // Execute automatic shot
-        this.executeAutomaticShot(kicker)
-        
-        // Clear restart state
-        this.gameState.ballOut = false
-        this.gameState.restartType = null
-        this.gameState.restartTeam = null
-        this.gameState.freeKickTimer = undefined
-        this.gameState.freeKickTimerExpiry = undefined
-        this.ballStationaryTime = 0
-        this.freeKickStartTime = null
-        
-        // Clear restart movement for all players
-        this.players.forEach(player => {
-          player.isMovingToRestart = false
-          player.restartTarget = undefined
-          player.restartRole = 'normal'
-        })
-      }
-    }
+    // Clear restart state
+    this.gameState.ballOut = false
+    this.gameState.restartType = null
+    this.gameState.restartTeam = null
+    this.ballStationaryTime = 0
   }
 
   // Goal detection
   private checkGoals(): void {
     const goalY = (this.config.fieldHeight - this.config.goalWidth) / 2
-    const goalHeight = 80 // Futsal goal height (approximately 2 meters)
-    
-    // Check if ball is within goal area and below crossbar
     if (this.ball.x <= this.config.goalDepth && 
         this.ball.y >= goalY && 
-        this.ball.y <= goalY + this.config.goalWidth &&
-        this.ball.z <= goalHeight) {
+        this.ball.y <= goalY + this.config.goalWidth) {
       this.gameState.awayScore++
       this.handleGoalScored('away')
     } else if (this.ball.x >= this.config.fieldWidth - this.config.goalDepth && 
                this.ball.y >= goalY && 
-               this.ball.y <= goalY + this.config.goalWidth &&
-               this.ball.z <= goalHeight) {
+               this.ball.y <= goalY + this.config.goalWidth) {
       this.gameState.homeScore++
       this.handleGoalScored('home')
     }
@@ -3939,13 +2331,6 @@ export class FutsalGameEngine {
     this.gameState.matchStats.goals.push(goal)
     this.gameState.lastGoal = goal
     
-    // Check if this was a free kick goal
-    if (this.lastFreeKickTaker && this.lastFreeKickTaker === scorer) {
-      // Goal scored directly from free kick
-      this.gameState.matchStats.freeKicksScored[team]++
-      this.lastFreeKickTaker = null // Reset
-    }
-    
     // Start goal celebration
     this.gameState.goalCelebration = {
       active: true,
@@ -3974,11 +2359,9 @@ export class FutsalGameEngine {
 
   // Main update function
   update(currentTime: number): void {
-    // Initialize on first frame
     if (this.startTime === null) {
       this.startTime = currentTime
       this.lastUpdateTime = currentTime
-      console.log('Engine first update - startTime set to:', currentTime)
     }
     
     const deltaTime = Math.min((currentTime - (this.lastUpdateTime || currentTime)) / 1000, 0.1)
@@ -4007,32 +2390,17 @@ export class FutsalGameEngine {
     })
     
     // Update positions
-    for (const player of this.players) {
+    this.players.forEach(player => {
       if (!player.isSentOff) {
         // Update position
-        const dx = player.vx * deltaTime * 60 * this.gameState.gameSpeed
-        const dy = player.vy * deltaTime * 60 * this.gameState.gameSpeed
-        
-        // Debug check
-        if (isNaN(dx) || isNaN(dy) || isNaN(player.x) || isNaN(player.y)) {
-          console.error('Player position update NaN detected!', {
-            player: { x: player.x, y: player.y, vx: player.vx, vy: player.vy, name: player.name },
-            deltaTime,
-            gameSpeed: this.gameState.gameSpeed,
-            dx, dy
-          })
-          continue // Skip this player update
-        }
-        
-        player.x += dx
-        player.y += dy
+        player.x += player.vx * deltaTime * 60 * this.gameState.gameSpeed
+        player.y += player.vy * deltaTime * 60 * this.gameState.gameSpeed
 
-        // Keep players in bounds (including buffer zone)
-        const buffer = this.config.fieldBuffer || 0
-        player.x = Math.max(player.radius - buffer, Math.min(this.config.fieldWidth + buffer - player.radius, player.x))
-        player.y = Math.max(player.radius - buffer, Math.min(this.config.fieldHeight + buffer - player.radius, player.y))
+        // Keep players in bounds
+        player.x = Math.max(player.radius, Math.min(this.config.fieldWidth - player.radius, player.x))
+        player.y = Math.max(player.radius, Math.min(this.config.fieldHeight - player.radius, player.y))
       }
-    }
+    })
     
     // Update player collisions
     this.updatePlayerCollisions()
@@ -4046,33 +2414,8 @@ export class FutsalGameEngine {
     // Check for goals
     this.checkGoals()
     
-    // Check free kick timer expiry
-    this.checkFreeKickTimer()
-    
     // Update possession tracking
     this.updatePossessionStats(deltaTime)
-    
-    // Update pass completion rates
-    this.updatePassCompletionRates()
-  }
-  
-  // Update pass completion rates
-  private updatePassCompletionRates(): void {
-    // Calculate home team pass completion rate
-    if (this.gameState.matchStats.passesAttempted.home > 0) {
-      this.gameState.matchStats.passCompletionRate.home = Math.round(
-        (this.gameState.matchStats.passesCompleted.home / 
-         this.gameState.matchStats.passesAttempted.home) * 100
-      )
-    }
-    
-    // Calculate away team pass completion rate
-    if (this.gameState.matchStats.passesAttempted.away > 0) {
-      this.gameState.matchStats.passCompletionRate.away = Math.round(
-        (this.gameState.matchStats.passesCompleted.away / 
-         this.gameState.matchStats.passesAttempted.away) * 100
-      )
-    }
   }
   
   // Update possession statistics
@@ -4102,12 +2445,6 @@ export class FutsalGameEngine {
   }
 
   getPlayers(): Player[] {
-    // Only return players who haven't been sent off
-    return this.players.filter(p => !p.isSentOff)
-  }
-
-  getAllPlayers(): Player[] {
-    // Return all players including sent-off ones
     return [...this.players]
   }
 
@@ -4117,16 +2454,22 @@ export class FutsalGameEngine {
 
   getStatistics(): MatchStats & { 
     foulsCommitted?: { home: number; away: number }
-    advantagesPlayed?: number 
+    advantagesPlayed?: number
+    possession?: { home: number; away: number }
+    freeKicksAttempted?: { home: number; away: number }
+    shots?: { home: number; away: number }
+    shotsOnTarget?: { home: number; away: number }
+    passCompletionRate?: { home: number; away: number }
   } {
-    // Return match statistics with additional foul tracking
-    return {
+    return { 
       ...this.gameState.matchStats,
-      foulsCommitted: { 
-        home: this.gameState.fouls.home, 
-        away: this.gameState.fouls.away 
-      },
-      advantagesPlayed: this.gameState.advantagesPlayed || 0
+      foulsCommitted: this.gameState.fouls,
+      advantagesPlayed: this.gameState.advantagesPlayed || 0,
+      possession: this.gameState.matchStats.possessionPercentage,
+      freeKicksAttempted: { home: 0, away: 0 }, // Not tracked in original engine
+      shots: this.gameState.shots,
+      shotsOnTarget: this.gameState.shotsOnTarget,
+      passCompletionRate: { home: 0, away: 0 } // Not tracked in original engine
     }
   }
 
@@ -4137,7 +2480,7 @@ export class FutsalGameEngine {
 
   resetGame(): void {
     this.gameState.isPlaying = false
-    this.gameState.gameTime = 90000 // 90 seconds
+    this.gameState.gameTime = 1200000 // 20 minutes per half
     this.gameState.halfTime = 1
     this.gameState.homeScore = 0
     this.gameState.awayScore = 0
@@ -4152,12 +2495,6 @@ export class FutsalGameEngine {
     this.gameState.advantage = null
     this.startTime = null
     this.lastUpdateTime = null
-    this.freeKickStartTime = null
-    this.lastPassTarget = null
-    this.lastPassTime = null
-    this.lastFreeKickTaker = null
-    this.gameState.freeKickTimer = undefined
-    this.gameState.freeKickTimerExpiry = undefined
     
     this.ball.x = this.config.fieldWidth / 2
     this.ball.y = this.config.fieldHeight / 2
@@ -4169,22 +2506,12 @@ export class FutsalGameEngine {
     this.ball.possessor = null
     this.ball.lastKicker = null
     this.ball.touchCount = 0
-    this.ball.isStationary = true
-    this.ball.bounceCount = 0
-    this.ball.lastMovementTime = 0
-    this.ball.stuckCheckTimer = 0
     
     this.initializePlayers()
-    
-    // FlowAI removed - using original AI only
   }
 
   setGameSpeed(speed: number): void {
     this.gameState.gameSpeed = speed
-  }
-
-  setSoundEnabled(enabled: boolean): void {
-    this.soundEnabled = enabled
   }
 
   updateConfig(newConfig: Partial<GameConfig>): void {
@@ -4193,75 +2520,7 @@ export class FutsalGameEngine {
   }
 
   play(): void {
-    console.log('Engine play() called')
     this.gameState.isPlaying = true
-  }
-  
-  private performKickoff(): void {
-    console.log('Performing kickoff')
-    
-    // Determine which team kicks off (alternates or could be set from coin toss)
-    const kickoffTeam: 'home' | 'away' = this.gameState.lastGoal ? 
-      (this.gameState.lastGoal.team === 'home' ? 'away' : 'home') : 'home'
-    const striker = this.players.find(p => 
-      p.team === kickoffTeam && 
-      p.role === 'striker' && 
-      !p.isSentOff
-    )
-    
-    if (striker) {
-      // Position striker next to ball
-      striker.x = this.ball.x - (kickoffTeam === 'home' ? 15 : -15)
-      striker.y = this.ball.y
-      
-      // Give a small kick to start the game
-      setTimeout(() => {
-        if (this.ball.isStationary) {
-          // Simple pass to nearby teammate
-          const teammate = this.players.find(p => 
-            p.team === kickoffTeam && 
-            p !== striker && 
-            !p.isSentOff &&
-            p.role === 'midfielder'
-          )
-          
-          if (teammate) {
-            const angle = Math.atan2(teammate.y - this.ball.y, teammate.x - this.ball.x)
-            this.ball.vx = Math.cos(angle) * 3
-            this.ball.vy = Math.sin(angle) * 3
-            this.ball.vz = 0
-            this.ball.isStationary = false
-            this.ball.lastKicker = striker
-            this.gameState.possession = kickoffTeam
-            
-            console.log('Kickoff executed - ball passed to teammate')
-          } else {
-            // Fallback: kick forward
-            const direction = kickoffTeam === 'home' ? 1 : -1
-            this.ball.vx = direction * 3
-            this.ball.vy = (Math.random() - 0.5) * 2
-            this.ball.vz = 0
-            this.ball.isStationary = false
-            this.ball.lastKicker = striker
-            this.gameState.possession = kickoffTeam
-            
-            console.log('Kickoff executed - ball kicked forward')
-          }
-        }
-      }, 500) // Small delay to let players settle
-    } else {
-      // Emergency fallback - just get the ball moving
-      console.log('No striker found - using emergency kickoff')
-      setTimeout(() => {
-        if (this.ball.isStationary) {
-          this.ball.vx = 2
-          this.ball.vy = (Math.random() - 0.5) * 2
-          this.ball.vz = 0
-          this.ball.isStationary = false
-          console.log('Emergency kickoff executed')
-        }
-      }, 1000)
-    }
   }
 
   pause(): void {

@@ -173,6 +173,18 @@ const router = createRouter({
       
     },
     {
+      path: '/intro',
+      name: 'intro',
+      component: () => import('@/views/Intro.vue'),
+      
+    },
+    {
+      path: '/dance',
+      name: 'dance',
+      component: () => import('@/views/Dance.vue'),
+      
+    },
+    {
       path: '/matchmaking',
       name: 'matchmaking',
       component: () => import('@/components/multiplayer/WaitingRoom.vue'),
