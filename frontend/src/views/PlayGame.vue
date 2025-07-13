@@ -60,10 +60,10 @@
               </div>
             </transition>
             <GameButton
-              @click="startGame"
+              @click="proceedToStrategy"
               color="success"
-              label="Start Game"
-              prepend-icon="mdi-play-circle"
+              label="Continue"
+              prepend-icon="mdi-arrow-right"
               size="large"
               click-sound="success"
               class="mt-4"
@@ -72,9 +72,67 @@
         </div>
       </div>
       
+      <!-- Strategy Selection Modal -->
+      <div v-if="showStrategyModal" class="modal-overlay">
+        <div class="strategy-modal">
+          <h2>⚽ Managers Plan</h2>
+          <p class="strategy-intro">Select your team's strategy and formation</p>
+          
+          <div class="strategy-container">
+            <!-- Home Team Strategy -->
+            <div class="strategy-team home-strategy">
+              <h3>My Team</h3>
+              <div class="strategy-section">
+                <label>Formation:</label>
+                <select v-model="homeFormation" class="strategy-select">
+                  <option value="1-2-1-1">1-2-1-1 (Balanced)</option>
+                  <option value="1-1-2-1">1-1-2-1 (Midfield)</option>
+                  <option value="1-3-1">1-3-1 (Defensive)</option>
+                  <option value="1-2-2">1-2-2 (Attacking)</option>
+                </select>
+              </div>
+              
+              <div class="strategy-section">
+                <label>Tactic:</label>
+                <select v-model="homeTactic" class="strategy-select">
+                  <option value="rotation">Rotation in Attack</option>
+                  <option value="flying-keeper">Flying Keeper</option>
+                  <option value="pass-move">Pass and Move</option>
+                  <option value="defensive">Defensive Positioning</option>
+                  <option value="counter">Counter-Attacking</option>
+                  <option value="high-press">High Press</option>
+                  <option value="wing-play">Wing Play</option>
+                  <option value="pivot">Pivot Play</option>
+                </select>
+              </div>
+              
+              <div class="strategy-section">
+                <label>Playing Style:</label>
+                <div class="strategy-slider">
+                  <span>Defensive</span>
+                  <input type="range" v-model="homeStrategy" min="0" max="8" step="1" />
+                  <span>Attacking</span>
+                </div>
+                <div class="strategy-value">{{ getStrategyLabel(homeStrategy) }}</div>
+              </div>
+            </div>
+          </div>
+          
+          <GameButton
+            @click="startGame"
+            color="success"
+            label="Start Match"
+            prepend-icon="mdi-play-circle"
+            size="large"
+            click-sound="success"
+            class="mt-4"
+          />
+        </div>
+      </div>
+      
       <div class="team-settings">
         <div class="team-config home-team">
-          <h3>Home Team</h3>
+          <h3>My Team</h3>
           <div class="config-row">
             <label>Formation:</label>
             <select v-model="homeFormation">
@@ -103,49 +161,35 @@
             <span class="strategy-label">{{ getStrategyLabel(homeStrategy) }}</span>
           </div>
         </div>
-        
-        <div class="team-config away-team">
-          <h3>Away Team</h3>
-          <div class="config-row">
-            <label>Formation:</label>
-            <select v-model="awayFormation">
-              <option value="1-2-1-1">1-2-1-1 (Balanced)</option>
-              <option value="1-1-2-1">1-1-2-1 (Midfield)</option>
-              <option value="1-3-1">1-3-1 (Defensive)</option>
-              <option value="1-2-2">1-2-2 (Attacking)</option>
-            </select>
-          </div>
-          <div class="config-row">
-            <label>Tactic:</label>
-            <select v-model="awayTactic">
-              <option value="rotation">Rotation in Attack</option>
-              <option value="flying-keeper">Flying Keeper</option>
-              <option value="pass-move">Pass and Move</option>
-              <option value="defensive">Defensive Positioning</option>
-              <option value="counter">Counter-Attacking</option>
-              <option value="high-press">High Press</option>
-              <option value="wing-play">Wing Play</option>
-              <option value="pivot">Pivot Play</option>
-            </select>
-          </div>
-          <div class="config-row">
-            <label>Strategy:</label>
-            <input type="range" v-model="awayStrategy" min="0" max="8" step="1" />
-            <span class="strategy-label">{{ getStrategyLabel(awayStrategy) }}</span>
-          </div>
-        </div>
       </div>
     </div>
     
-    <canvas 
-      ref="canvas" 
-      class="game-canvas" 
-      :width="700" 
-      :height="500"
-      @click="handleCanvasClick"
-      @mousemove="handleCanvasHover"
-      @mouseleave="handleCanvasLeave"
-    />
+    <div class="game-canvas-container">
+      <canvas 
+        ref="canvas" 
+        class="game-canvas" 
+        :width="700" 
+        :height="500"
+        @click="handleCanvasClick"
+        @mousemove="handleCanvasHover"
+        @mouseleave="handleCanvasLeave"
+      />
+      
+      <!-- Team Avatars -->
+      <div class="team-avatar home-avatar">
+        <div class="avatar-circle">
+          <img src="/sim/demo-manger-left.png" alt="Home Manager" class="manager-image" />
+        </div>
+      </div>
+      
+      <div class="team-avatar away-avatar">
+        <div class="avatar-circle">
+          <img src="/sim/demo-manger-right.png" alt="Away Manager" class="manager-image" />
+        </div>
+      </div>
+      
+      <div class="managers-label">Managers</div>
+    </div>
     
     <div class="controls">
       <GameButton
@@ -344,6 +388,7 @@ const coinFlipping = ref(false)
 const coinResult = ref<'Heads' | 'Tails' | null>(null)
 const kickoffTeam = ref<'Home' | 'Away' | null>(null)
 const playerWon = ref(false)
+const showStrategyModal = ref(false)
 
 // Sound effects
 const soundEnabled = ref(true)
@@ -570,8 +615,13 @@ const makeChoice = (choice: 'Heads' | 'Tails') => {
   render()
 }
 
-const startGame = () => {
+const proceedToStrategy = () => {
   showCoinFlipModal.value = false
+  showStrategyModal.value = true
+}
+
+const startGame = () => {
+  showStrategyModal.value = false
   gameStarted.value = true
   
   // Play kickoff whistle
@@ -1573,13 +1623,84 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
+.game-canvas-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
 .game-canvas {
   display: block;
-  margin: 0 auto 20px;
   border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   background-color: #000;
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* Team Avatars */
+.team-avatar {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-avatar {
+  bottom: -70px;
+  left: 20px;
+}
+
+.away-avatar {
+  bottom: -70px;
+  right: 20px;
+}
+
+.avatar-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+.home-avatar .avatar-circle {
+  background: linear-gradient(135deg, #0078ed 0%, #3366FF 100%);
+}
+
+.away-avatar .avatar-circle {
+  background: linear-gradient(135deg, #FF8C42 0%, #E67E22 100%);
+}
+
+.avatar-text {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.manager-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.managers-label {
+  position: absolute;
+  bottom: -65px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  font-weight: 600;
+  color: #ccc;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
 }
 
 .controls {
@@ -1587,7 +1708,7 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   justify-content: center;
   align-items: center;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 80px;
   flex-wrap: wrap;
 }
 
@@ -2081,6 +2202,156 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 .fade-delay-enter-from {
   opacity: 0;
   transform: translateY(10px);
+}
+
+/* Strategy Modal */
+.strategy-modal {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  max-width: 900px;
+  width: 90%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 120, 237, 0.3);
+}
+
+.strategy-modal h2 {
+  margin-bottom: 15px;
+  font-size: 32px;
+  color: #3366FF;
+}
+
+.strategy-intro {
+  font-size: 18px;
+  color: #ccc;
+  margin-bottom: 30px;
+}
+
+.strategy-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.strategy-team {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 25px;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
+  width: 100%;
+  max-width: 400px;
+}
+
+.home-strategy {
+  border-color: rgba(0, 120, 237, 0.3);
+}
+
+.away-strategy {
+  border-color: rgba(255, 140, 66, 0.3);
+}
+
+.strategy-team h3 {
+  margin-bottom: 20px;
+  font-size: 20px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.home-strategy h3 {
+  color: #3366FF;
+}
+
+.away-strategy h3 {
+  color: #FF8C42;
+}
+
+.strategy-section {
+  margin-bottom: 20px;
+}
+
+.strategy-section label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #ccc;
+  font-weight: 600;
+}
+
+.strategy-select {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.2s;
+}
+
+.strategy-select:focus {
+  outline: none;
+  border-color: #0078ed;
+  box-shadow: 0 0 0 2px rgba(0, 120, 237, 0.3);
+}
+
+.strategy-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.strategy-slider span {
+  font-size: 12px;
+  color: #999;
+  white-space: nowrap;
+}
+
+.strategy-slider input[type="range"] {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  border-radius: 3px;
+}
+
+.strategy-slider input[type="range"]:hover {
+  opacity: 1;
+}
+
+.strategy-slider input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #0078ed;
+  cursor: pointer;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.strategy-slider input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #0078ed;
+  cursor: pointer;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.strategy-value {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #00b4d8;
+  font-weight: 600;
 }
 
 @keyframes coinFadeIn {

@@ -198,6 +198,8 @@ export const useUserStore = defineStore('user', () => {
       
       // Reset user profile to initial state with onboarding false
       const resetData = {
+        id: userId,
+        uid: currentUser.value.uid,
         onboardingCompleted: false,
         onboardingStep: 0,
         managerProfile: null,
@@ -212,8 +214,19 @@ export const useUserStore = defineStore('user', () => {
       // Keep essential auth data
       if (userProfile.value?.walletAddress) {
         resetData.walletAddress = userProfile.value.walletAddress;
-        resetData.authMethod = userProfile.value.authMethod;
       }
+      
+      // Only set authMethod if it exists and is not undefined
+      if (userProfile.value?.authMethod) {
+        resetData.authMethod = userProfile.value.authMethod;
+      } else if (currentUser.value?.providerData?.[0]?.providerId) {
+        // Fallback to current user's provider if profile doesn't have authMethod
+        resetData.authMethod = currentUser.value.providerData[0].providerId;
+      } else {
+        // If no authMethod is available, set a default value to avoid undefined
+        resetData.authMethod = 'unknown';
+      }
+      
       if (userProfile.value?.email) {
         resetData.email = userProfile.value.email;
       }
@@ -226,6 +239,9 @@ export const useUserStore = defineStore('user', () => {
       
       // Update local state
       userProfile.value = { ...resetData };
+      
+      console.log('Account reset - userProfile after update:', userProfile.value);
+      console.log('isOnboardingComplete:', isOnboardingComplete.value);
       
       return true;
     } catch (err) {

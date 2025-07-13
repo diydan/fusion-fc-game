@@ -62,8 +62,11 @@
               {{ wordData.word }}{{ index < audioState.currentWords.length - 1 ? ' ' : '' }}
             </span>
           </div>
+          <div v-else-if="audioState.currentLyric" class="karaoke-lyrics">
+            <span class="karaoke-word highlighted">{{ audioState.currentLyric }}</span>
+          </div>
           <div v-else class="lyric-text">
-            {{ audioState.currentLyric || '' }}
+            {{ '' }}
           </div>
         </div>
         
@@ -148,7 +151,11 @@ onMounted(() => {
   // Enable lyrics by default on dance page
   audioState.showLyrics = true
   // Auto-play music on page load immediately
-  toggleBackgroundMusic()
+  setTimeout(() => {
+    if (!audioState.isMusicPlaying) {
+      toggleBackgroundMusic()
+    }
+  }, 100)
 })
 
 onUnmounted(() => {
@@ -224,7 +231,10 @@ onUnmounted(() => {
 
 /* Hide only lyrics in the music footer on dance page, keep song title */
 .music-player-footer :deep(.lyrics-stack),
-.music-player-footer :deep(.karaoke-lyrics) {
+.music-player-footer :deep(.karaoke-lyrics),
+.music-player-footer :deep(.lyric-line.previous),
+.music-player-footer :deep(.lyric-line.next),
+.music-player-footer :deep(.current-lyric) {
   display: none !important;
 }
 
@@ -233,16 +243,39 @@ onUnmounted(() => {
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
+  position: relative !important;
+  left: 0 !important;
+  transform: none !important;
+}
+
+.music-player-footer :deep(.lyric-line.current) {
+  display: block !important;
 }
 
 .music-player-footer :deep(.track-info) {
-  display: block !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
 }
 
 .music-player-footer :deep(.track-name) {
   display: block !important;
   color: white !important;
   font-size: 1rem !important;
+  font-weight: 500 !important;
+}
+
+.music-player-footer :deep(.track-counter) {
+  display: block !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 0.75rem !important;
+}
+
+/* Force show track info even when lyrics are present */
+.music-player-footer :deep(.lyrics-center .track-info) {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 /* Also override mobile positioning */
@@ -296,7 +329,7 @@ onUnmounted(() => {
 /* Karaoke Display Styles */
 .karaoke-display {
   position: fixed;
-  bottom: 60px; /* Position above music player - moved down 20px */
+  bottom: 55px; /* Position above music player - moved down 25px total */
   left: 0;
   right: 0;
   z-index: 90;
@@ -385,7 +418,7 @@ onUnmounted(() => {
 /* Mobile adjustments */
 @media (max-width: 768px) {
   .karaoke-display {
-    bottom: 80px; /* Adjust for mobile music player height - moved down 20px */
+    bottom: 75px; /* Adjust for mobile music player height - moved down 25px total */
   }
   
   .lyrics-container {

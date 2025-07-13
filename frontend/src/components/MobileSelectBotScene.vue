@@ -66,36 +66,66 @@
       </TresMesh>
 
       <!-- Character Group -->
-      <TresGroup :position="[props.showDanceBot ? -1.35 : 0, sceneOffsetY, 0]">
+      <TresGroup :position="[props.showDanceBot ? -1.55 : 0, sceneOffsetY, props.showDanceBot ? -0.4 : 0]">
         <TresGroup ref="modelGroup" :scale="characterScale" />
-        <!-- Main Character Label -->
-        <TresSprite v-if="props.showDanceBot" ref="mainCharacterLabel" :position="[0, 2.2, 0]" :scale="[1.2, 0.3, 1]">
-          <TresSpriteMaterial :map="mainCharacterLabelTexture" :depthTest="false" />
-        </TresSprite>
       </TresGroup>
 
       <!-- Jamie Bot Group (only visible on dance page) -->
       <TresGroup 
         v-if="props.showDanceBot"
-        :position="[-0.6, sceneOffsetY, 1.6]"
+        :position="[-0.6, sceneOffsetY, 1.2]"
         :rotation="[0, 0, 0]">
         <TresGroup ref="danceBotGroup" :scale="characterScale * 0.18" />
-        <!-- Jamie Bot Label -->
-        <TresSprite ref="jamieBotLabel" :position="[0, 0.4, 0]" :scale="[1.2, 0.3, 1]">
-          <TresSpriteMaterial :map="jamieBotLabelTexture" :depthTest="false" />
-        </TresSprite>
       </TresGroup>
 
       <!-- Cansu Bot Group (only visible on dance page) -->
       <TresGroup 
         v-if="props.showDanceBot"
-        :position="[0.4, sceneOffsetY, 0]"
+        :position="[0.6, sceneOffsetY, -0.4]"
         :rotation="[0, 0.3, 0]">
         <TresGroup ref="cansuBotGroup" :scale="[characterScale * 0.459 * 0.9, characterScale * 0.459, characterScale * 0.459]" />
-        <!-- Cansu Bot Label -->
-        <TresSprite ref="cansuBotLabel" :position="[0, 0.8, 0]" :scale="[1.2, 0.3, 1]">
-          <TresSpriteMaterial :map="cansuBotLabelTexture" :depthTest="false" />
-        </TresSprite>
+      </TresGroup>
+
+      <!-- Character Labels (on ground) -->
+      <TresGroup v-if="props.showDanceBot">
+        <!-- DanBot Label -->
+        <TresMesh 
+          ref="mainCharacterLabel" 
+          :position="[-1.55, 0.2, 1.1]" 
+          :rotation="[-Math.PI / 2 + Math.PI / 6 + Math.PI / 18, 0, 0]">
+          <TresPlaneGeometry :args="[1.2, 0.3]" />
+          <TresMeshBasicMaterial 
+            :map="mainCharacterLabelTexture" 
+            :transparent="true" 
+            :depthWrite="false"
+            :side="THREE.DoubleSide" />
+        </TresMesh>
+        
+        <!-- JamieBot Label -->
+        <TresMesh 
+          ref="jamieBotLabel" 
+          :position="[-0.6, 0.2, 2.7]" 
+          :rotation="[-Math.PI / 2 + Math.PI / 6 + Math.PI / 18, 0, 0]">
+          <TresPlaneGeometry :args="[1.08, 0.27]" />
+          <TresMeshBasicMaterial 
+            :map="jamieBotLabelTexture" 
+            :transparent="true" 
+            :depthWrite="false"
+            :side="THREE.DoubleSide" />
+        </TresMesh>
+        
+        <!-- CansuBot Label -->
+        <TresMesh 
+          ref="cansuBotLabel" 
+          :position="[0.6, 0.2, 1.1]" 
+          :rotation="[-Math.PI / 2 + Math.PI / 6 + Math.PI / 18, 0, 0]">
+          <TresPlaneGeometry :args="[1.2, 0.3]" />
+          <TresMeshBasicMaterial 
+            :map="cansuBotLabelTexture" 
+            :transparent="true" 
+            :depthWrite="false"
+            :side="THREE.DoubleSide" />
+        </TresMesh>
       </TresGroup>
 
       <!-- Goalkeeper Group -->
@@ -387,13 +417,14 @@ const createLabelTexture = (text: string): THREE.Texture => {
   // Create texture from canvas
   const texture = new THREE.CanvasTexture(canvas)
   texture.needsUpdate = true
+  texture.encoding = THREE.sRGBEncoding
   
   return texture
 }
 
 // Initialize label textures
 const initializeLabelTextures = () => {
-  mainCharacterLabelTexture.value = createLabelTexture('Main Player')
+  mainCharacterLabelTexture.value = createLabelTexture('DanBot')
   jamieBotLabelTexture.value = createLabelTexture('JamieBot')
   cansuBotLabelTexture.value = createLabelTexture('CansuBot')
 }
@@ -1173,38 +1204,47 @@ const findHeadBone = (model: THREE.Object3D): THREE.Bone | null => {
   return headBone
 }
 
-// Update label positions to follow head bones
+// Update label positions to follow characters on ground
 const updateLabelPositions = () => {
   if (!props.showDanceBot) return
   
-  // Update main character label
-  if (headBones.value.mainCharacter && mainCharacterLabel.value) {
-    const headWorldPos = new THREE.Vector3()
-    headBones.value.mainCharacter.getWorldPosition(headWorldPos)
+  // Update DanBot label
+  if (modelGroup.value && mainCharacterLabel.value?.value) {
+    const characterWorldPos = new THREE.Vector3()
+    modelGroup.value.getWorldPosition(characterWorldPos)
     
-    // Convert to local position relative to character group
-    const localPos = modelGroup.value.worldToLocal(headWorldPos.clone())
-    mainCharacterLabel.value.position.set(localPos.x, localPos.y + 0.5, localPos.z)
+    // Get the mesh object
+    const mesh = mainCharacterLabel.value.value
+    if (mesh && mesh.position) {
+      // Position label on ground in front of character
+      mesh.position.set(characterWorldPos.x, 0.01, characterWorldPos.z + 1)
+    }
   }
   
-  // Update Jamie bot label
-  if (headBones.value.jamieBot && jamieBotLabel.value) {
-    const headWorldPos = new THREE.Vector3()
-    headBones.value.jamieBot.getWorldPosition(headWorldPos)
+  // Update JamieBot label
+  if (danceBotGroup.value && jamieBotLabel.value?.value) {
+    const botWorldPos = new THREE.Vector3()
+    danceBotGroup.value.getWorldPosition(botWorldPos)
     
-    // Convert to local position relative to bot group
-    const localPos = danceBotGroup.value.worldToLocal(headWorldPos.clone())
-    jamieBotLabel.value.position.set(localPos.x, localPos.y + 0.1, localPos.z)
+    // Get the mesh object
+    const mesh = jamieBotLabel.value.value
+    if (mesh && mesh.position) {
+      // Position label on ground in front of bot
+      mesh.position.set(botWorldPos.x, 0.01, botWorldPos.z + 1)
+    }
   }
   
-  // Update Cansu bot label
-  if (headBones.value.cansuBot && cansuBotLabel.value) {
-    const headWorldPos = new THREE.Vector3()
-    headBones.value.cansuBot.getWorldPosition(headWorldPos)
+  // Update CansuBot label
+  if (cansuBotGroup.value && cansuBotLabel.value?.value) {
+    const botWorldPos = new THREE.Vector3()
+    cansuBotGroup.value.getWorldPosition(botWorldPos)
     
-    // Convert to local position relative to bot group
-    const localPos = cansuBotGroup.value.worldToLocal(headWorldPos.clone())
-    cansuBotLabel.value.position.set(localPos.x, localPos.y + 0.2, localPos.z)
+    // Get the mesh object
+    const mesh = cansuBotLabel.value.value
+    if (mesh && mesh.position) {
+      // Position label on ground in front of bot
+      mesh.position.set(botWorldPos.x, 0.01, botWorldPos.z + 1)
+    }
   }
 }
 

@@ -76,9 +76,6 @@
           <v-list-item to="/settings">
             <v-list-item-title>Settings</v-list-item-title>
           </v-list-item>
-          <v-list-item to="/theme">
-            <v-list-item-title>Theme</v-list-item-title>
-          </v-list-item>
           <v-divider></v-divider>
           <v-list-item @click="logout">
             <v-list-item-title>Logout</v-list-item-title>
@@ -143,13 +140,6 @@
         ></v-list-item>
 
         <v-divider class="my-2"></v-divider>
-
-        <v-list-item
-          prepend-icon="mdi-palette"
-          title="Theme"
-          to="/theme"
-          rounded="xl"
-        ></v-list-item>
       </v-list>
     </v-navigation-drawer>
 

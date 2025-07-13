@@ -117,12 +117,13 @@
         <v-col cols="6">
           <game-button
             block
-            variant="outlined"
+            variant="text"
             size="large"
             label="Back"
             prepend-icon="mdi-arrow-left"
             @click="goBack"
             click-sound="pop"
+            class="back-button"
           />
         </v-col>
         <v-col cols="6">
@@ -319,5 +320,20 @@ onMounted(() => {
 .v-btn[size="large"] {
   width: 48px;
   height: 48px;
+}
+
+/* Back button styling */
+.back-button {
+  color: white !important;
+  opacity: 0.9;
+}
+
+.back-button:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.back-button :deep(.v-btn__content) {
+  font-weight: normal;
 }
 </style>

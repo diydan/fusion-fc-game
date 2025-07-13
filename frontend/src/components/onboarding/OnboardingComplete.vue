@@ -55,11 +55,12 @@
           <game-button
             block
             size="large"
-            variant="outlined"
+            variant="text"
             label="Back"
             prepend-icon="mdi-arrow-left"
             @click="goBack"
             click-sound="pop"
+            class="back-button"
           />
         </v-col>
         <v-col cols="12" sm="6">
@@ -185,5 +186,20 @@ onMounted(() => {
 .stat-card:hover {
   background-color: rgba(var(--v-theme-surface-variant), 0.8);
   transform: translateY(-2px);
+}
+
+/* Back button styling */
+.back-button {
+  color: white !important;
+  opacity: 0.9;
+}
+
+.back-button:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.back-button :deep(.v-btn__content) {
+  font-weight: normal;
 }
 </style>

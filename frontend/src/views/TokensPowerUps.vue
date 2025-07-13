@@ -7,12 +7,8 @@
     </div>
 
     <!-- Wallet Connection Status -->
-    <v-card class="unified-card mb-6">
-      <v-card-title class="card-title">
-        <v-icon start>mdi-wallet</v-icon>
-        Wallet Status
-      </v-card-title>
-      <v-card-text>
+    <v-card class="wallet-status-card mb-6" elevation="0">
+      <v-card-text class="pa-4">
             <div v-if="walletConnected" class="d-flex align-center">
               <v-chip color="success" variant="tonal" class="me-3">
                 <v-icon start size="small">mdi-check-circle</v-icon>
@@ -56,72 +52,39 @@
 
     <!-- Network Info -->
     <v-row v-if="walletConnected" class="mb-6">
-      <v-col cols="12" md="6">
-        <v-card class="unified-card">
-          <v-card-title class="card-title">
-            <v-icon start>mdi-web</v-icon>
-            Network Information
-          </v-card-title>
-          <v-card-text>
-            <v-list density="compact">
-              <v-list-item>
-                <template v-slot:prepend>
-                  <v-icon size="small">mdi-web</v-icon>
-                </template>
-                <v-list-item-title>{{ currentNetwork }}</v-list-item-title>
-                <v-list-item-subtitle>Network</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <template v-slot:prepend>
-                  <v-icon size="small">mdi-currency-eth</v-icon>
-                </template>
-                <v-list-item-title>{{ nativeBalance }} CHZ</v-list-item-title>
-                <v-list-item-subtitle>Native Balance</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
+      <v-col cols="12" md="4">
+        <div class="stat-card">
+          <v-icon size="24" color="primary">mdi-web</v-icon>
+          <div class="stat-value">{{ currentNetwork }}</div>
+          <div class="stat-label">Network</div>
+        </div>
       </v-col>
-      <v-col cols="12" md="6">
-        <v-card class="unified-card">
-          <v-card-title class="card-title">
-            <v-icon start>mdi-chart-line</v-icon>
-            Quick Stats
-          </v-card-title>
-          <v-card-text>
-            <v-list density="compact">
-              <v-list-item>
-                <template v-slot:prepend>
-                  <v-icon size="small">mdi-coins</v-icon>
-                </template>
-                <v-list-item-title>{{ tokens.length }}</v-list-item-title>
-                <v-list-item-subtitle>Total Tokens</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <template v-slot:prepend>
-                  <v-icon size="small">mdi-lightning-bolt</v-icon>
-                </template>
-                <v-list-item-title>{{ powerUps.length }}</v-list-item-title>
-                <v-list-item-subtitle>Active PowerUps</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
+      <v-col cols="12" md="4">
+        <div class="stat-card">
+          <v-icon size="24" color="primary">mdi-currency-eth</v-icon>
+          <div class="stat-value">{{ nativeBalance }} CHZ</div>
+          <div class="stat-label">Native Balance</div>
+        </div>
+      </v-col>
+      <v-col cols="12" md="4">
+        <div class="stat-card">
+          <v-icon size="24" color="primary">mdi-coins</v-icon>
+          <div class="stat-value">{{ tokens.length }}</div>
+          <div class="stat-label">Tokens Held</div>
+        </div>
       </v-col>
     </v-row>
 
     <!-- Tokens Table -->
-    <v-card v-if="walletConnected" class="unified-card mb-6">
-      <v-card-title class="card-title">
-        <v-icon start>mdi-coins</v-icon>
-        Token Holdings
-        <v-spacer />
-        <v-chip v-if="loading" color="info" variant="tonal" size="small">
+    <v-card v-if="walletConnected" class="content-card mb-6" elevation="0">
+      <div class="section-header">
+        <h2 class="section-title">Token Holdings</h2>
+        <v-chip v-if="loading" variant="flat" size="small">
           <v-icon start size="x-small">mdi-loading</v-icon>
           Loading...
         </v-chip>
-      </v-card-title>
-          <v-card-text>
+      </div>
+      <v-card-text class="pa-0">
             <v-data-table
               :headers="tokenHeaders"
               :items="tokens"
@@ -131,10 +94,22 @@
             >
               <template v-slot:item.symbol="{ item }">
                 <div class="d-flex align-center">
-                  <v-avatar size="24" class="me-2" color="primary">
-                    <span class="text-caption font-weight-bold">{{ item.symbol.charAt(0) }}</span>
+                  <v-avatar size="32" class="me-3">
+                    <v-img 
+                      v-if="item.logoURI || getTokenLogo(item.symbol)" 
+                      :src="item.logoURI || getTokenLogo(item.symbol)"
+                      :alt="item.symbol"
+                    >
+                      <template v-slot:placeholder>
+                        <div class="token-placeholder">{{ item.symbol.charAt(0) }}</div>
+                      </template>
+                    </v-img>
+                    <div v-else class="token-placeholder">{{ item.symbol.charAt(0) }}</div>
                   </v-avatar>
-                  {{ item.symbol }}
+                  <div>
+                    <div class="font-weight-medium">{{ item.symbol }}</div>
+                    <div class="text-caption text-medium-emphasis">{{ item.name }}</div>
+                  </div>
                 </div>
               </template>
               
@@ -178,12 +153,11 @@
     </v-card>
 
     <!-- PowerUps Table -->
-    <v-card v-if="walletConnected" class="unified-card mb-6">
-      <v-card-title class="card-title">
-        <v-icon start>mdi-lightning-bolt</v-icon>
-        Game PowerUps
-      </v-card-title>
-          <v-card-text>
+    <v-card v-if="walletConnected" class="content-card mb-6" elevation="0">
+      <div class="section-header">
+        <h2 class="section-title">Game PowerUps</h2>
+      </div>
+      <v-card-text class="pa-0">
             <v-data-table
               :headers="powerUpHeaders"
               :items="powerUps"
@@ -254,12 +228,11 @@
     </v-card>
 
     <!-- Teams Matrix Section -->
-    <v-card class="unified-card mb-6">
-      <v-card-title class="card-title">
-        <v-icon start>mdi-soccer</v-icon>
-        Teams Matrix
-      </v-card-title>
-          <v-card-text>
+    <v-card class="content-card mb-6" elevation="0">
+      <div class="section-header">
+        <h2 class="section-title">Teams Matrix</h2>
+      </div>
+      <v-card-text>
             <v-tabs v-model="matrixView" centered grow class="mb-6 view-toggle">
               <v-tab value="table" class="view-btn">📊 Table View</v-tab>
               <v-tab value="chart" class="view-btn">📈 Chart View</v-tab>
@@ -450,8 +423,7 @@
             </v-window>
             
             <!-- Bonus Tokens Section -->
-            <v-card class="mt-6" variant="outlined">
-              <v-card-text class="pa-6">
+            <div class="bonus-tokens-section mt-6">
                 <h3 class="text-center mb-4">⚡ Performance Boost Tokens</h3>
                 <p class="text-center text-grey mb-6">Each token provides 1% bonus to specific attributes (max 100% total)</p>
                 
@@ -502,8 +474,7 @@
                     </v-card>
                   </v-col>
                 </v-row>
-              </v-card-text>
-            </v-card>
+            </div>
           </v-card-text>
     </v-card>
 
@@ -933,6 +904,28 @@ const showSnackbar = (text, color = 'success') => {
   snackbar.value = { show: true, text, color }
 }
 
+const getTokenLogo = (symbol) => {
+  const tokenLogos = {
+    'CHZ': 'https://assets.coingecko.com/coins/images/8834/small/CHZ_Token_updated.png',
+    'PSG': 'https://www.socios.com/wp-content/uploads/2024/01/Token-PSG.svg',
+    'BAR': 'https://www.socios.com/wp-content/uploads/2024/01/Token-FCB.svg',
+    'CITY': 'https://www.socios.com/wp-content/uploads/2024/01/Token-CITY.svg',
+    'JUV': 'https://www.socios.com/wp-content/uploads/2024/01/Token-JUV.svg',
+    'ATM': 'https://www.socios.com/wp-content/uploads/2024/01/Token-ATM.svg',
+    'INTER': 'https://www.socios.com/wp-content/uploads/2024/01/Token-INTER.svg',
+    'MILAN': 'https://www.socios.com/wp-content/uploads/2024/01/Token-AC.svg',
+    'AFC': 'https://www.socios.com/wp-content/uploads/2024/01/Token-AFC.svg',
+    'ASR': 'https://www.socios.com/wp-content/uploads/2024/01/Token-ASR.svg',
+    'GAL': 'https://www.socios.com/wp-content/uploads/2024/01/Token-GAL.svg',
+    'OG': 'https://www.socios.com/wp-content/uploads/2024/01/Token-OG.svg',
+    'ALL': 'https://www.socios.com/wp-content/uploads/2024/01/Token-ALL.svg',
+    'TH': 'https://www.socios.com/wp-content/uploads/2024/01/Token-TH.svg',
+    'UFC': 'https://www.socios.com/wp-content/uploads/2024/01/Token-UFC.svg',
+    'PFL': 'https://www.socios.com/wp-content/uploads/2024/01/Token-PFL.svg'
+  }
+  return tokenLogos[symbol.toUpperCase()] || null
+}
+
 // Teams Matrix methods
 const getRatingClass = (rating) => {
   if (rating >= 90) return 'rating-90-100'
@@ -1040,29 +1033,75 @@ onUnmounted(() => {
 
 .page-subtitle {
   font-size: 1.125rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+/* Simplified Card Designs */
+.wallet-status-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.content-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.section-header {
+  padding: 1.5rem 1.5rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title {
+  font-size: 1.375rem;
+  font-weight: 600;
   color: #ffffff;
   margin: 0;
 }
 
-/* Unified Card Design */
-.unified-card {
-  background: white;
+/* Stat Cards */
+.stat-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
-  transition: box-shadow 0.2s ease;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.2s ease;
 }
 
-.unified-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
 }
 
-.card-title {
-  font-size: 1.25rem;
+.stat-value {
+  font-size: 1.5rem;
   font-weight: 600;
   color: #ffffff;
-  padding: 1.5rem 1.5rem 1rem;
-  border-bottom: 1px solid #f3f4f6;
+  margin: 0.5rem 0;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Token Logo Styles */
+.token-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 1rem;
 }
 
 /* Simplified Buttons */
@@ -1079,16 +1118,28 @@ onUnmounted(() => {
 
 /* Data Tables */
 .v-data-table {
-  border-radius: 8px;
-  overflow: hidden;
+  background: transparent !important;
 }
 
-.v-data-table tbody tr td {
-  color: #ffffff;
+.v-data-table :deep(.v-table__wrapper) {
+  background: transparent;
 }
 
-.v-data-table .v-data-table__tr:hover {
-  background-color: #f9fafb !important;
+.v-data-table :deep(thead tr th) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.v-data-table :deep(tbody tr td) {
+  color: rgba(255, 255, 255, 0.9) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  padding: 1rem !important;
+}
+
+.v-data-table :deep(tbody tr:hover) {
+  background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
 /* List Items */
@@ -1100,37 +1151,47 @@ onUnmounted(() => {
   color: #ffffff !important;
 }
 
+/* Bonus Tokens Section */
+.bonus-tokens-section {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 2rem;
+}
+
 /* Bonus Cards */
 .bonus-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
   padding: 1.5rem;
   text-align: center;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
 }
 
 .bonus-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .bonus-card h4 {
   color: #ffffff;
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
+  margin-top: 1rem;
   margin-bottom: 0.5rem;
 }
 
 .bonus-value {
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: #059669;
-  padding: 0.5rem 1rem;
-  background: #ecfdf5;
+  color: #10b981;
+  padding: 0.375rem 0.75rem;
+  background: rgba(16, 185, 129, 0.1);
   border-radius: 6px;
-  border: 1px solid #d1fae5;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  display: inline-block;
 }
 
 .font-mono {
@@ -1154,14 +1215,15 @@ onUnmounted(() => {
 
 .teams-table {
   min-width: 1000px;
+  background: transparent;
 }
 
 .teams-table th {
-  background: #f9fafb;
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
   font-weight: 600;
   font-size: 0.875rem;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding: 1rem 0.75rem;
 }
 
@@ -1171,16 +1233,17 @@ onUnmounted(() => {
 }
 
 .teams-table th.sortable:hover {
-  background: #f3f4f6;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .teams-table td {
   padding: 0.75rem;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .teams-table tr:hover td {
-  background-color: #f9fafb;
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .team-info {
@@ -1195,13 +1258,13 @@ onUnmounted(() => {
 
 .team-name {
   font-weight: 600;
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 0.25rem;
 }
 
 .team-meta {
   font-size: 0.875rem;
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .country-flag-large {
@@ -1238,7 +1301,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .legend-color {
@@ -1248,15 +1311,15 @@ onUnmounted(() => {
 }
 
 .chart-container {
-  background: #f9fafb;
+  background: rgba(255, 255, 255, 0.03);
   padding: 2rem;
   border-radius: 8px;
   margin: 1rem 0;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .chart-title {
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 1rem;

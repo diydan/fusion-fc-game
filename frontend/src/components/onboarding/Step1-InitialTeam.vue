@@ -252,12 +252,13 @@
           <game-button
             v-if="props.prev"
             block
-            variant="outlined"
+            variant="text"
             size="large"
             label="Back"
             prepend-icon="mdi-arrow-left"
             @click="props.prev"
             click-sound="pop"
+            class="back-button"
           />
           <game-button
             v-else
@@ -889,5 +890,20 @@ const fallbackLogoStyle = computed(() => {
 .stadium-card:hover {
   border-color: rgba(var(--v-theme-success), 0.4);
   box-shadow: 0 4px 12px rgba(var(--v-theme-success), 0.1);
+}
+
+/* Back button styling */
+.back-button {
+  color: white !important;
+  opacity: 0.9;
+}
+
+.back-button:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.back-button :deep(.v-btn__content) {
+  font-weight: normal;
 }
 </style>

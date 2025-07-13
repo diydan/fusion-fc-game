@@ -38,6 +38,9 @@ const requireAuth = (to, from, next) => {
 const requireOnboarding = (to, from, next) => {
   const userStore = useUserStore()
   
+  console.log('requireOnboarding guard - isOnboardingComplete:', userStore.isOnboardingComplete)
+  console.log('requireOnboarding guard - userProfile:', userStore.userProfile)
+  
   if (userStore.loading) {
     // Wait for auth to initialize
     const unwatch = userStore.$subscribe((mutation, state) => {
@@ -56,8 +59,10 @@ const requireOnboarding = (to, from, next) => {
     })
   } else if (userStore.isAuthenticated) {
     if (userStore.isOnboardingComplete) {
+      console.log('User has completed onboarding, redirecting to dashboard')
       next('/')
     } else {
+      console.log('User has NOT completed onboarding, allowing access')
       next()
     }
   } else {

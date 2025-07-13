@@ -51,20 +51,33 @@ export const updateUser = async (userId, updates) => {
   try {
     const docRef = doc(db, 'users', userId);
     
+    // Remove any undefined values from updates to prevent Firebase errors
+    const cleanedUpdates = Object.entries(updates).reduce((acc, [key, value]) => {
+      if (value !== undefined && value !== null) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+    
+    // Debug logging
+    if ('authMethod' in updates && updates.authMethod === undefined) {
+      console.warn('Warning: authMethod is undefined in updates', updates);
+    }
+    
     // Check if document exists first
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
       // Document exists, update it
       await updateDoc(docRef, {
-        ...updates,
+        ...cleanedUpdates,
         updatedAt: serverTimestamp()
       });
     } else {
       // Document doesn't exist, create it
       await setDoc(docRef, {
         uid: userId,
-        ...updates,
+        ...cleanedUpdates,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });

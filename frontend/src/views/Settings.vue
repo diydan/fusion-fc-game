@@ -313,6 +313,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
 import GameButton from '@/components/GameButton.vue';
 import { 
@@ -323,6 +324,7 @@ import {
 } from '@/services/auth/account-linking';
 
 const userStore = useUserStore();
+const router = useRouter();
 
 // State
 const providers = ref({
@@ -471,12 +473,12 @@ const handleResetAccount = async () => {
     
     showSnackbar('Account reset successfully! Redirecting to onboarding...', 'success');
     
-    // Close dialog and redirect after a brief delay
-    setTimeout(() => {
-      closeResetDialog();
-      // Force redirect to onboarding page
-      window.location.href = '/onboarding';
-    }, 2000);
+    // Close dialog
+    closeResetDialog();
+    
+    // Force navigation to onboarding
+    // Use replace to avoid back button issues
+    await router.replace('/onboarding');
     
   } catch (error) {
     console.error('Failed to reset account:', error);

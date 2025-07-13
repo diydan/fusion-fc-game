@@ -189,6 +189,7 @@
             <v-btn
               text
               @click="$router.push('/dashboard')"
+              class="back-button"
             >
               <v-icon left>mdi-arrow-left</v-icon>
               Back
