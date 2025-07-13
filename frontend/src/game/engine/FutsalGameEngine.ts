@@ -57,6 +57,9 @@ export interface Player {
   slideEndTime?: number
   yellowCards: number
   isSentOff: boolean
+  isShootingChargeUp?: boolean
+  shootingChargeLevel?: number
+  shootingChargeStartTime?: number
 }
 
 export interface Ball {
@@ -1352,11 +1355,41 @@ export class FutsalGameEngine {
     const shouldShoot = Math.random() < shootChance
     
     if (shouldShoot && nearGoal) {
-      this.executeShot(player)
-      this.ball.possessor = null
+      // Start shooting charge-up
+      if (!player.shootingChargeStartTime) {
+        player.isShootingChargeUp = true
+        player.shootingChargeStartTime = Date.now()
+        player.shootingChargeLevel = 0
+      } else {
+        // Update charge level (0 to 1 over 1 second)
+        const chargeTime = Date.now() - player.shootingChargeStartTime
+        player.shootingChargeLevel = Math.min(1, chargeTime / 1000)
+        
+        // Execute shot after charge-up (0.5 seconds)
+        if (chargeTime >= 500) {
+          this.executeShot(player)
+          this.ball.possessor = null
+          player.isShootingChargeUp = false
+          player.shootingChargeStartTime = undefined
+          player.shootingChargeLevel = 0
+        }
+      }
     } else if (shouldPass) {
+      // Cancel any shooting charge-up
+      if (player.isShootingChargeUp) {
+        player.isShootingChargeUp = false
+        player.shootingChargeStartTime = undefined
+        player.shootingChargeLevel = 0
+      }
       this.executePass(player)
       this.ball.possessor = null
+    } else {
+      // Cancel shooting charge-up if not shooting
+      if (player.isShootingChargeUp) {
+        player.isShootingChargeUp = false
+        player.shootingChargeStartTime = undefined
+        player.shootingChargeLevel = 0
+      }
     }
   }
 
@@ -2117,20 +2150,20 @@ export class FutsalGameEngine {
     
     if (ballNearby && !isSlideTackle) {
       // Normal challenge for the ball, less likely to be a foul
-      return impactForce > 200 && Math.random() < 0.1
+      return impactForce > 250 && Math.random() < 0.05  // Reduced from 0.1
     }
     
     // Slide tackles more likely to be fouls
     if (isSlideTackle) {
       const tacklingPlayer = player1.isSliding ? player1 : player2
       const tackleQuality = tacklingPlayer.attributes.tackling / 99
-      const foulChance = 0.4 - tackleQuality * 0.3
+      const foulChance = 0.2 - tackleQuality * 0.15  // Reduced from 0.4 - 0.3
       return Math.random() < foulChance
     }
     
     // High impact collisions
-    if (impactForce > 180) {
-      return Math.random() < 0.3
+    if (impactForce > 220) {  // Increased threshold from 180
+      return Math.random() < 0.15  // Reduced from 0.3
     }
     
     return false
@@ -2151,7 +2184,7 @@ export class FutsalGameEngine {
     
     // Check for card
     const severity = Math.random()
-    if (severity > 0.9 || (foulingPlayer.yellowCards > 0 && severity > 0.7)) {
+    if (severity > 0.95 || (foulingPlayer.yellowCards > 0 && severity > 0.85)) {  // Reduced chance
       // Red card or second yellow
       foulingPlayer.isSentOff = true
       if (foulingPlayer.yellowCards > 0) {
@@ -2160,7 +2193,7 @@ export class FutsalGameEngine {
         this.gameState.matchStats.yellowCards[foulingPlayer.team]++
       }
       this.gameState.matchStats.redCards[foulingPlayer.team]++
-    } else if (severity > 0.6) {
+    } else if (severity > 0.8) {  // Reduced from 0.6 to 0.8
       // Yellow card
       foulingPlayer.yellowCards++
       this.gameState.matchStats.yellowCards[foulingPlayer.team]++

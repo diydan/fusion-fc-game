@@ -329,7 +329,9 @@ export function useAudio() {
         // Update current words with highlighting status
         audioState.currentWords = currentLyricData.words.map(wordData => ({
           ...wordData,
-          isHighlighted: currentTime >= wordData.start && currentTime <= wordData.end
+          isHighlighted: currentTime >= wordData.start && currentTime <= wordData.end,
+          isCompleted: currentTime > wordData.end,
+          isUpcoming: currentTime < wordData.start
         }))
 
         // Find current word index

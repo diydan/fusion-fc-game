@@ -145,12 +145,11 @@
     <!-- Stats and Activity Container -->
     <div class="stats-activity-container">
       <!-- Activity Stream (Left) -->
-      <div class="activity-stream" :class="{ collapsed: activityStreamCollapsed }">
-        <div class="activity-header" @click="activityStreamCollapsed = !activityStreamCollapsed">
+      <div class="activity-stream">
+        <div class="activity-header">
           <h3>Activity Stream</h3>
-          <span class="toggle-icon">{{ activityStreamCollapsed ? '◀' : '▼' }}</span>
         </div>
-        <div class="activity-content" v-if="!activityStreamCollapsed">
+        <div class="activity-content">
           <div class="activity-list">
             <TransitionGroup name="activity">
               <div v-for="event in gameEvents" :key="event.id" class="activity-item" :class="event.type">
@@ -165,8 +164,11 @@
       
       <!-- Match Statistics (Right) -->
       <div class="engine-controls v1-controls">
-        <h3>Match Statistics</h3>
-        <div class="stat-row">
+        <div class="stats-header">
+          <h3>Match Statistics</h3>
+        </div>
+        <div class="stats-content">
+          <div class="stat-row">
           <span class="stat-label">Possession:</span>
           <span class="stat-value">
             <span class="possession-bar">
@@ -203,6 +205,7 @@
             </span>
             <span v-if="v1Stats.cards.length === 0" class="no-cards">No cards</span>
           </span>
+        </div>
         </div>
       </div>
     </div>
@@ -336,7 +339,6 @@ const achievements = ref([
 const recentAchievements = ref<Array<any>>([])
 
 // Activity Stream
-const activityStreamCollapsed = ref(false)
 const gameEvents = ref<Array<{
   id: string
   time: number
@@ -885,9 +887,11 @@ const render = () => {
   // Draw field
   drawField(ctx)
   
-  // Draw players
+  // Draw players (skip red-carded players)
   players.value.forEach(player => {
-    drawPlayer(ctx, player)
+    if (!player.isSentOff) {
+      drawPlayer(ctx, player)
+    }
   })
   
   // Draw ball
@@ -907,12 +911,16 @@ const drawField = (ctx: CanvasRenderingContext2D) => {
   const fieldWidth = 600
   const fieldHeight = 400
   
-  // Dark green field
-  ctx.fillStyle = '#2d5a2d'
+  // Dark green field with gradient
+  const fieldGradient = ctx.createLinearGradient(fieldX, fieldY, fieldX, fieldY + fieldHeight)
+  fieldGradient.addColorStop(0, '#2d5a2d')
+  fieldGradient.addColorStop(0.5, '#357a35')
+  fieldGradient.addColorStop(1, '#2d5a2d')
+  ctx.fillStyle = fieldGradient
   ctx.fillRect(fieldX, fieldY, fieldWidth, fieldHeight)
   
-  // Lighter stripes
-  ctx.fillStyle = '#357a35'
+  // Lighter stripes with subtle opacity
+  ctx.fillStyle = 'rgba(53, 122, 53, 0.3)'
   for (let i = 0; i < 12; i += 2) {
     ctx.fillRect(fieldX + i * 50, fieldY, 50, fieldHeight)
   }
@@ -1013,16 +1021,16 @@ const drawPlayer = (ctx: CanvasRenderingContext2D, player: Player) => {
     ctx.stroke()
   }
   
-  // Player body
+  // Player body with new theme colors
   const gradient = ctx.createRadialGradient(x - 3, y - 3, 0, x, y, player.radius)
   if (player.team === 'home') {
-    gradient.addColorStop(0, '#4a90e2')
-    gradient.addColorStop(0.7, '#357abd')
-    gradient.addColorStop(1, '#2968a3')
+    gradient.addColorStop(0, '#00d9ff')
+    gradient.addColorStop(0.7, '#00b4d8')
+    gradient.addColorStop(1, '#0077b6')
   } else {
-    gradient.addColorStop(0, '#e74c3c')
-    gradient.addColorStop(0.7, '#d62c1a')
-    gradient.addColorStop(1, '#c0392b')
+    gradient.addColorStop(0, '#ff8787')
+    gradient.addColorStop(0.7, '#ff6b6b')
+    gradient.addColorStop(1, '#ff5252')
   }
   
   ctx.fillStyle = gradient
@@ -1030,17 +1038,18 @@ const drawPlayer = (ctx: CanvasRenderingContext2D, player: Player) => {
   ctx.arc(x, y, player.radius, 0, Math.PI * 2)
   ctx.fill()
   
-  // Darker edge
-  ctx.strokeStyle = player.team === 'home' ? '#1e4d8a' : '#8b1a1a'
+  // Darker edge with new colors
+  ctx.strokeStyle = player.team === 'home' ? '#023e8a' : '#dc2626'
   ctx.lineWidth = 1
   ctx.stroke()
   
-  // Stamina indicator
-  if (player.stamina < player.maxStamina * 0.5) {
-    ctx.strokeStyle = player.stamina < player.maxStamina * 0.25 ? '#ff4444' : '#ffaa44'
-    ctx.lineWidth = 2
+  // Shooting charge-up indicator
+  if (player.isShootingChargeUp) {
+    const chargeLevel = player.shootingChargeLevel || 0
+    ctx.strokeStyle = '#00ff00'
+    ctx.lineWidth = 3
     ctx.beginPath()
-    ctx.arc(x, y, player.radius + 3, -Math.PI/2, -Math.PI/2 + (player.stamina / player.maxStamina) * Math.PI * 2)
+    ctx.arc(x, y, player.radius + 5, -Math.PI/2, -Math.PI/2 + chargeLevel * Math.PI * 2)
     ctx.stroke()
   }
   
@@ -1118,55 +1127,26 @@ const drawBall = (ctx: CanvasRenderingContext2D, ball: Ball) => {
   const x = ball.x + 50
   const y = ball.y + 50
   
-  // Shadow based on height
+  // Simple shadow
   const shadowScale = 1 - (ball.z || 0) / 100
-  ctx.fillStyle = `rgba(0, 0, 0, ${0.3 * shadowScale})`
+  ctx.fillStyle = `rgba(0, 0, 0, ${0.2 * shadowScale})`
   ctx.beginPath()
-  ctx.ellipse(x, y + 10 + (ball.z || 0) * 0.5, ball.radius * shadowScale, ball.radius * 0.3 * shadowScale, 0, 0, Math.PI * 2)
+  ctx.ellipse(x, y + 8 + (ball.z || 0) * 0.3, ball.radius * 0.8 * shadowScale, ball.radius * 0.3 * shadowScale, 0, 0, Math.PI * 2)
   ctx.fill()
   
   // Ball at height
   const ballY = y - (ball.z || 0) * 0.5
   
-  // Ball gradient
-  const gradient = ctx.createRadialGradient(x - 2, ballY - 2, 0, x, ballY, ball.radius)
-  gradient.addColorStop(0, '#ffffff')
-  gradient.addColorStop(0.3, '#f0f0f0')
-  gradient.addColorStop(0.6, '#e0e0e0')
-  gradient.addColorStop(1, '#cccccc')
-  
-  ctx.fillStyle = gradient
+  // Simple white ball
+  ctx.fillStyle = '#ffffff'
   ctx.beginPath()
   ctx.arc(x, ballY, ball.radius, 0, Math.PI * 2)
   ctx.fill()
   
-  // Ball pattern (simple pentagon)
-  ctx.strokeStyle = '#999'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  for (let i = 0; i < 5; i++) {
-    const angle = (i * Math.PI * 2 / 5) - Math.PI / 2
-    const px = x + Math.cos(angle) * (ball.radius * 0.6)
-    const py = ballY + Math.sin(angle) * (ball.radius * 0.6)
-    if (i === 0) {
-      ctx.moveTo(px, py)
-    } else {
-      ctx.lineTo(px, py)
-    }
-  }
-  ctx.closePath()
+  // Black outline
+  ctx.strokeStyle = '#000000'
+  ctx.lineWidth = 1.5
   ctx.stroke()
-  
-  // Ball spin indicator
-  if (ball.spin && (Math.abs(ball.spin.x) > 0.1 || Math.abs(ball.spin.y) > 0.1)) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
-    ctx.lineWidth = 2
-    ctx.beginPath()
-    ctx.arc(x, ballY, ball.radius + 2, 0, Math.PI * 2)
-    ctx.setLineDash([3, 3])
-    ctx.stroke()
-    ctx.setLineDash([])
-  }
 }
 
 // Helper functions
@@ -1468,11 +1448,11 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 
 <style scoped>
 .sim-2d-container {
-  background-color: #1a1a1a;
+  background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
   color: white;
   padding: 20px;
   min-height: 100vh;
-  font-family: Arial, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .game-header {
@@ -1483,11 +1463,12 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #2a2a2a;
-  padding: 15px 30px;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  padding: 20px 40px;
+  border-radius: 15px;
   margin-bottom: 20px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .team-score {
@@ -1497,19 +1478,22 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .team-score.home .score {
-  color: #4a90e2;
+  color: #00b4d8;
+  text-shadow: 0 0 20px rgba(0, 180, 216, 0.5);
 }
 
 .team-score.away .score {
-  color: #e74c3c;
+  color: #ff6b6b;
+  text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
 }
 
 .team-name {
   font-size: 14px;
-  color: #999;
+  color: #cbd5e1;
   margin-bottom: 5px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  font-weight: 600;
 }
 
 .score {
@@ -1534,15 +1518,16 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   margin-top: 10px;
   font-weight: bold;
   text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
 .game-canvas {
   display: block;
   margin: 0 auto 20px;
-  border: 2px solid #333;
-  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   background-color: #000;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
 }
 
 .controls {
@@ -1555,27 +1540,28 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .control-btn {
-  padding: 10px 24px;
+  padding: 12px 28px;
   font-size: 16px;
   font-weight: bold;
-  background-color: #4a90e2;
+  background: linear-gradient(135deg, #00b4d8 0%, #0077b6 100%);
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s;
   text-transform: uppercase;
   letter-spacing: 1px;
+  box-shadow: 0 4px 8px rgba(0, 119, 182, 0.3);
 }
 
 .control-btn:hover:not(:disabled) {
-  background-color: #357abd;
+  background: linear-gradient(135deg, #0077b6 0%, #023e8a 100%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(74, 144, 226, 0.3);
+  box-shadow: 0 6px 12px rgba(0, 119, 182, 0.4);
 }
 
 .control-btn:disabled {
-  background-color: #555;
+  background: #334155;
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -1617,10 +1603,12 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .team-config {
-  background-color: #2a2a2a;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  background: rgba(30, 41, 59, 0.9);
+  backdrop-filter: blur(10px);
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .team-config h3 {
@@ -1631,11 +1619,11 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .home-team h3 {
-  color: #4a90e2;
+  color: #00b4d8;
 }
 
 .away-team h3 {
-  color: #e74c3c;
+  color: #ff6b6b;
 }
 
 .config-row {
@@ -1654,17 +1642,19 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 .config-row select,
 .config-row input[type="range"] {
   flex: 1;
-  background-color: #1a1a1a;
+  background-color: rgba(15, 23, 42, 0.8);
   color: white;
-  border: 1px solid #444;
-  padding: 6px 10px;
-  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 6px;
   font-size: 14px;
+  transition: all 0.2s;
 }
 
 .config-row select:focus {
   outline: none;
-  border-color: #4a90e2;
+  border-color: #00b4d8;
+  box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.2);
 }
 
 .strategy-label {
@@ -1676,18 +1666,34 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 
 /* Engine controls */
 .engine-controls {
-  background-color: #2a2a2a;
-  padding: 20px;
-  border-radius: 10px;
+  background: rgba(30, 41, 59, 0.9);
+  backdrop-filter: blur(10px);
+  padding: 24px;
+  border-radius: 12px;
   margin: 20px 0;
   height: 100%;
   display: flex;
   flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.stats-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.stats-content {
+  padding: 20px;
+  height: 400px;
+  overflow-y: auto;
+}
+.stats-header h3,
 .engine-controls h3 {
-  margin-bottom: 15px;
-  color: #4a90e2;
+  margin: 0;
+  font-size: 18px;
+  color: #00b4d8;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .stat-row {
@@ -1745,23 +1751,25 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .possession-home {
-  background-color: #4a90e2;
+  background: linear-gradient(90deg, #00b4d8 0%, #0077b6 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .possession-away {
-  background-color: #e24a4a;
+  background: linear-gradient(90deg, #ff6b6b 0%, #ff5252 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 /* Player display */
@@ -2007,6 +2015,18 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
   100% { transform: scale(1) rotate(360deg); }
 }
 
+@keyframes achievementGlow {
+  0% { 
+    box-shadow: 0 8px 16px rgba(0, 180, 216, 0.3);
+  }
+  50% { 
+    box-shadow: 0 8px 24px rgba(0, 180, 216, 0.5), 0 0 40px rgba(0, 180, 216, 0.3);
+  }
+  100% { 
+    box-shadow: 0 8px 16px rgba(0, 180, 216, 0.3);
+  }
+}
+
 /* Achievement notifications */
 .achievement-container {
   position: fixed;
@@ -2016,16 +2036,18 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 }
 
 .achievement-notification {
-  background-color: #2a2a2a;
-  border: 2px solid #4a90e2;
-  border-radius: 10px;
-  padding: 15px 20px;
-  margin-bottom: 10px;
+  background: linear-gradient(135deg, rgba(0, 180, 216, 0.1) 0%, rgba(0, 119, 182, 0.1) 100%);
+  backdrop-filter: blur(10px);
+  border: 2px solid #00b4d8;
+  border-radius: 12px;
+  padding: 16px 24px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
-  gap: 15px;
-  min-width: 300px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  gap: 16px;
+  min-width: 320px;
+  box-shadow: 0 8px 16px rgba(0, 180, 216, 0.3);
+  animation: achievementGlow 2s ease-in-out;
 }
 
 .achievement-icon {
@@ -2035,8 +2057,9 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 .achievement-title {
   font-weight: bold;
   font-size: 16px;
-  color: #4a90e2;
+  color: #00b4d8;
   margin-bottom: 4px;
+  text-shadow: 0 0 10px rgba(0, 180, 216, 0.3);
 }
 
 .achievement-desc {
@@ -2078,47 +2101,38 @@ watch([homeFormation, awayFormation, homeTactic, awayTactic], () => {
 
 /* Activity Stream */
 .activity-stream {
-  background-color: #2a2a2a;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  background: rgba(30, 41, 59, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.activity-stream.collapsed {
-  grid-column: 1 / 2;
-}
 
-.activity-stream.collapsed .activity-content {
-  display: none;
-}
 
 .activity-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
-  background-color: #1a1a1a;
-  border-radius: 10px 10px 0 0;
-  cursor: pointer;
-  user-select: none;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .activity-header h3 {
   margin: 0;
-  font-size: 16px;
-  color: #4a90e2;
+  font-size: 18px;
+  color: #00b4d8;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
-.toggle-icon {
-  font-size: 12px;
-  color: #999;
-  transition: transform 0.3s;
-}
 
 .activity-content {
-  max-height: 400px;
+  height: 400px;
   overflow-y: auto;
-  padding: 15px;
+  padding: 20px;
 }
 
 .activity-list {

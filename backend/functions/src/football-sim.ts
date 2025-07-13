@@ -5,7 +5,7 @@ const footballEngine = require('footballsimulationengine');
 let gameSessions = new Map();
 
 export const initGame = onRequest(
-  { cors: true },
+  { cors: true, invoker: "public" },
   async (request, response) => {
     try {
       if (request.method !== 'POST') {
@@ -41,7 +41,7 @@ export const initGame = onRequest(
 );
 
 export const playIteration = onRequest(
-  { cors: true },
+  { cors: true, invoker: "public" },
   async (request, response) => {
     try {
       if (request.method !== 'POST') {
@@ -77,7 +77,7 @@ export const playIteration = onRequest(
 );
 
 export const startSecondHalf = onRequest(
-  { cors: true },
+  { cors: true, invoker: "public" },
   async (request, response) => {
     try {
       if (request.method !== 'POST') {
@@ -113,7 +113,7 @@ export const startSecondHalf = onRequest(
 );
 
 export const getGameState = onRequest(
-  { cors: true },
+  { cors: true, invoker: "public" },
   async (request, response) => {
     try {
       const sessionId = request.query.sessionId as string;

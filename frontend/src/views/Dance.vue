@@ -1,67 +1,112 @@
 <template>
-  <BaseCharacterScene ref="baseScene" :show-hints="true">
-    <template #content>
-      <!-- Dance mode overlay -->
-      <div class="dance-overlay">
-        <!-- Global Music Player at top -->
-        <GlobalMusicFooter
-          :audio-state="audioState"
-          @toggle="toggleBackgroundMusic"
-          @stop="stopMusic"
-          @next-track="nextTrack"
-          @previous-track="previousTrack"
-          @toggle-lyrics="() => audioState.showLyrics = !audioState.showLyrics"
-        />
+  <div class="dance-container">
+    <!-- 3D Scene Container -->
+    <div 
+      class="scene-container" 
+      :class="{ 'screen-shake-active': isScreenShaking }">
+      
+      <!-- Mobile optimized background -->
+      <div class="background-video-container">
+        <video 
+          ref="backgroundVideo"
+          autoplay
+          loop 
+          muted 
+          playsinline
+          poster="/textures/stadium_bg.jpg"
+          class="background-video">
+          <source src="/video/stadium.mp4" type="video/mp4" />
+        </video>
+      </div>
 
-        <!-- Beat indicator floating element -->
-        <div class="floating-beat-indicator">
-          <div 
-            v-for="i in 4" 
-            :key="i"
-            class="beat-dot"
-            :class="{ active: currentBeat === i }">
+      <!-- 3D Scene Canvas without UI elements and locked camera -->
+      <MobileSelectBotScene 
+        ref="sceneCanvas" 
+        :hide-ui-elements="true"
+        :lock-camera="true"
+      />
+
+      <!-- Effects overlay -->
+      <div class="dance-effects">
+        <transition name="pulse">
+          <div v-if="showPulse" class="pulse-effect"></div>
+        </transition>
+      </div>
+
+    </div>
+
+    <!-- Karaoke Lyrics Display -->
+    <div class="karaoke-display" v-if="audioState.showLyrics">
+      <div class="lyrics-container">
+        <!-- Previous Lyric -->
+        <transition name="lyric-fade">
+          <div v-if="audioState.previousLyric" class="lyric-line previous">
+            {{ audioState.previousLyric }}
+          </div>
+        </transition>
+        
+        <!-- Current Lyric with Karaoke Effect -->
+        <div class="lyric-line current">
+          <div v-if="audioState.currentWords && audioState.currentWords.length > 0" class="karaoke-lyrics">
+            <span
+              v-for="(wordData, index) in audioState.currentWords"
+              :key="index"
+              class="karaoke-word"
+              :class="{
+                'highlighted': wordData.isHighlighted,
+                'completed': wordData.isCompleted,
+                'upcoming': !wordData.isHighlighted && !wordData.isCompleted
+              }">
+              {{ wordData.word }}{{ index < audioState.currentWords.length - 1 ? ' ' : '' }}
+            </span>
+          </div>
+          <div v-else class="lyric-text">
+            {{ audioState.currentLyric || 'No lyrics available' }}
           </div>
         </div>
-
-        <!-- Effects overlay -->
-        <div class="dance-effects">
-          <transition name="pulse">
-            <div v-if="showPulse" class="pulse-effect"></div>
-          </transition>
-          
-          <!-- Particle effects would go here -->
-          <div class="particles-container" ref="particlesContainer"></div>
-        </div>
-
-        <!-- Exit button -->
-        <v-btn
-          icon
-          size="large"
-          class="exit-btn"
-          @click="exitDanceMode">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+        
+        <!-- Next Lyric -->
+        <transition name="lyric-fade">
+          <div v-if="audioState.nextLyric" class="lyric-line next">
+            {{ audioState.nextLyric }}
+          </div>
+        </transition>
       </div>
-    </template>
-  </BaseCharacterScene>
+    </div>
+
+    <!-- Global Music Player at bottom -->
+    <div class="music-player-footer">
+      <GlobalMusicFooter
+        :audio-state="audioState"
+        @toggle="toggleBackgroundMusic"
+        @stop="stopMusic"
+        @next-track="nextTrack"
+        @previous-track="previousTrack"
+        @toggle-lyrics="() => audioState.showLyrics = !audioState.showLyrics"
+      />
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import BaseCharacterScene from '@/components/BaseCharacterScene.vue'
+import MobileSelectBotScene from '@/components/MobileSelectBotScene.vue'
 import GlobalMusicFooter from '@/components/ui/GlobalMusicFooter.vue'
 import { useAudio } from '@/composables/useAudio'
 
 const router = useRouter()
-const baseScene = ref()
+const sceneCanvas = ref()
 
 // Audio
 const { audioState, toggleBackgroundMusic, stopMusic, nextTrack, previousTrack } = useAudio()
 
+// Scene state
+const isScreenShaking = ref(false)
+const showPulse = ref(false)
+
 // Dance state
 const currentBeat = ref(0)
-const showPulse = ref(false)
 
 // Beat tracking
 let beatInterval: number | null = null
@@ -73,9 +118,6 @@ const triggerPulse = () => {
   }, 500)
 }
 
-const exitDanceMode = () => {
-  router.push('/character-creator')
-}
 
 // Beat tracking for visual sync
 const startBeatTracking = () => {
@@ -101,6 +143,8 @@ const stopBeatTracking = () => {
 
 onMounted(() => {
   startBeatTracking()
+  // Enable lyrics by default on dance page
+  audioState.showLyrics = true
 })
 
 onUnmounted(() => {
@@ -109,43 +153,80 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.dance-overlay {
+.dance-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+.scene-container {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
-  z-index: 10;
+  overflow: hidden;
+  transition: transform 0.1s ease-out;
 }
 
-.floating-beat-indicator {
+.scene-container.screen-shake-active {
+  animation: screenShake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes screenShake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-2px, 0, 0); }
+  40%, 60% { transform: translate3d(2px, 0, 0); }
+}
+
+.background-video-container {
   position: absolute;
-  bottom: 2rem;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+
+.background-video {
+  position: absolute;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  padding: 1rem 2rem;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(20px);
-  border-radius: 50px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: translate(-50%, -50%);
+  z-index: -1;
 }
 
-.beat-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  transition: all 0.2s ease;
+.music-player-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
 }
 
-.beat-dot.active {
-  background: var(--v-primary-base);
-  transform: scale(1.8);
-  box-shadow: 0 0 30px var(--v-primary-base);
+/* Override GlobalMusicFooter's top positioning */
+.music-player-footer :deep(.global-music-footer) {
+  top: auto !important;
+  bottom: 0 !important;
+  border-bottom: none !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Also override mobile positioning */
+@media (max-width: 768px) {
+  .music-player-footer :deep(.global-music-footer) {
+    right: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    border-radius: 0 !important;
+  }
 }
 
 .dance-effects {
@@ -175,14 +256,6 @@ onUnmounted(() => {
   height: 100%;
 }
 
-.exit-btn {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  pointer-events: auto;
-  background: rgba(0, 0, 0, 0.6) !important;
-  backdrop-filter: blur(10px);
-}
 
 /* Transitions */
 .pulse-enter-active, .pulse-leave-active {
@@ -193,7 +266,116 @@ onUnmounted(() => {
   opacity: 0;
 }
 
+/* Karaoke Display Styles */
+.karaoke-display {
+  position: fixed;
+  bottom: 120px; /* Position above music player */
+  left: 0;
+  right: 0;
+  z-index: 90;
+  pointer-events: none;
+}
+
+.lyrics-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+}
+
+.lyric-line {
+  text-align: center;
+  width: 100%;
+  max-width: 800px;
+  transition: all 0.3s ease;
+}
+
+.lyric-line.previous {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 400;
+}
+
+.lyric-line.current {
+  font-size: 2rem;
+  color: white;
+  font-weight: 600;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
+}
+
+.lyric-line.next {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 400;
+}
+
+/* Karaoke Word Animation */
+.karaoke-lyrics {
+  display: inline-block;
+  line-height: 1.4;
+}
+
+.karaoke-word {
+  display: inline;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.karaoke-word.completed {
+  color: #10b981;
+  text-shadow: 0 0 20px rgba(16, 185, 129, 0.8);
+}
+
+.karaoke-word.highlighted {
+  color: #60a5fa;
+  text-shadow: 0 0 30px rgba(96, 165, 250, 1);
+  transform: scale(1.1);
+  display: inline-block;
+}
+
+.karaoke-word.upcoming {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Lyric transitions */
+.lyric-fade-enter-active,
+.lyric-fade-leave-active {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.lyric-fade-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.lyric-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
 /* Mobile adjustments */
+@media (max-width: 768px) {
+  .karaoke-display {
+    bottom: 100px; /* Adjust for mobile music player height */
+  }
+  
+  .lyrics-container {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+  
+  .lyric-line.previous,
+  .lyric-line.next {
+    font-size: 1rem;
+  }
+  
+  .lyric-line.current {
+    font-size: 1.5rem;
+  }
+}
+
 @media (max-width: 600px) {
   .floating-beat-indicator {
     bottom: 1rem;

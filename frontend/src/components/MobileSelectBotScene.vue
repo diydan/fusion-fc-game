@@ -38,7 +38,11 @@
       @scene-render="onSceneRender"
     >
       <!-- Camera optimized for mobile -->
-      <SceneCamera :camera-position="mobileCameraPosition" :fov="mobileCameraFov" />
+      <SceneCamera 
+        :camera-position="mobileCameraPosition" 
+        :fov="mobileCameraFov"
+        :enable-controls="!props.lockCamera" 
+      />
       
       <!-- Simplified fog for mobile -->
       <TresFogExp2 
@@ -82,6 +86,7 @@
 
     <!-- Mobile Control Panel - Now positioned at top with high z-index -->
     <MobileControlPanel
+      v-if="!props.hideUiElements"
       :is-ready="isReady"
       :loading-status="loadingStatus"
       :is-strike-sequence-active="animationState.isStrikeSequenceActive"
@@ -97,7 +102,7 @@
     />
 
     <!-- Color Controls in top left corner -->
-    <div class="color-controls-top-left">
+    <div v-if="!props.hideUiElements" class="color-controls-top-left">
       <MobileColorSlider
         label="Shirt"
         :initial-hue="overlayColorHue"
@@ -112,6 +117,7 @@
 
     <!-- Global Music Footer moved to top -->
     <GlobalMusicFooter
+      v-if="!props.hideUiElements"
       :audio-state="audioState"
       @toggle="toggleBackgroundMusic"
       @stop="stopMusic"
@@ -144,6 +150,17 @@
 import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import * as THREE from 'three'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
+
+// Props
+interface Props {
+  hideUiElements?: boolean
+  lockCamera?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  hideUiElements: false,
+  lockCamera: false
+})
 
 // Components
 import SceneCanvas from './scene/SceneCanvas.vue'

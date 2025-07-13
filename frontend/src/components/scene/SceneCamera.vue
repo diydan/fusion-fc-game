@@ -12,10 +12,12 @@
   <!-- Orbit Controls -->
   <OrbitControls 
     ref="controls"
-    :enabled="true"
+    :enabled="props.enableControls"
     :enable-damping="true"
     :damping-factor="0.05"
-    :enable-zoom="true"
+    :enable-zoom="props.enableControls"
+    :enable-pan="props.enableControls"
+    :enable-rotate="props.enableControls"
     :auto-rotate="false"
   />
 </template>
@@ -27,9 +29,12 @@ import { OrbitControls } from '@tresjs/cientos'
 interface Props {
   cameraPosition: [number, number, number]
   fov: number
+  enableControls?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  enableControls: true
+})
 const camera = ref()
 const controls = ref()
 
